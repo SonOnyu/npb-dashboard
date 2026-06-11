@@ -4,177 +4,170 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NPB 2026 세이버매트릭스 대시보드</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0d0f14; --surface: #161920; --surface2: #1e2230;
-    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.14);
-    --text: #f0f2f7; --muted: #8b90a0;
-    --accent: #e8c840; --accent2: #3d9cf0; --accent3: #e85c40;
-    --cl: #7ec87e; --pl: #6faee8;
-    --font-d: 'Barlow Condensed', sans-serif;
-    --font-b: 'Noto Sans JP', sans-serif;
-  }
-  body { background: var(--bg); color: var(--text); font-family: var(--font-b); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0d0f14; --surface:#161920; --surface2:#1e2230;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.14);
+  --text:#f0f2f7; --muted:#8b90a0;
+  --accent:#e8c840; --accent2:#3d9cf0; --accent3:#e85c40;
+  --cl:#7ec87e; --pl:#6faee8;
+  --fd:'Barlow Condensed',sans-serif; --fb:'Noto Sans JP',sans-serif;
+}
+body { background:var(--bg); color:var(--text); font-family:var(--fb); font-size:14px; line-height:1.6; }
 
-  /* HEADER */
-  header { border-bottom: 1px solid var(--border2); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; background: rgba(13,15,20,0.96); backdrop-filter: blur(12px); z-index: 100; }
-  .logo-main { font-family: var(--font-d); font-size: 22px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent); }
-  .logo-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-left: 10px; }
-  .header-meta { display: flex; align-items: center; gap: 20px; }
-  .season-badge { font-family: var(--font-d); font-size: 13px; font-weight: 700; color: var(--accent); border: 1px solid var(--accent); padding: 3px 10px; border-radius: 3px; }
-  .live-dot { display: inline-block; width:6px; height:6px; background:#4cde80; border-radius:50%; margin-right:5px; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+header { border-bottom:1px solid var(--border2); padding:0 40px; display:flex; align-items:center; justify-content:space-between; height:64px; position:sticky; top:0; background:rgba(13,15,20,0.96); backdrop-filter:blur(12px); z-index:100; }
+.logo-main { font-family:var(--fd); font-size:22px; font-weight:800; letter-spacing:0.04em; color:var(--accent); }
+.logo-sub { font-size:11px; color:var(--muted); letter-spacing:0.1em; margin-left:10px; }
+.season-badge { font-family:var(--fd); font-size:13px; font-weight:700; color:var(--accent); border:1px solid var(--accent); padding:3px 10px; border-radius:3px; }
+.live-dot { display:inline-block; width:6px; height:6px; background:#4cde80; border-radius:50%; margin-right:5px; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
 
-  /* NAV */
-  .nav-tabs { display: flex; gap: 2px; padding: 20px 40px 0; border-bottom: 1px solid var(--border); }
-  .nav-tab { font-family: var(--font-d); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 9px 20px; border: none; background: transparent; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
-  .nav-tab:hover { color: var(--text); }
-  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.nav-tabs { display:flex; gap:2px; padding:20px 40px 0; border-bottom:1px solid var(--border); overflow-x:auto; }
+.nav-tab { font-family:var(--fd); font-size:13px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:9px 18px; border:none; background:transparent; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; transition:color 0.15s,border-color 0.15s; }
+.nav-tab:hover { color:var(--text); }
+.nav-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
 
-  main { padding: 32px 40px 60px; }
-  .section { display: none; }
-  .section.active { display: block; }
+main { padding:28px 40px 60px; }
+.section { display:none; }
+.section.active { display:block; }
 
-  /* SECTION HEADER */
-  .section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-  .section-title { font-family: var(--font-d); font-size: 26px; font-weight: 800; letter-spacing: 0.03em; }
-  .section-desc { font-size: 12px; color: var(--muted); }
-  .data-source { margin-left: auto; font-size: 11px; color: var(--muted); }
-  .data-source a { color: var(--accent2); text-decoration: none; }
-  .data-source a:hover { text-decoration: underline; }
+.sec-hdr { display:flex; align-items:baseline; gap:12px; margin-bottom:22px; flex-wrap:wrap; }
+.sec-title { font-family:var(--fd); font-size:26px; font-weight:800; letter-spacing:0.03em; }
+.sec-desc { font-size:12px; color:var(--muted); }
+.src { margin-left:auto; font-size:11px; color:var(--muted); }
+.src a { color:var(--accent2); text-decoration:none; }
 
-  /* GRID */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.mgb { margin-bottom:18px; }
 
-  /* CARDS */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 22px; }
-  .card-title { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
-  .card-title::before { content:''; display:inline-block; width:3px; height:14px; background:var(--accent); border-radius:2px; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:18px 20px; }
+.card-t { font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+.card-t::before { content:''; display:inline-block; width:3px; height:14px; background:var(--accent); border-radius:2px; }
 
-  /* METRIC CARDS */
-  .metric-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
-  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
-  .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
-  .metric-value { font-family: var(--font-d); font-size: 32px; font-weight: 700; line-height: 1; color: var(--accent); }
-  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+/* METRIC */
+.metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px; }
+.mc { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+.mc-label { font-size:11px; color:var(--muted); margin-bottom:5px; }
+.mc-val { font-family:var(--fd); font-size:30px; font-weight:700; line-height:1; color:var(--accent); }
+.mc-sub { font-size:11px; color:var(--muted); margin-top:3px; }
 
-  /* TEAM BADGE — logo + name */
-  .team-cell { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-  .team-logo { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-d); font-size: 11px; font-weight: 800; flex-shrink: 0; }
-  .team-name-short { font-size: 12px; font-weight: 500; color: var(--text); }
+/* TEAM LOGO — real image with fallback */
+.tlogo { width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--fd); font-size:11px; font-weight:800; background:var(--surface2); }
+.tlogo img { width:100%; height:100%; object-fit:contain; }
+.tcell { display:flex; align-items:center; gap:8px; }
+.tname { font-size:12px; font-weight:500; }
 
-  /* team colors */
-  .tl-T  { background:#ffcc00; color:#1a1a1a; }
-  .tl-H  { background:#f37021; color:#fff; }
-  .tl-G  { background:#f5a623; color:#1a1a1a; }
-  .tl-DB { background:#009bdf; color:#fff; }
-  .tl-B  { background:#e60026; color:#fff; }
-  .tl-C  { background:#e60012; color:#fff; }
-  .tl-L  { background:#003087; color:#fff; }
-  .tl-F  { background:#00843d; color:#fff; }
-  .tl-H2 { background:#f37021; color:#fff; }
-  .tl-E  { background:#860026; color:#fff; }
-  .tl-M  { background:#000000; color:#fff; border: 1px solid #333; }
-  .tl-Bs { background:#0033a0; color:#fff; }
-  .tl-Sw { background:#009a44; color:#fff; }
+/* TABLE */
+.lb { width:100%; border-collapse:collapse; }
+.lb thead th { font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); padding:7px 10px; text-align:right; border-bottom:1px solid var(--border2); }
+.lb thead th:nth-child(1),.lb thead th:nth-child(2) { text-align:left; }
+.lb tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+.lb tbody tr:hover { background:var(--surface2); }
+.lb tbody td { padding:8px 10px; text-align:right; font-size:13px; }
+.lb tbody td:nth-child(1) { text-align:left; font-family:var(--fd); font-size:14px; font-weight:700; color:var(--muted); width:24px; }
+.lb tbody td:nth-child(2) { text-align:left; }
+.r1 td:nth-child(1){color:var(--accent)!important}
+.r2 td:nth-child(1){color:#c8c8c8!important}
+.r3 td:nth-child(1){color:#c08040!important}
+.pn { font-size:14px; font-weight:500; color:var(--text); }
+.ps { font-size:11px; color:var(--muted); }
+.hv { font-family:var(--fd); font-size:16px; font-weight:700; color:var(--accent); }
+.vg { color:#4cde80; } .vb { color:var(--accent3); }
 
-  /* LEADERBOARD TABLE */
-  .lb-table { width: 100%; border-collapse: collapse; }
-  .lb-table thead th { font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border2); }
-  .lb-table thead th:first-child, .lb-table thead th:nth-child(2) { text-align: left; }
-  .lb-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-  .lb-table tbody tr:hover { background: var(--surface2); }
-  .lb-table tbody td { padding: 9px 10px; text-align: right; font-size: 13px; }
-  .lb-table tbody td:first-child { text-align: left; font-family: var(--font-d); font-size: 15px; font-weight: 700; color: var(--muted); width: 28px; }
-  .lb-table tbody td:nth-child(2) { text-align: left; }
-  .rank-1 td:first-child { color: var(--accent) !important; }
-  .rank-2 td:first-child { color: #c8c8c8 !important; }
-  .rank-3 td:first-child { color: #c08040 !important; }
+/* ── MATCH CARD (compact) ── */
+.match-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+.mc2 { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.mc2.featured { border-color:var(--accent); }
 
-  .player-name { font-size: 14px; font-weight: 500; color: var(--text); }
-  .player-sub { font-size: 11px; color: var(--muted); }
-  .hv { font-family: var(--font-d); font-size: 16px; font-weight: 700; color: var(--accent); }
-  .vg { color: #4cde80; } .vb { color: var(--accent3); } .vw { color: var(--accent); }
+.mh { display:flex; align-items:center; justify-content:space-between; padding:9px 14px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02); }
+.mh-venue { font-size:10px; color:var(--muted); letter-spacing:0.05em; }
+.mh-badge { font-family:var(--fd); font-size:11px; font-weight:700; padding:2px 8px; border-radius:3px; background:rgba(61,156,240,0.15); color:var(--accent2); }
+.mh-badge.featured { background:rgba(232,200,64,0.18); color:var(--accent); }
 
-  /* STANDINGS */
-  .standings-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
-  .league-label { font-family: var(--font-d); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; margin-bottom: 10px; display: inline-block; }
-  .lc { background: rgba(126,200,126,0.15); color: var(--cl); }
-  .lp { background: rgba(111,174,232,0.15); color: var(--pl); }
-  .standings-table { width: 100%; border-collapse: collapse; }
-  .standings-table thead th { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border2); text-align: right; }
-  .standings-table thead th:first-child { text-align: left; }
-  .standings-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-  .standings-table tbody tr:hover { background: var(--surface2); }
-  .standings-table tbody td { padding: 7px 8px; font-size: 13px; text-align: right; }
-  .standings-table tbody td:first-child { text-align: left; }
-  .rk { display:inline-block; width:18px; height:18px; border-radius:3px; font-family:var(--font-d); font-size:11px; font-weight:700; text-align:center; line-height:18px; margin-right:4px; }
-  .rk1 { background:var(--accent); color:#000; }
-  .rk2 { background:rgba(255,255,255,0.12); color:var(--text); }
-  .rk3 { background:rgba(255,255,255,0.08); color:var(--muted); }
-  .rk4 { background:rgba(255,255,255,0.05); color:var(--muted); }
-  .rk5 { background:rgba(255,80,60,0.12); color:#e06060; }
-  .rk6 { background:rgba(255,80,60,0.18); color:#e06060; }
-  .rdp { color:#4cde80; } .rdn { color:var(--accent3); }
-  .wpct { font-family:var(--font-d); font-size:14px; font-weight:600; }
+/* team row */
+.teams-row { display:flex; align-items:center; padding:12px 14px 8px; gap:0; }
+.team-side { display:flex; align-items:center; gap:10px; flex:1; }
+.team-side.away { flex-direction:row-reverse; }
+.team-logo-lg { width:40px; height:40px; border-radius:50%; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--fd); font-size:13px; font-weight:800; background:var(--surface2); }
+.team-logo-lg img { width:100%; height:100%; object-fit:contain; }
+.team-info { line-height:1.3; }
+.team-info.right { text-align:right; }
+.team-fullname { font-size:13px; font-weight:500; }
+.team-rec { font-size:10px; color:var(--muted); }
+.vs-badge { font-family:var(--fd); font-size:14px; font-weight:800; color:rgba(255,255,255,0.2); flex-shrink:0; padding:0 10px; }
 
-  /* MATCH PREVIEW */
-  .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 28px; }
-  .match-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .match-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 10px; border-bottom: 1px solid var(--border); }
-  .match-venue { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
-  .match-time { font-family: var(--font-d); font-size: 12px; font-weight: 700; color: var(--accent2); }
-  .match-teams { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; gap: 12px; }
-  .match-team { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
-  .match-team-logo { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-d); font-size: 14px; font-weight: 800; }
-  .match-team-name { font-size: 13px; font-weight: 500; text-align: center; }
-  .match-team-rec { font-size: 11px; color: var(--muted); }
-  .match-vs { font-family: var(--font-d); font-size: 18px; font-weight: 800; color: var(--muted); flex-shrink: 0; }
-  .match-prob { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin: 0 16px 6px; }
-  .prob-home { background: var(--accent2); border-radius: 3px 0 0 3px; }
-  .prob-away { background: var(--accent3); border-radius: 0 3px 3px 0; }
-  .prob-labels { display: flex; justify-content: space-between; padding: 0 16px; margin-bottom: 12px; }
-  .prob-label { font-family: var(--font-d); font-size: 13px; font-weight: 700; }
-  .match-body { padding: 12px 16px; }
-  .match-issues { margin-bottom: 10px; }
-  .issue-tag { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 3px; margin-right: 5px; margin-bottom: 4px; }
-  .tag-injury { background: rgba(232,92,64,0.2); color: #f07050; }
-  .tag-form { background: rgba(77,222,128,0.2); color: #4cde80; }
-  .tag-bad { background: rgba(232,200,64,0.2); color: #e8c840; }
-  .tag-transfer { background: rgba(61,156,240,0.2); color: var(--accent2); }
-  .match-key { font-size: 12px; color: var(--muted); line-height: 1.7; margin-bottom: 10px; }
-  .match-verdict { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface2); border-radius: 6px; }
-  .verdict-icon { font-size: 18px; }
-  .verdict-text { font-size: 12px; font-weight: 500; line-height: 1.5; }
-  .verdict-fav { font-family: var(--font-d); font-size: 14px; font-weight: 700; color: var(--accent); }
+/* prob bar */
+.prob-wrap { padding:0 14px 4px; }
+.prob-bar { display:flex; height:5px; border-radius:3px; overflow:hidden; margin-bottom:4px; }
+.pb-home { background:var(--accent2); }
+.pb-away { background:var(--accent3); }
+.prob-labels { display:flex; justify-content:space-between; }
+.prob-pct { font-family:var(--fd); font-size:12px; font-weight:700; }
+.ph { color:var(--accent2); } .pa { color:var(--accent3); }
 
-  /* BAR CHART */
-  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .bar-label { width: 110px; font-size: 12px; text-align: right; flex-shrink: 0; color: var(--text); }
-  .bar-track { flex: 1; height: 20px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px; }
-  .bar-val { font-family: var(--font-d); font-size: 11px; font-weight: 700; color: rgba(0,0,0,0.75); }
-  .bar-val-out { font-family: var(--font-d); font-size: 12px; font-weight: 600; color: var(--text); width: 36px; flex-shrink: 0; }
+/* analysis body */
+.mbody { padding:10px 14px 14px; }
+.issue-row { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+.itag { font-size:10px; font-weight:500; padding:2px 7px; border-radius:3px; }
+.ti { background:rgba(232,92,64,0.18); color:#f07050; }
+.tf { background:rgba(77,222,128,0.18); color:#4cde80; }
+.tb { background:rgba(232,200,64,0.18); color:#e8c840; }
+.tt { background:rgba(61,156,240,0.18); color:var(--accent2); }
 
-  /* GLOSSARY */
-  .glossary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
-  .glossary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
-  .glossary-term { font-family: var(--font-d); font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 2px; }
-  .glossary-full { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
-  .glossary-desc { font-size: 12px; line-height: 1.7; }
+/* analysis sections */
+.analysis-block { margin-bottom:8px; }
+.analysis-label { font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+.analysis-text { font-size:12px; color:rgba(240,242,247,0.85); line-height:1.7; }
 
-  /* RESPONSIVE */
-  @media (max-width: 960px) {
-    header { padding: 0 20px; } main { padding: 20px; } .nav-tabs { padding: 16px 20px 0; }
-    .grid-2, .grid-3, .grid-4, .metric-grid, .standings-wrap, .match-grid { grid-template-columns: 1fr; }
-    .glossary-grid { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 580px) { .glossary-grid { grid-template-columns: 1fr; } .logo-sub { display:none; } }
+.verdict-box { display:flex; align-items:flex-start; gap:8px; padding:9px 11px; background:var(--surface2); border-radius:6px; margin-top:8px; }
+.verdict-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+.verdict-fav { font-family:var(--fd); font-size:14px; font-weight:700; color:var(--accent); }
+.verdict-txt { font-size:11px; color:var(--muted); line-height:1.6; margin-top:1px; }
+
+/* STANDINGS */
+.std-wrap { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:20px; }
+.ll { font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:3px 10px; border-radius:4px; margin-bottom:10px; display:inline-block; }
+.lc { background:rgba(126,200,126,0.15); color:var(--cl); }
+.lp { background:rgba(111,174,232,0.15); color:var(--pl); }
+.std { width:100%; border-collapse:collapse; }
+.std thead th { font-size:10px; letter-spacing:0.07em; text-transform:uppercase; color:var(--muted); padding:5px 7px; border-bottom:1px solid var(--border2); text-align:right; }
+.std thead th:first-child { text-align:left; }
+.std tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+.std tbody tr:hover { background:var(--surface2); }
+.std tbody td { padding:7px 7px; font-size:12px; text-align:right; }
+.std tbody td:first-child { text-align:left; }
+.rk { display:inline-block; width:18px; height:18px; border-radius:3px; font-family:var(--fd); font-size:11px; font-weight:700; text-align:center; line-height:18px; margin-right:4px; }
+.rk1{background:var(--accent);color:#000} .rk2{background:rgba(255,255,255,0.12);color:var(--text)}
+.rk3{background:rgba(255,255,255,0.08);color:var(--muted)} .rk4{background:rgba(255,255,255,0.05);color:var(--muted)}
+.rk5{background:rgba(255,80,60,0.12);color:#e06060} .rk6{background:rgba(255,80,60,0.18);color:#e06060}
+.rdp{color:#4cde80} .rdn{color:var(--accent3)}
+.wpct{font-family:var(--fd);font-size:13px;font-weight:600}
+
+/* BAR */
+.bar-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+.bar-lbl { width:130px; font-size:11px; text-align:right; flex-shrink:0; }
+.bar-track { flex:1; height:18px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:3px; display:flex; align-items:center; padding-left:6px; }
+.bar-v { font-family:var(--fd); font-size:11px; font-weight:700; color:rgba(0,0,0,0.75); }
+.bar-out { font-family:var(--fd); font-size:11px; font-weight:600; color:var(--text); width:32px; flex-shrink:0; }
+
+/* GLOSSARY */
+.gls-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.gc { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+.gt { font-family:var(--fd); font-size:20px; font-weight:800; color:var(--accent); margin-bottom:2px; }
+.gf { font-size:11px; color:var(--muted); margin-bottom:6px; }
+.gd { font-size:12px; line-height:1.7; }
+
+@media(max-width:960px){
+  header{padding:0 16px} main{padding:16px} .nav-tabs{padding:12px 16px 0}
+  .grid2,.grid3,.grid4,.metric-grid,.std-wrap,.match-grid{grid-template-columns:1fr}
+  .gls-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:580px){ .gls-grid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -182,9 +175,9 @@
 <header>
   <div>
     <span class="logo-main">NPB Sabermetrics</span>
-    <span class="logo-sub">1.02 / Deltagraphs 데이터</span>
+    <span class="logo-sub">1.02 · Deltagraphs</span>
   </div>
-  <div class="header-meta">
+  <div style="display:flex;align-items:center;gap:16px">
     <span style="font-size:11px;color:var(--muted)"><span class="live-dot"></span>2026.06.11 기준</span>
     <span class="season-badge">2026 시즌</span>
   </div>
@@ -201,694 +194,552 @@
 
 <main>
 
-<!-- ══════════════════════════════════════
-     OVERVIEW
-══════════════════════════════════════ -->
+<!-- ── 팀 로고 헬퍼 (Yahoo 스포츠나비 공식 이미지) ── -->
+<script>
+const TEAMS = {
+  G:  { name:'요미우리',  id:1,   color:'#F5A623' },
+  Sw: { name:'야쿠르트', id:2,   color:'#009A44' },
+  DB: { name:'DeNA',     id:3,   color:'#009BDF' },
+  D:  { name:'주니치',   id:4,   color:'#0059A3' },
+  T:  { name:'한신',     id:5,   color:'#FFCC00' },
+  C:  { name:'히로시마', id:6,   color:'#E60012' },
+  L:  { name:'세이부',   id:7,   color:'#003087' },
+  F:  { name:'닛폰햄',  id:8,   color:'#00843D' },
+  M:  { name:'롯데',     id:9,   color:'#000000' },
+  Bs: { name:'오릭스',   id:11,  color:'#0033A0' },
+  H:  { name:'소뱅',     id:12,  color:'#F37021' },
+  E:  { name:'라쿠텐',   id:376, color:'#860026' },
+};
+
+function tlogo(key, size=32) {
+  const t = TEAMS[key];
+  if (!t) return '';
+  const sz = size;
+  const img = `https://npb.jp/bis/teams/img_l/${key.toLowerCase()}.png`;
+  // Yahoo Sportsnavi CDN pattern
+  const yahoo = `https://s.yimg.jp/images/sports/teams/baseball/npb/${t.id}.png`;
+  return `<div class="tlogo" style="width:${sz}px;height:${sz}px;background:${t.color}20">
+    <img src="${yahoo}" alt="${t.name}" onerror="this.style.display='none';this.parentNode.innerHTML='<span style=\'font-size:${Math.round(sz*0.35)}px;font-weight:800;font-family:Barlow Condensed,sans-serif;color:${t.color}\'>${key}</span>'">
+  </div>`;
+}
+function tcell(key, extra='') {
+  const t = TEAMS[key];
+  return `<div class="tcell">${tlogo(key)}${t ? `<span class="tname">${t.name}${extra}</span>` : ''}</div>`;
+}
+function tlogoLg(key) {
+  const t = TEAMS[key];
+  if (!t) return '';
+  const yahoo = `https://s.yimg.jp/images/sports/teams/baseball/npb/${t.id}.png`;
+  return `<div class="team-logo-lg" style="background:${t.color}20">
+    <img src="${yahoo}" alt="${t.name}" onerror="this.style.display='none';this.parentNode.innerHTML='<span style=\'font-size:13px;font-weight:800;font-family:Barlow Condensed,sans-serif;color:${t.color}\'>${key}</span>'">
+  </div>`;
+}
+</script>
+
+<!-- ════════════════════ OVERVIEW ════════════════════ -->
 <section id="overview" class="section active">
-  <div class="section-header">
-    <h2 class="section-title">2026 시즌 현황</h2>
-    <span class="section-desc">2026.06.10 종료 기준</span>
-    <span class="data-source">출처: <a href="https://1point02.jp" target="_blank">1point02.jp</a></span>
+  <div class="sec-hdr">
+    <h2 class="sec-title">2026 시즌 현황</h2>
+    <span class="sec-desc">2026.06.10 종료 기준</span>
+    <span class="src">출처: <a href="https://1point02.jp" target="_blank">1point02.jp</a></span>
   </div>
 
   <div class="metric-grid">
-    <div class="metric-card">
-      <div class="metric-label">야수 WAR 1위</div>
-      <div class="metric-value">4.2</div>
-      <div class="metric-sub">佐藤 輝明 — 한신</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-label">투수 WAR 1위</div>
-      <div class="metric-value">2.1</div>
-      <div class="metric-sub">髙橋 遥人 — 한신</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-label">PL 선두 (세이부)</div>
-      <div class="metric-value">.627</div>
-      <div class="metric-sub">37승 22패 2무</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-label">CL 선두 (요미우리)</div>
-      <div class="metric-value">.569</div>
-      <div class="metric-sub">33승 25패 2무</div>
-    </div>
+    <div class="mc"><div class="mc-label">야수 WAR 1위</div><div class="mc-val">4.2</div><div class="mc-sub">佐藤 輝明 — 한신</div></div>
+    <div class="mc"><div class="mc-label">투수 WAR 1위</div><div class="mc-val">2.1</div><div class="mc-sub">髙橋 遥人 — 한신</div></div>
+    <div class="mc"><div class="mc-label">PL 선두</div><div class="mc-val">.627</div><div class="mc-sub">세이부 37승 22패</div></div>
+    <div class="mc"><div class="mc-label">CL 선두</div><div class="mc-val">.569</div><div class="mc-sub">요미우리 33승 25패</div></div>
   </div>
 
-  <div class="grid-2" style="margin-bottom:20px">
+  <div class="grid2 mgb">
     <div class="card">
-      <div class="card-title">WAR 랭킹 — 야수 (2026 시즌)</div>
-      <table class="lb-table">
+      <div class="card-t">WAR 랭킹 — 야수</div>
+      <table class="lb">
         <thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>WPA</th></tr></thead>
-        <tbody>
-          <tr class="rank-1"><td>1</td><td><div class="player-name">佐藤 輝明</div><div class="player-sub">사토 테루아키 · 3B</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td class="hv">4.2</td><td>2.26</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">近藤 健介</div><div class="player-sub">콘도 켄스케 · OF</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-H">H</div><span class="team-name-short">소뱅</span></div></td><td class="hv">3.0</td><td>2.39</td></tr>
-          <tr class="rank-3"><td>3</td><td><div class="player-name">栗原 陵矢</div><div class="player-sub">쿠리하라 료야 · OF</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-H">H</div><span class="team-name-short">소뱅</span></div></td><td class="hv">2.6</td><td>1.96</td></tr>
-          <tr><td>4</td><td><div class="player-name">森下 翔太</div><div class="player-sub">모리시타 쇼타 · OF</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td class="hv">2.4</td><td>—</td></tr>
-          <tr><td>5</td><td><div class="player-name">大城 卓三</div><div class="player-sub">오시로 타쿠조 · C</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-G">G</div><span class="team-name-short">요미우리</span></div></td><td class="hv">2.2</td><td>—</td></tr>
-        </tbody>
+        <tbody id="war-bat-table"></tbody>
       </table>
     </div>
     <div class="card">
-      <div class="card-title">WAR 랭킹 — 투수 (2026 시즌)</div>
-      <table class="lb-table">
+      <div class="card-t">WAR 랭킹 — 투수</div>
+      <table class="lb">
         <thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>WPA</th></tr></thead>
-        <tbody>
-          <tr class="rank-1"><td>1</td><td><div class="player-name">髙橋 遥人</div><div class="player-sub">타카하시 하루토 · SP</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td class="hv">2.1</td><td>3.68</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">平良 海馬</div><div class="player-sub">타이라 카이마 · SP</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-L">L</div><span class="team-name-short">세이부</span></div></td><td class="hv">1.7</td><td>—</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">石田 裕太郎</div><div class="player-sub">이시다 유타로 · SP</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-DB">DB</div><span class="team-name-short">DeNA</span></div></td><td class="hv">1.7</td><td>—</td></tr>
-          <tr><td>4</td><td><div class="player-name">北山 亘基</div><div class="player-sub">키타야마 코키 · SP</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-F">F</div><span class="team-name-short">닛폰햄</span></div></td><td class="hv">1.6</td><td>—</td></tr>
-          <tr><td>5</td><td><div class="player-name">九里 亜蓮</div><div class="player-sub">쿠리 아렌 · SP</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-B">B</div><span class="team-name-short">히로시마</span></div></td><td class="hv">1.5</td><td>—</td></tr>
-        </tbody>
+        <tbody id="war-pit-table"></tbody>
       </table>
     </div>
   </div>
 
-  <div class="grid-2">
+  <div class="grid2">
     <div class="card">
-      <div class="card-title">WPA 랭킹 — 야수</div>
-      <table class="lb-table">
+      <div class="card-t">WPA 랭킹 — 야수</div>
+      <table class="lb">
         <thead><tr><th>#</th><th>선수</th><th>팀</th><th>WPA</th></tr></thead>
-        <tbody>
-          <tr class="rank-1"><td>1</td><td><div class="player-name">近藤 健介</div></td><td><div class="team-cell"><div class="team-logo tl-H">H</div><span class="team-name-short">소뱅</span></div></td><td class="hv">2.39</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">佐藤 輝明</div></td><td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td class="hv">2.26</td></tr>
-          <tr class="rank-3"><td>3</td><td><div class="player-name">栗原 陵矢</div></td><td><div class="team-cell"><div class="team-logo tl-H">H</div><span class="team-name-short">소뱅</span></div></td><td class="hv">1.96</td></tr>
-          <tr><td>4</td><td><div class="player-name">D. 산타나</div></td><td><div class="team-cell"><div class="team-logo tl-Sw">Sw</div><span class="team-name-short">야쿠르트</span></div></td><td class="hv">1.49</td></tr>
-          <tr><td>5</td><td><div class="player-name">坂倉 将吾</div></td><td><div class="team-cell"><div class="team-logo tl-B">B</div><span class="team-name-short">히로시마</span></div></td><td class="hv">1.36</td></tr>
-        </tbody>
+        <tbody id="wpa-bat-table"></tbody>
       </table>
     </div>
     <div class="card">
-      <div class="card-title">WPA 랭킹 — 투수</div>
-      <table class="lb-table">
+      <div class="card-t">WPA 랭킹 — 투수</div>
+      <table class="lb">
         <thead><tr><th>#</th><th>선수</th><th>팀</th><th>WPA</th></tr></thead>
-        <tbody>
-          <tr class="rank-1"><td>1</td><td><div class="player-name">髙橋 遥人</div></td><td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td class="hv">3.68</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">柳 裕也</div></td><td><div class="team-cell"><div class="team-logo tl-F" style="background:#00843d">D</div><span class="team-name-short">주니치</span></div></td><td class="hv">2.25</td></tr>
-          <tr class="rank-3"><td>3</td><td><div class="player-name">髙橋 光成</div></td><td><div class="team-cell"><div class="team-logo tl-L">L</div><span class="team-name-short">세이부</span></div></td><td class="hv">2.18</td></tr>
-          <tr><td>4</td><td><div class="player-name">山野 太一</div></td><td><div class="team-cell"><div class="team-logo tl-Sw">Sw</div><span class="team-name-short">야쿠르트</span></div></td><td class="hv">2.04</td></tr>
-          <tr><td>5</td><td><div class="player-name">大津 亮介</div></td><td><div class="team-cell"><div class="team-logo tl-H">H</div><span class="team-name-short">소뱅</span></div></td><td class="hv">1.78</td></tr>
-        </tbody>
+        <tbody id="wpa-pit-table"></tbody>
       </table>
     </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════
-     TODAY'S GAMES
-══════════════════════════════════════ -->
+<!-- ════════════════════ TODAY ════════════════════ -->
 <section id="today" class="section">
-  <div class="section-header">
-    <h2 class="section-title">오늘 경기 분석</h2>
-    <span class="section-desc">2026년 6월 11일 (목) · 교류전</span>
-    <span class="data-source">출처: <a href="https://baseball.yahoo.co.jp/npb/schedule/" target="_blank">Yahoo! 스포츠나비</a> · <a href="https://1point02.jp" target="_blank">1.02</a></span>
+  <div class="sec-hdr">
+    <h2 class="sec-title">오늘 경기 분석</h2>
+    <span class="sec-desc">2026년 6월 11일(목) 교류전 6경기</span>
+    <span class="src">출처: <a href="https://baseball.yahoo.co.jp/npb/schedule/" target="_blank">Yahoo 스포츠나비</a> · <a href="https://1point02.jp" target="_blank">1.02</a></span>
   </div>
 
-  <div class="match-grid">
-
-    <!-- 경기 1: 닛폰햄 vs DeNA -->
-    <div class="match-card">
-      <div class="match-header">
-        <span class="match-venue">⚾ 에스콘 필드 홋카이도 · 18:00</span>
-        <span class="match-time">교류전</span>
-      </div>
-      <div class="match-teams">
-        <div class="match-team">
-          <div class="match-team-logo tl-F" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">F</div>
-          <div class="match-team-name">닛폰햄<br>파이터즈</div>
-          <div class="match-team-rec">33승 29패 · PL 4위</div>
-        </div>
-        <div class="match-vs">VS</div>
-        <div class="match-team">
-          <div class="match-team-logo tl-DB" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">DB</div>
-          <div class="match-team-name">요코하마<br>DeNA</div>
-          <div class="match-team-rec">25승 33패 · CL 4위</div>
-        </div>
-      </div>
-      <div class="match-prob">
-        <div class="prob-home" style="width:58%"></div>
-        <div class="prob-away" style="width:42%"></div>
-      </div>
-      <div class="prob-labels">
-        <span class="prob-label" style="color:var(--accent2)">닛폰햄 58%</span>
-        <span class="prob-label" style="color:var(--accent3)">DeNA 42%</span>
-      </div>
-      <div class="match-body">
-        <div class="match-issues">
-          <span class="issue-tag tag-form">닛폰햄 ↑ 홈 강세</span>
-          <span class="issue-tag tag-bad">DeNA 원정 부진</span>
-        </div>
-        <div class="match-key">
-          핵심 포인트: 닛폰햄은 에스콘 필드에서 홈 승률이 높고, 투수 北山 亘基(WAR 1.6)가 안정적인 로테이션을 유지 중. DeNA는 원정에서 득점력이 크게 떨어지며 시즌 중반 슬럼프 지속.
-        </div>
-        <div class="match-verdict">
-          <span class="verdict-icon">🏆</span>
-          <div>
-            <div class="verdict-fav">닛폰햄 우세</div>
-            <div class="verdict-text">홈 이점 + 선발진 안정성. 단, 에스콘 필드 특유의 타자 친화 환경으로 고득점 경기 가능성 있음.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 경기 2: 라쿠텐 vs 요미우리 -->
-    <div class="match-card">
-      <div class="match-header">
-        <span class="match-venue">⚾ 라쿠텐 모바일 파크 · 18:00</span>
-        <span class="match-time">교류전</span>
-      </div>
-      <div class="match-teams">
-        <div class="match-team">
-          <div class="match-team-logo tl-E" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">E</div>
-          <div class="match-team-name">도호쿠<br>라쿠텐</div>
-          <div class="match-team-rec">·· 5위권 · PL</div>
-        </div>
-        <div class="match-vs">VS</div>
-        <div class="match-team">
-          <div class="match-team-logo tl-G" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">G</div>
-          <div class="match-team-name">요미우리<br>자이언츠</div>
-          <div class="match-team-rec">33승 25패 · CL 1위</div>
-        </div>
-      </div>
-      <div class="match-prob">
-        <div class="prob-home" style="width:40%"></div>
-        <div class="prob-away" style="width:60%"></div>
-      </div>
-      <div class="prob-labels">
-        <span class="prob-label" style="color:var(--accent2)">라쿠텐 40%</span>
-        <span class="prob-label" style="color:var(--accent3)">요미우리 60%</span>
-      </div>
-      <div class="match-body">
-        <div class="match-issues">
-          <span class="issue-tag tag-form">요미우리 CL 1위</span>
-          <span class="issue-tag tag-bad">라쿠텐 득점력 저조</span>
-        </div>
-        <div class="match-key">
-          핵심 포인트: 요미우리가 CL 수위를 달리며 공수 균형 유지. 야수 大城 卓三(WAR 2.2)와 WPA 1위 近藤 등 상위권 선수들과의 교류전. 라쿠텐은 현재 득점 창출력이 리그 하위권.
-        </div>
-        <div class="match-verdict">
-          <span class="verdict-icon">🏆</span>
-          <div>
-            <div class="verdict-fav">요미우리 우세</div>
-            <div class="verdict-text">리그 선두 팀의 안정된 전력과 투수진. 라쿠텐 홈이지만 전력 차이가 뚜렷한 매치업.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 경기 3: 세이부 vs 히로시마 -->
-    <div class="match-card">
-      <div class="match-header">
-        <span class="match-venue">⚾ 벨루나 돔 · 18:00</span>
-        <span class="match-time">교류전</span>
-      </div>
-      <div class="match-teams">
-        <div class="match-team">
-          <div class="match-team-logo tl-L" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">L</div>
-          <div class="match-team-name">사이타마<br>세이부</div>
-          <div class="match-team-rec">37승 22패 · PL 1위</div>
-        </div>
-        <div class="match-vs">VS</div>
-        <div class="match-team">
-          <div class="match-team-logo tl-B" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">C</div>
-          <div class="match-team-name">히로시마<br>도요 카프</div>
-          <div class="match-team-rec">21승 33패 · CL 5위</div>
-        </div>
-      </div>
-      <div class="match-prob">
-        <div class="prob-home" style="width:68%"></div>
-        <div class="prob-away" style="width:32%"></div>
-      </div>
-      <div class="prob-labels">
-        <span class="prob-label" style="color:var(--accent2)">세이부 68%</span>
-        <span class="prob-label" style="color:var(--accent3)">히로시마 32%</span>
-      </div>
-      <div class="match-body">
-        <div class="match-issues">
-          <span class="issue-tag tag-form">세이부 PL 압도적 1위</span>
-          <span class="issue-tag tag-bad">히로시마 5연패 부진</span>
-          <span class="issue-tag tag-injury">히로시마 선발진 불안</span>
-        </div>
-        <div class="match-key">
-          핵심 포인트: 세이부는 평균 실점 2.98로 리그 최강 투수진. 平良 海馬(WAR 1.7)·髙橋 光成(WPA 2.18)의 원투펀치 보유. 히로시마는 현재 시즌 최악의 슬럼프이며 선발진 부상 이탈자 다수.
-        </div>
-        <div class="match-verdict">
-          <span class="verdict-icon">🏆</span>
-          <div>
-            <div class="verdict-fav">세이부 강력 우세</div>
-            <div class="verdict-text">득실차 +54 리그 최고, 홈 이점까지. 이 경기의 명확한 강자. 히로시마는 전력 재건 시간 필요.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 경기 4: 롯데 vs 주니치 -->
-    <div class="match-card">
-      <div class="match-header">
-        <span class="match-venue">⚾ ZOZO 마린 스타디움 · 18:00</span>
-        <span class="match-time">교류전</span>
-      </div>
-      <div class="match-teams">
-        <div class="match-team">
-          <div class="match-team-logo tl-M" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">M</div>
-          <div class="match-team-name">치바<br>롯데</div>
-          <div class="match-team-rec">PL 5~6위권</div>
-        </div>
-        <div class="match-vs">VS</div>
-        <div class="match-team">
-          <div class="match-team-logo" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;background:#0059a3;color:#fff;">D</div>
-          <div class="match-team-name">주니치<br>드래곤즈</div>
-          <div class="match-team-rec">21승 38패 · CL 꼴찌</div>
-        </div>
-      </div>
-      <div class="match-prob">
-        <div class="prob-home" style="width:55%"></div>
-        <div class="prob-away" style="width:45%"></div>
-      </div>
-      <div class="prob-labels">
-        <span class="prob-label" style="color:var(--accent2)">롯데 55%</span>
-        <span class="prob-label" style="color:var(--accent3)">주니치 45%</span>
-      </div>
-      <div class="match-body">
-        <div class="match-issues">
-          <span class="issue-tag tag-form">롯데 홈 강세</span>
-          <span class="issue-tag tag-bad">주니치 CL 최하위</span>
-        </div>
-        <div class="match-key">
-          핵심 포인트: 주니치는 시즌 내내 득점력 부족(평균 3.32득점, 실점 3.73)으로 고전 중. 그러나 불펜 WPA 1위 투수 柳 裕也(WPA 2.25)가 복귀 후 안정감. 롯데도 해안가 구장 이점.
-        </div>
-        <div class="match-verdict">
-          <span class="verdict-icon">⚔️</span>
-          <div>
-            <div class="verdict-fav">롯데 소폭 우세</div>
-            <div class="verdict-text">두 팀 모두 하위권이라 예측 어렵지만, 롯데 홈 이점이 결정적. 접전 예상.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 경기 5: 오릭스 vs 야쿠르트 -->
-    <div class="match-card">
-      <div class="match-header">
-        <span class="match-venue">⚾ 교세라 돔 오사카 · 18:00</span>
-        <span class="match-time">교류전</span>
-      </div>
-      <div class="match-teams">
-        <div class="match-team">
-          <div class="match-team-logo tl-Bs" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">Bs</div>
-          <div class="match-team-name">오릭스<br>버팔로즈</div>
-          <div class="match-team-rec">32승 27패 · PL 3위</div>
-        </div>
-        <div class="match-vs">VS</div>
-        <div class="match-team">
-          <div class="match-team-logo tl-Sw" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">Sw</div>
-          <div class="match-team-name">도쿄<br>야쿠르트</div>
-          <div class="match-team-rec">32승 27패 · CL 3위</div>
-        </div>
-      </div>
-      <div class="match-prob">
-        <div class="prob-home" style="width:52%"></div>
-        <div class="prob-away" style="width:48%"></div>
-      </div>
-      <div class="prob-labels">
-        <span class="prob-label" style="color:var(--accent2)">오릭스 52%</span>
-        <span class="prob-label" style="color:var(--accent3)">야쿠르트 48%</span>
-      </div>
-      <div class="match-body">
-        <div class="match-issues">
-          <span class="issue-tag tag-form">오릭스 홈 강세</span>
-          <span class="issue-tag tag-transfer">야쿠르트 D.산타나 WPA 4위</span>
-          <span class="issue-tag tag-bad">전날 야쿠르트 4-8 패</span>
-        </div>
-        <div class="match-key">
-          핵심 포인트: 승률이 거의 동일한 초접전 매치업. 전날(6/10) 오릭스가 야쿠르트를 8-4로 대파. 야쿠르트는 D.산타나(WPA 1.49)가 클러치 상황에서 강하지만, 오릭스의 교세라 돔 홈 이점이 크다. H2H 역사상 오릭스가 근소 우위(40승 vs 36승).
-        </div>
-        <div class="match-verdict">
-          <span class="verdict-icon">⚔️</span>
-          <div>
-            <div class="verdict-fav">오릭스 근소 우세</div>
-            <div class="verdict-text">오늘의 최대 접전. 홈 이점 + 전날 모멘텀이 관건. 야쿠르트도 CL 3위 전력으로 충분히 역전 가능.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 경기 6: 소뱅 vs 한신 (빅 매치) -->
-    <div class="match-card" style="border-color: var(--accent)">
-      <div class="match-header" style="border-bottom-color: rgba(232,200,64,0.3)">
-        <span class="match-venue">⚾ 미즈호 페이페이 돔 · 18:00</span>
-        <span class="match-time" style="background:rgba(232,200,64,0.15);color:var(--accent);padding:2px 8px;border-radius:4px">⭐ 빅 매치</span>
-      </div>
-      <div class="match-teams">
-        <div class="match-team">
-          <div class="match-team-logo tl-H" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">H</div>
-          <div class="match-team-name">후쿠오카<br>소프트뱅크</div>
-          <div class="match-team-rec">35승 24패 · PL 2위</div>
-        </div>
-        <div class="match-vs" style="color:var(--accent)">VS</div>
-        <div class="match-team">
-          <div class="match-team-logo tl-T" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:14px;font-weight:800;">T</div>
-          <div class="match-team-name">한신<br>타이거즈</div>
-          <div class="match-team-rec">32승 25패 · CL 2위</div>
-        </div>
-      </div>
-      <div class="match-prob">
-        <div class="prob-home" style="width:60%"></div>
-        <div class="prob-away" style="width:40%"></div>
-      </div>
-      <div class="prob-labels">
-        <span class="prob-label" style="color:var(--accent2)">소뱅 60%</span>
-        <span class="prob-label" style="color:var(--accent3)">한신 40%</span>
-      </div>
-      <div class="match-body">
-        <div class="match-issues">
-          <span class="issue-tag tag-form">소뱅 평균 4.44득점 리그 최다</span>
-          <span class="issue-tag tag-bad">한신 전날 6-2 완패</span>
-          <span class="issue-tag tag-form">소뱅 近藤·栗原 WPA 1·3위</span>
-          <span class="issue-tag tag-form">한신 WAR 1·2위 보유</span>
-        </div>
-        <div class="match-key">
-          핵심 포인트: 양 팀 모두 리그 최상위권의 빅매치. 소뱅은 평균 득점 4.44로 12팀 중 최다이며 近藤 健介(WPA 2.39 1위)·栗原 陵矢(WPA 3위) 등 타선이 폭발적. 반면 한신은 WAR 1위 佐藤 輝明 + 투수 WAR 1위 髙橋 遥人을 보유한 최강 전력. 前날 소뱅이 6-2로 이겼으나 한신 투수 로테이션 변수.
-        </div>
-        <div class="match-verdict">
-          <span class="verdict-icon">🔥</span>
-          <div>
-            <div class="verdict-fav">소뱅 우세 — 그러나 최고의 접전 예상</div>
-            <div class="verdict-text">오늘의 최고 주목 경기. 소뱅 홈 + 타선 폭발력이 앞서지만, 한신 髙橋 遥人이 선발이라면 판이 뒤집힐 수 있다. 교류전 최고 빅매치.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
+  <div class="match-grid" id="match-container"></div>
 
   <div class="card">
-    <div class="card-title">6월 11일 경기 요약</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+    <div class="card-t">오늘의 요약</div>
+    <div class="grid3" style="padding-top:4px">
       <div style="background:var(--surface2);border-radius:6px;padding:14px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">오늘의 최강팀</div>
-        <div style="font-family:var(--font-d);font-size:18px;font-weight:800;color:#4cde80">세이부 라이온즈</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">PL 1위, 득실차 +54 · 히로시마 상대 68% 우세</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 최강팀</div>
+        <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:#4cde80">세이부 라이온즈</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">PL 1위, 득실차 +54 · 히로시마 상대 68% 우세</div>
       </div>
       <div style="background:var(--surface2);border-radius:6px;padding:14px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">오늘의 빅매치</div>
-        <div style="font-family:var(--font-d);font-size:18px;font-weight:800;color:var(--accent)">소뱅 vs 한신</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">WAR·WPA 최상위 선수 총출동 · 교류전 하이라이트</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 빅매치 ⭐</div>
+        <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:var(--accent)">소뱅 vs 한신</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">WAR·WPA 최상위 선수 총출동 · 교류전 하이라이트</div>
       </div>
       <div style="background:var(--surface2);border-radius:6px;padding:14px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">오늘의 접전 예상</div>
-        <div style="font-family:var(--font-d);font-size:18px;font-weight:800;color:var(--accent2)">오릭스 vs 야쿠르트</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">동률 승률 52:48 초박빙 · 전날 결과 모멘텀 변수</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 최대 접전</div>
+        <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:var(--accent2)">오릭스 vs 야쿠르트</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">동률 승률 52:48 박빙 · 전날 오릭스 8-4 승 모멘텀</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════
-     BATTING
-══════════════════════════════════════ -->
+<!-- ════════════════════ BATTING ════════════════════ -->
 <section id="batting" class="section">
-  <div class="section-header">
-    <h2 class="section-title">타자 세이버매트릭스</h2>
-    <span class="section-desc">2025시즌 최종 · 2026 진행 중</span>
-    <span class="data-source">출처: <a href="https://japanball.com" target="_blank">JapanBall</a> · <a href="https://www.yakyucosmo.com" target="_blank">Yakyu Cosmo</a></span>
+  <div class="sec-hdr">
+    <h2 class="sec-title">타자 세이버매트릭스</h2>
+    <span class="sec-desc">2025시즌 최종</span>
+    <span class="src">출처: <a href="https://www.yakyucosmo.com" target="_blank">Yakyu Cosmo</a></span>
   </div>
-
-  <div class="card" style="margin-bottom:20px">
-    <div class="card-title">2026 야수 WAR 바 차트 (1.02 기준)</div>
-    <div id="war-chart" style="padding:8px 0"></div>
+  <div class="card mgb">
+    <div class="card-t">2026 야수 WAR 바 차트</div>
+    <div id="war-chart" style="padding:6px 0"></div>
   </div>
-
-  <div class="grid-2" style="margin-bottom:20px">
+  <div class="grid2 mgb">
     <div class="card">
-      <div class="card-title">OPS+ 리더보드 (2025 최종)</div>
-      <table class="lb-table">
+      <div class="card-t">OPS+ 리더보드 (2025)</div>
+      <table class="lb">
         <thead><tr><th>#</th><th>선수</th><th>팀</th><th>OPS+</th><th>HR</th></tr></thead>
-        <tbody>
-          <tr class="rank-1"><td>1</td><td><div class="player-name">佐藤 輝明</div><div class="player-sub">사토 테루아키 · 3B</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td class="hv">186</td><td>40</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">森下 翔太</div><div class="player-sub">모리시타 쇼타 · OF</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td class="hv">153</td><td>—</td></tr>
-          <tr class="rank-3"><td>3</td><td><div class="player-name">Tyler Nevin</div><div class="player-sub">라일러 네빈 · 1B</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-L">L</div><span class="team-name-short">세이부</span></div></td><td class="hv">142</td><td>21</td></tr>
-          <tr><td>4</td><td><div class="player-name">中野 拓夢</div><div class="player-sub">나카노 타쿠무 · 2B</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td>109</td><td>—</td></tr>
-          <tr><td>5</td><td><div class="player-name">泉口 友汰</div><div class="player-sub">이즈구치 유타 · SS</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-G">G</div><span class="team-name-short">요미우리</span></div></td><td>—</td><td>.301</td></tr>
-        </tbody>
+        <tbody id="ops-table"></tbody>
       </table>
     </div>
     <div class="card">
-      <div class="card-title">주요 타자 종합 지표 (2025)</div>
-      <table class="lb-table">
+      <div class="card-t">종합 지표 (2025)</div>
+      <table class="lb">
         <thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>OBP</th></tr></thead>
-        <tbody>
-          <tr class="rank-1"><td>1</td><td><div class="player-name">柳町 達</div><div class="player-sub">야나기마치 타츠루 · OF</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-H">H</div><span class="team-name-short">소뱅</span></div></td><td>—</td><td class="vg">.384</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">近本 光司</div><div class="player-sub">치카모토 코지 · CF</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td>5.8</td><td>—</td></tr>
-          <tr class="rank-3"><td>3</td><td><div class="player-name">泉口 友汰</div><div class="player-sub">이즈구치 유타 · SS</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-G">G</div><span class="team-name-short">요미우리</span></div></td><td class="vg">6.0+</td><td>—</td></tr>
-          <tr><td>4</td><td><div class="player-name">坂本 誠志郎</div><div class="player-sub">사카모토 세이시로 · C</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td>—</td><td>.357</td></tr>
-          <tr><td>5</td><td><div class="player-name">森下 翔太</div><div class="player-sub">모리시타 쇼타 · OF</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td>6.1</td><td>—</td></tr>
-        </tbody>
+        <tbody id="bat-misc-table"></tbody>
       </table>
     </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════
-     PITCHING
-══════════════════════════════════════ -->
+<!-- ════════════════════ PITCHING ════════════════════ -->
 <section id="pitching" class="section">
-  <div class="section-header">
-    <h2 class="section-title">투수 세이버매트릭스</h2>
-    <span class="section-desc">2025시즌 최종</span>
-    <span class="data-source">출처: <a href="https://www.yakyucosmo.com/pitching-stats/2025-npb/" target="_blank">Yakyu Cosmo</a></span>
+  <div class="sec-hdr">
+    <h2 class="sec-title">투수 세이버매트릭스</h2>
+    <span class="sec-desc">2025시즌 최종</span>
+    <span class="src">출처: <a href="https://www.yakyucosmo.com/pitching-stats/2025-npb/" target="_blank">Yakyu Cosmo</a></span>
   </div>
-
-  <div class="card" style="margin-bottom:20px">
-    <div class="card-title">2026 투수 WAR 바 차트 (1.02 기준)</div>
-    <div id="pitcher-war-chart" style="padding:8px 0"></div>
+  <div class="card mgb">
+    <div class="card-t">2026 투수 WAR 바 차트</div>
+    <div id="pitcher-war-chart" style="padding:6px 0"></div>
   </div>
-
-  <div class="grid-2" style="margin-bottom:20px">
+  <div class="grid2">
     <div class="card">
-      <div class="card-title">선발 투수 주요 지표 (2025)</div>
-      <table class="lb-table">
+      <div class="card-t">선발 투수 (2025)</div>
+      <table class="lb">
         <thead><tr><th>#</th><th>선수</th><th>팀</th><th>ERA</th><th>K%</th></tr></thead>
-        <tbody>
-          <tr class="rank-1"><td>1</td><td><div class="player-name">Liván Moinelo</div><div class="player-sub">리반 모이넬로 · PL MVP</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-H">H</div><span class="team-name-short">소뱅</span></div></td><td class="vg">1.46</td><td class="vg">27%</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">今井 達也</div><div class="player-sub">이마이 타츠야 · SP</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-L">L</div><span class="team-name-short">세이부</span></div></td><td class="vg">1.92</td><td class="vg">28%</td></tr>
-          <tr class="rank-3"><td>3</td><td><div class="player-name">宮城 大弥</div><div class="player-sub">미야기 히로야 · FIP- 63</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-Bs">Bs</div><span class="team-name-short">오릭스</span></div></td><td>—</td><td>—</td></tr>
-          <tr><td>4</td><td><div class="player-name">村上 頌樹</div><div class="player-sub">무라카미 쇼키 · WHIP 0.89</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-T">T</div><span class="team-name-short">한신</span></div></td><td>—</td><td>—</td></tr>
-          <tr><td>5</td><td><div class="player-name">伊藤 大海</div><div class="player-sub">이토 히로미 · 사와무라상</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-F">F</div><span class="team-name-short">닛폰햄</span></div></td><td>—</td><td>—</td></tr>
-        </tbody>
+        <tbody id="sp-table"></tbody>
       </table>
     </div>
     <div class="card">
-      <div class="card-title">불펜 투수 주요 지표 (2025)</div>
-      <table class="lb-table">
+      <div class="card-t">불펜 투수 (2025)</div>
+      <table class="lb">
         <thead><tr><th>#</th><th>선수</th><th>팀</th><th>SV</th><th>K%</th></tr></thead>
-        <tbody>
-          <tr class="rank-1"><td>1</td><td><div class="player-name">松山 晋也</div><div class="player-sub">마츠야마 신야 · RP</div></td>
-            <td><div class="team-cell"><div class="team-logo" style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:11px;font-weight:800;background:#0059a3;color:#fff;">D</div><span class="team-name-short">주니치</span></div></td><td>46</td><td class="vg">35%</td></tr>
-          <tr class="rank-2"><td>2</td><td><div class="player-name">Raidel Martinez</div><div class="player-sub">WHIP 0.76</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-G">G</div><span class="team-name-short">요미우리</span></div></td><td>—</td><td>—</td></tr>
-          <tr class="rank-3"><td>3</td><td><div class="player-name">杉山 一樹</div><div class="player-sub">스기야마 카즈키 · RP</div></td>
-            <td><div class="team-cell"><div class="team-logo tl-H">H</div><span class="team-name-short">소뱅</span></div></td><td>31</td><td class="vg">32%</td></tr>
-        </tbody>
+        <tbody id="rp-table"></tbody>
       </table>
     </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════
-     STANDINGS
-══════════════════════════════════════ -->
+<!-- ════════════════════ STANDINGS ════════════════════ -->
 <section id="standings" class="section">
-  <div class="section-header">
-    <h2 class="section-title">리그 순위표</h2>
-    <span class="section-desc">2026.06.10 기준 (1군)</span>
-    <span class="data-source">출처: <a href="https://1point02.jp/op/gnav/standings/standing.aspx?cp=101" target="_blank">1point02.jp</a></span>
+  <div class="sec-hdr">
+    <h2 class="sec-title">리그 순위표</h2>
+    <span class="sec-desc">2026.06.10 기준</span>
+    <span class="src">출처: <a href="https://1point02.jp/op/gnav/standings/standing.aspx?cp=101" target="_blank">1point02.jp</a></span>
   </div>
-
-  <div class="standings-wrap">
+  <div class="std-wrap">
     <div class="card">
-      <div><span class="league-label lc">セ · Central League</span></div>
-      <table class="standings-table">
-        <thead><tr><th>구단</th><th>G</th><th>W</th><th>L</th><th>승률</th><th>득실</th><th>R/G</th><th>RA/G</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="rk rk1">1</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-G" style="width:22px;height:22px;font-size:10px">G</div><span style="margin-left:5px">요미우리</span></div></td>
-            <td>60</td><td>33</td><td>25</td><td><span class="wpct vg">.569</span></td><td class="rdp">+6</td><td>3.30</td><td>3.20</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk2">2</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-T" style="width:22px;height:22px;font-size:10px">T</div><span style="margin-left:5px">한신</span></div></td>
-            <td>58</td><td>32</td><td>25</td><td><span class="wpct">.561</span></td><td class="rdp">+22</td><td>3.78</td><td>3.40</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk3">3</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-Sw" style="width:22px;height:22px;font-size:10px">Sw</div><span style="margin-left:5px">야쿠르트</span></div></td>
-            <td>60</td><td>32</td><td>27</td><td><span class="wpct">.542</span></td><td class="rdn">−11</td><td>3.25</td><td>3.43</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk4">4</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-DB" style="width:22px;height:22px;font-size:10px">DB</div><span style="margin-left:5px">DeNA</span></div></td>
-            <td>60</td><td>25</td><td>33</td><td><span class="wpct">.431</span></td><td class="rdn">−29</td><td>3.50</td><td>3.98</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk5">5</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-B" style="width:22px;height:22px;font-size:10px">C</div><span style="margin-left:5px">히로시마</span></div></td>
-            <td>57</td><td>21</td><td>33</td><td><span class="wpct vb">.389</span></td><td class="rdn">−18</td><td>2.95</td><td>3.26</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk6">6</span><div class="team-cell" style="display:inline-flex"><div class="team-logo" style="width:22px;height:22px;font-size:10px;border-radius:50%;background:#0059a3;color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-weight:800">D</div><span style="margin-left:5px">주니치</span></div></td>
-            <td>60</td><td>21</td><td>38</td><td><span class="wpct vb">.356</span></td><td class="rdn">−25</td><td>3.32</td><td>3.73</td>
-          </tr>
-        </tbody>
-      </table>
+      <div><span class="ll lc">セ · Central League</span></div>
+      <table class="std" id="cl-table"></table>
     </div>
-
     <div class="card">
-      <div><span class="league-label lp">パ · Pacific League</span></div>
-      <table class="standings-table">
-        <thead><tr><th>구단</th><th>G</th><th>W</th><th>L</th><th>승률</th><th>득실</th><th>R/G</th><th>RA/G</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="rk rk1">1</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-L" style="width:22px;height:22px;font-size:10px">L</div><span style="margin-left:5px">세이부</span></div></td>
-            <td>61</td><td>37</td><td>22</td><td><span class="wpct vg">.627</span></td><td class="rdp">+54</td><td>3.87</td><td>2.98</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk2">2</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-H" style="width:22px;height:22px;font-size:10px">H</div><span style="margin-left:5px">소뱅</span></div></td>
-            <td>59</td><td>35</td><td>24</td><td><span class="wpct vg">.593</span></td><td class="rdp">+51</td><td>4.44</td><td>3.58</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk3">3</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-Bs" style="width:22px;height:22px;font-size:10px">Bs</div><span style="margin-left:5px">오릭스</span></div></td>
-            <td>60</td><td>32</td><td>27</td><td><span class="wpct">.542</span></td><td class="rdp">+6</td><td>3.58</td><td>3.48</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk4">4</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-F" style="width:22px;height:22px;font-size:10px">F</div><span style="margin-left:5px">닛폰햄</span></div></td>
-            <td>62</td><td>33</td><td>29</td><td><span class="wpct">.532</span></td><td class="rdp">+22</td><td>3.97</td><td>3.61</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk5">5</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-M" style="width:22px;height:22px;font-size:10px">M</div><span style="margin-left:5px">롯데</span></div></td>
-            <td>—</td><td>—</td><td>—</td><td><span class="wpct vb">—</span></td><td>—</td><td>—</td><td>—</td>
-          </tr>
-          <tr>
-            <td><span class="rk rk6">6</span><div class="team-cell" style="display:inline-flex"><div class="team-logo tl-E" style="width:22px;height:22px;font-size:10px">E</div><span style="margin-left:5px">라쿠텐</span></div></td>
-            <td>—</td><td>—</td><td>—</td><td><span class="wpct vb">—</span></td><td>—</td><td>—</td><td>—</td>
-          </tr>
-        </tbody>
-      </table>
-      <div style="font-size:11px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">※ 롯데·라쿠텐 세부 데이터 수집 중</div>
+      <div><span class="ll lp">パ · Pacific League</span></div>
+      <table class="std" id="pl-table"></table>
     </div>
   </div>
-
   <div class="card">
-    <div class="card-title">2025시즌 최종 결과</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:8px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">セ리그 우승</div>
-        <div class="team-cell" style="justify-content:center;margin-bottom:4px"><div class="team-logo tl-T" style="width:36px;height:36px;font-size:14px">T</div></div>
-        <div style="font-family:var(--font-d);font-size:20px;font-weight:800;color:var(--cl)">한신 타이거즈</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">MVP: 佐藤 輝明 (40HR)</div>
+    <div class="card-t">2025시즌 최종 결과</div>
+    <div class="grid3" style="padding-top:4px">
+      <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:8px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">セ리그 우승</div>
+        <div id="cl-champ-logo" style="display:flex;justify-content:center;margin-bottom:6px"></div>
+        <div style="font-family:var(--fd);font-size:18px;font-weight:800;color:var(--cl)">한신 타이거즈</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">MVP: 佐藤 輝明 (40HR)</div>
       </div>
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:8px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">パ리그 우승</div>
-        <div class="team-cell" style="justify-content:center;margin-bottom:4px"><div class="team-logo tl-H" style="width:36px;height:36px;font-size:14px">H</div></div>
-        <div style="font-family:var(--font-d);font-size:20px;font-weight:800;color:var(--pl)">소프트뱅크</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">MVP: Liván Moinelo</div>
+      <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:8px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">パ리그 우승</div>
+        <div id="pl-champ-logo" style="display:flex;justify-content:center;margin-bottom:6px"></div>
+        <div style="font-family:var(--fd);font-size:18px;font-weight:800;color:var(--pl)">후쿠오카 소뱅</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">MVP: Liván Moinelo</div>
       </div>
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:8px;border:1px solid var(--accent)">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">日本시리즈 우승 🏆</div>
-        <div class="team-cell" style="justify-content:center;margin-bottom:4px"><div class="team-logo tl-H" style="width:36px;height:36px;font-size:14px">H</div></div>
-        <div style="font-family:var(--font-d);font-size:20px;font-weight:800;color:var(--accent)">후쿠오카 소뱅</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">MVP: 山川 穂高</div>
+      <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:8px;border:1px solid var(--accent)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">🏆 일본시리즈 우승</div>
+        <div id="js-champ-logo" style="display:flex;justify-content:center;margin-bottom:6px"></div>
+        <div style="font-family:var(--fd);font-size:18px;font-weight:800;color:var(--accent)">후쿠오카 소뱅</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">MVP: 山川 穂高</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════
-     GLOSSARY
-══════════════════════════════════════ -->
+<!-- ════════════════════ GLOSSARY ════════════════════ -->
 <section id="glossary" class="section">
-  <div class="section-header">
-    <h2 class="section-title">세이버매트릭스 용어 해설</h2>
-  </div>
-  <div class="glossary-grid">
-    <div class="glossary-card"><div class="glossary-term">WAR</div><div class="glossary-full">Wins Above Replacement</div><div class="glossary-desc">대체 선수 대비 팀 승리 기여도. 타격·수비·주루를 모두 합산. 2 이상 우수 레귤러, 6 이상 MVP급. NPB에서는 1.02(Deltagraphs) 독자 산출.</div></div>
-    <div class="glossary-card"><div class="glossary-term">WPA</div><div class="glossary-full">Win Probability Added</div><div class="glossary-desc">각 타석·투구 결과가 팀 승리 확률에 미친 영향의 누적합. 클러치 상황 활약을 잘 반영. 높을수록 승부처에서 공헌한 선수.</div></div>
-    <div class="glossary-card"><div class="glossary-term">OPS+</div><div class="glossary-full">On-base Plus Slugging Plus</div><div class="glossary-desc">OPS를 리그 평균(100)과 구장 효과로 보정. 150이면 평균보다 50% 뛰어난 타자. 시대·구장 비교에 유용.</div></div>
-    <div class="glossary-card"><div class="glossary-term">FIP</div><div class="glossary-full">Fielding Independent Pitching</div><div class="glossary-desc">삼진·볼넷·홈런만으로 수비 영향을 배제한 투수 지표. ERA와 같은 스케일. ERA보다 낮으면 수비 운이 나빴을 가능성.</div></div>
-    <div class="glossary-card"><div class="glossary-term">FIP-</div><div class="glossary-full">FIP Minus</div><div class="glossary-desc">FIP를 리그 평균(100)과 파크 팩터로 보정. 낮을수록 우수. 63이면 리그 평균보다 37% 뛰어남.</div></div>
-    <div class="glossary-card"><div class="glossary-term">wRC+</div><div class="glossary-full">Weighted Runs Created Plus</div><div class="glossary-desc">타격 이벤트의 득점 가치를 가중 합산 후 리그·파크 보정. OPS+보다 세밀한 가중치 적용. 100 = 리그 평균.</div></div>
-    <div class="glossary-card"><div class="glossary-term">BABIP</div><div class="glossary-full">Batting Average on Balls in Play</div><div class="glossary-desc">인플레이 타구에서의 안타율. 리그 평균 .290~.300. 투수는 평균 회귀 경향 강해 운 지표로도 활용.</div></div>
-    <div class="glossary-card"><div class="glossary-term">K-BB%</div><div class="glossary-full">Strikeout minus Walk Rate</div><div class="glossary-desc">삼진율에서 볼넷율을 뺀 값. 투수의 커맨드·압도성 동시 측정. 20% 이상이면 엘리트급.</div></div>
-    <div class="glossary-card"><div class="glossary-term">CSW%</div><div class="glossary-full">Called Strike + Whiff Rate</div><div class="glossary-desc">루킹 스트라이크+헛스윙 비율의 합. 투수 구위 지표. 30% 이상이면 최상위권.</div></div>
-    <div class="glossary-card"><div class="glossary-term">DRS</div><div class="glossary-full">Defensive Runs Saved</div><div class="glossary-desc">수비로 절약한 실점 수. 양수면 평균 이상 수비. 포지션 간 직접 비교는 주의 필요.</div></div>
-    <div class="glossary-card"><div class="glossary-term">UZR</div><div class="glossary-full">Ultimate Zone Rating</div><div class="glossary-desc">타구 위치·속도 데이터 기반 수비 지표. DRS보다 세밀한 구역 분석. NPB는 1.02가 독자 산출.</div></div>
-    <div class="glossary-card"><div class="glossary-term">ISO</div><div class="glossary-full">Isolated Power</div><div class="glossary-desc">장타율 − 타율. 순수 장타력만 측정. .200 이상 파워 히터, .250 이상 리그 최상위급.</div></div>
+  <div class="sec-hdr"><h2 class="sec-title">세이버매트릭스 용어 해설</h2></div>
+  <div class="gls-grid">
+    <div class="gc"><div class="gt">WAR</div><div class="gf">Wins Above Replacement</div><div class="gd">대체 선수 대비 팀 승리 기여도. 타격·수비·주루 종합. 2↑ 우수 레귤러, 6↑ MVP급. NPB는 1.02(Deltagraphs) 독자 산출.</div></div>
+    <div class="gc"><div class="gt">WPA</div><div class="gf">Win Probability Added</div><div class="gd">각 타석·투구가 팀 승리 확률에 미친 영향 누적합. 클러치 활약 반영. 높을수록 승부처 공헌 선수.</div></div>
+    <div class="gc"><div class="gt">OPS+</div><div class="gf">On-base Plus Slugging Plus</div><div class="gd">OPS를 리그 평균(100)·파크팩터 보정. 150=평균보다 50% 우수. 시대·구장 비교에 유용.</div></div>
+    <div class="gc"><div class="gt">FIP</div><div class="gf">Fielding Independent Pitching</div><div class="gd">삼진·볼넷·홈런만으로 수비 영향 배제한 투수 지표. ERA 스케일. ERA보다 낮으면 수비 운이 나빴을 가능성.</div></div>
+    <div class="gc"><div class="gt">FIP-</div><div class="gf">FIP Minus</div><div class="gd">FIP를 리그 평균(100)·파크팩터 보정. 낮을수록 우수. 63=리그 평균보다 37% 뛰어남.</div></div>
+    <div class="gc"><div class="gt">wRC+</div><div class="gf">Weighted Runs Created Plus</div><div class="gd">타격 이벤트 득점가치 가중 합산 후 리그·파크 보정. OPS+보다 세밀. 100=리그 평균.</div></div>
+    <div class="gc"><div class="gt">BABIP</div><div class="gf">Batting Average on Balls in Play</div><div class="gd">인플레이 타구 안타율. 리그 평균 .290~.300. 투수는 평균 회귀 경향 강해 운 지표로도 활용.</div></div>
+    <div class="gc"><div class="gt">K-BB%</div><div class="gf">Strikeout minus Walk Rate</div><div class="gd">삼진율−볼넷율. 투수 커맨드·압도성 동시 측정. 20%↑ 엘리트급.</div></div>
+    <div class="gc"><div class="gt">CSW%</div><div class="gf">Called Strike + Whiff Rate</div><div class="gd">루킹 스트라이크+헛스윙 비율 합. 구위 지표. 30%↑ 최상위권.</div></div>
+    <div class="gc"><div class="gt">DRS</div><div class="gf">Defensive Runs Saved</div><div class="gd">수비로 절약한 실점수. 양수=평균 이상 수비. 포지션 간 비교 주의.</div></div>
+    <div class="gc"><div class="gt">UZR</div><div class="gf">Ultimate Zone Rating</div><div class="gd">타구 위치·속도 기반 수비 지표. NPB는 1.02 독자 산출.</div></div>
+    <div class="gc"><div class="gt">ISO</div><div class="gf">Isolated Power</div><div class="gd">장타율−타율. 순수 장타력. .200↑ 파워히터, .250↑ 리그 최상위.</div></div>
   </div>
 </section>
 
 </main>
 
 <script>
+/* ── 탭 전환 ── */
 function switchTab(id, btn) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
-  if (id === 'batting') renderWarChart();
-  if (id === 'pitching') renderPitcherWarChart();
 }
 
-const TC = { T:'#ffcc00',H:'#f37021',G:'#f5a623',DB:'#009bdf',B:'#e60026',C:'#e60012',L:'#003087',F:'#00843d',E:'#860026',M:'#444',Bs:'#0033a0',Sw:'#009a44' };
+/* ── 데이터 ── */
+const TC = { G:'#F5A623',Sw:'#009A44',DB:'#009BDF',D:'#0059A3',T:'#FFCC00',C:'#E60012',L:'#003087',F:'#00843D',M:'#333',Bs:'#0033A0',H:'#F37021',E:'#860026' };
+const TID = { G:1,Sw:2,DB:3,D:4,T:5,C:6,L:7,F:8,M:9,Bs:11,H:12,E:376 };
+const TN = { G:'요미우리',Sw:'야쿠르트',DB:'DeNA',D:'주니치',T:'한신',C:'히로시마',L:'세이부',F:'닛폰햄',M:'롯데',Bs:'오릭스',H:'소뱅',E:'라쿠텐' };
 
-function renderWarChart() {
-  const data = [
-    {name:'佐藤 輝明 (한신)',team:'T',war:4.2},{name:'近藤 健介 (소뱅)',team:'H',war:3.0},
-    {name:'栗原 陵矢 (소뱅)',team:'H',war:2.6},{name:'森下 翔太 (한신)',team:'T',war:2.4},
-    {name:'大城 卓三 (요미우리)',team:'G',war:2.2},{name:'近本 光司 (한신)',team:'T',war:1.9},
-    {name:'坂倉 将吾 (히로시마)',team:'B',war:1.7},{name:'D.산타나 (야쿠르트)',team:'Sw',war:1.5},
-  ];
-  const max=5;
-  document.getElementById('war-chart').innerHTML = data.map(d=>{
-    const pct=(d.war/max*100).toFixed(1);
-    const col=TC[d.team]||'#888';
-    return `<div class="bar-row"><div class="bar-label">${d.name}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"><span class="bar-val">&nbsp;${d.war}</span></div></div><div class="bar-val-out">${d.war}</div></div>`;
+function logoImg(key, sz=28) {
+  const id = TID[key]; const color = TC[key]||'#888'; const name = TN[key]||key;
+  const url = `https://s.yimg.jp/images/sports/teams/baseball/npb/${id}.png`;
+  return `<div style="width:${sz}px;height:${sz}px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${color}20;flex-shrink:0">
+    <img src="${url}" alt="${name}" width="${sz}" height="${sz}" style="object-fit:contain"
+      onerror="this.outerHTML='<span style=\'font-size:${Math.round(sz*0.38)}px;font-weight:800;font-family:Barlow Condensed,sans-serif;color:${color}\'>${key}</span>'">
+  </div>`;
+}
+function teamCell(key) {
+  return `<div style="display:flex;align-items:center;gap:7px">${logoImg(key)}<span style="font-size:12px;font-weight:500">${TN[key]||key}</span></div>`;
+}
+function logoLg(key) {
+  const id = TID[key]; const color = TC[key]||'#888'; const name = TN[key]||key;
+  const url = `https://s.yimg.jp/images/sports/teams/baseball/npb/${id}.png`;
+  return `<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${color}25;flex-shrink:0">
+    <img src="${url}" alt="${name}" width="44" height="44" style="object-fit:contain"
+      onerror="this.outerHTML='<span style=\'font-size:14px;font-weight:800;font-family:Barlow Condensed,sans-serif;color:${color}\'>${key}</span>'">
+  </div>`;
+}
+
+const rankClass = i => ['r1','r2','r3','',''][i] || '';
+
+/* ── OVERVIEW 테이블 ── */
+const WAR_BAT = [
+  {rank:1,name:'佐藤 輝明',sub:'사토 테루아키 · 3B',team:'T',war:4.2,wpa:2.26},
+  {rank:2,name:'近藤 健介',sub:'콘도 켄스케 · OF',team:'H',war:3.0,wpa:2.39},
+  {rank:3,name:'栗原 陵矢',sub:'쿠리하라 료야 · OF',team:'H',war:2.6,wpa:1.96},
+  {rank:4,name:'森下 翔太',sub:'모리시타 쇼타 · OF',team:'T',war:2.4,wpa:'—'},
+  {rank:5,name:'大城 卓三',sub:'오시로 타쿠조 · C',team:'G',war:2.2,wpa:'—'},
+];
+const WAR_PIT = [
+  {rank:1,name:'髙橋 遥人',sub:'타카하시 하루토 · SP',team:'T',war:2.1,wpa:3.68},
+  {rank:2,name:'平良 海馬',sub:'타이라 카이마 · SP',team:'L',war:1.7,wpa:'—'},
+  {rank:2,name:'石田 裕太郎',sub:'이시다 유타로 · SP',team:'DB',war:1.7,wpa:'—'},
+  {rank:4,name:'北山 亘基',sub:'키타야마 코키 · SP',team:'F',war:1.6,wpa:'—'},
+  {rank:5,name:'九里 亜蓮',sub:'쿠리 아렌 · SP',team:'C',war:1.5,wpa:'—'},
+];
+const WPA_BAT = [
+  {rank:1,name:'近藤 健介',team:'H',val:2.39},
+  {rank:2,name:'佐藤 輝明',team:'T',val:2.26},
+  {rank:3,name:'栗原 陵矢',team:'H',val:1.96},
+  {rank:4,name:'D. 산타나',team:'Sw',val:1.49},
+  {rank:5,name:'坂倉 将吾',team:'C',val:1.36},
+];
+const WPA_PIT = [
+  {rank:1,name:'髙橋 遥人',team:'T',val:3.68},
+  {rank:2,name:'柳 裕也',team:'D',val:2.25},
+  {rank:3,name:'髙橋 光成',team:'L',val:2.18},
+  {rank:4,name:'山野 太一',team:'Sw',val:2.04},
+  {rank:5,name:'大津 亮介',team:'H',val:1.78},
+];
+
+function renderWarTable(id, data, cols) {
+  const el = document.getElementById(id);
+  el.innerHTML = data.map((d,i) => `<tr class="${rankClass(i)}">
+    <td>${d.rank}</td>
+    <td><div class="pn">${d.name}</div>${d.sub?`<div class="ps">${d.sub}</div>`:''}</td>
+    <td>${teamCell(d.team)}</td>
+    ${cols.map(c=>`<td class="${c.cls||''}">${d[c.key]}</td>`).join('')}
+  </tr>`).join('');
+}
+renderWarTable('war-bat-table', WAR_BAT, [{key:'war',cls:'hv'},{key:'wpa'}]);
+renderWarTable('war-pit-table', WAR_PIT, [{key:'war',cls:'hv'},{key:'wpa'}]);
+renderWarTable('wpa-bat-table', WPA_BAT, [{key:'val',cls:'hv'}]);
+renderWarTable('wpa-pit-table', WPA_PIT, [{key:'val',cls:'hv'}]);
+
+/* ── BATTING TABLES ── */
+const OPS_DATA = [
+  {rank:1,name:'佐藤 輝明',sub:'3B',team:'T',ops:186,hr:40},
+  {rank:2,name:'森下 翔太',sub:'OF',team:'T',ops:153,hr:'—'},
+  {rank:3,name:'Tyler Nevin',sub:'1B',team:'L',ops:142,hr:21},
+  {rank:4,name:'中野 拓夢',sub:'2B',team:'T',ops:109,hr:'—'},
+  {rank:5,name:'泉口 友汰',sub:'SS',team:'G',ops:'—',hr:'.301'},
+];
+const BAT_MISC = [
+  {rank:1,name:'柳町 達',sub:'야나기마치 OF',team:'H',war:'—',obp:'.384'},
+  {rank:2,name:'近本 光司',sub:'치카모토 CF',team:'T',war:'5.8',obp:'—'},
+  {rank:3,name:'泉口 友汰',sub:'이즈구치 SS',team:'G',war:'6.0+',obp:'—'},
+  {rank:4,name:'坂本 誠志郎',sub:'사카모토 C',team:'T',war:'—',obp:'.357'},
+  {rank:5,name:'森下 翔太',sub:'모리시타 OF',team:'T',war:'6.1',obp:'—'},
+];
+renderWarTable('ops-table', OPS_DATA, [{key:'ops',cls:'hv'},{key:'hr'}]);
+renderWarTable('bat-misc-table', BAT_MISC, [{key:'war',cls:'hv'},{key:'obp'}]);
+
+/* ── PITCHING TABLES ── */
+const SP_DATA = [
+  {rank:1,name:'Liván Moinelo',sub:'PL MVP',team:'H',era:'1.46',k:'27%'},
+  {rank:2,name:'今井 達也',sub:'이마이 SP',team:'L',era:'1.92',k:'28%'},
+  {rank:3,name:'宮城 大弥',sub:'FIP- 63',team:'Bs',era:'—',k:'—'},
+  {rank:4,name:'村上 頌樹',sub:'WHIP 0.89',team:'T',era:'—',k:'—'},
+  {rank:5,name:'伊藤 大海',sub:'사와무라상',team:'F',era:'—',k:'—'},
+];
+const RP_DATA = [
+  {rank:1,name:'松山 晋也',sub:'마츠야마 RP',team:'D',sv:46,k:'35%'},
+  {rank:2,name:'Raidel Martinez',sub:'WHIP 0.76',team:'G',sv:'—',k:'—'},
+  {rank:3,name:'杉山 一樹',sub:'스기야마 RP',team:'H',sv:31,k:'32%'},
+];
+renderWarTable('sp-table', SP_DATA, [{key:'era',cls:'vg'},{key:'k',cls:'vg'}]);
+renderWarTable('rp-table', RP_DATA, [{key:'sv',cls:'hv'},{key:'k',cls:'vg'}]);
+
+/* ── BAR CHARTS ── */
+function renderBar(id, data, max) {
+  document.getElementById(id).innerHTML = data.map(d => {
+    const pct = (d.v / max * 100).toFixed(1);
+    const col = TC[d.team] || '#888';
+    return `<div class="bar-row">
+      <div class="bar-lbl">${d.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}">
+        <span class="bar-v">&nbsp;${d.v}</span></div></div>
+      <div class="bar-out">${d.v}</div>
+    </div>`;
+  }).join('');
+}
+renderBar('war-chart', [
+  {name:'佐藤 輝明 (한신)',team:'T',v:4.2},{name:'近藤 健介 (소뱅)',team:'H',v:3.0},
+  {name:'栗原 陵矢 (소뱅)',team:'H',v:2.6},{name:'森下 翔太 (한신)',team:'T',v:2.4},
+  {name:'大城 卓三 (요미우리)',team:'G',v:2.2},{name:'近本 光司 (한신)',team:'T',v:1.9},
+  {name:'坂倉 将吾 (히로시마)',team:'C',v:1.7},
+], 5);
+renderBar('pitcher-war-chart', [
+  {name:'髙橋 遥人 (한신)',team:'T',v:2.1},{name:'平良 海馬 (세이부)',team:'L',v:1.7},
+  {name:'石田 裕太郎 (DeNA)',team:'DB',v:1.7},{name:'北山 亘基 (닛폰햄)',team:'F',v:1.6},
+  {name:'九里 亜蓮 (히로시마)',team:'C',v:1.5},{name:'柳 裕也 (주니치)',team:'D',v:1.4},
+], 2.5);
+
+/* ── STANDINGS ── */
+function renderStd(id, rows) {
+  const hdr = `<thead><tr><th>구단</th><th>G</th><th>W</th><th>L</th><th>승률</th><th>득실</th><th>R/G</th><th>RA/G</th></tr></thead>`;
+  const body = '<tbody>' + rows.map(r => `<tr>
+    <td><span class="rk rk${r.rank}">${r.rank}</span><span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle">${logoImg(r.team,20)}<span style="font-size:12px">${TN[r.team]}</span></span></td>
+    <td>${r.g}</td><td>${r.w}</td><td>${r.l}</td>
+    <td><span class="wpct ${r.w>r.l?'vg':r.l>r.w+5?'vb':''}">${r.pct}</span></td>
+    <td class="${r.diff>0?'rdp':'rdn'}">${r.diff>0?'+'+r.diff:r.diff}</td>
+    <td>${r.rg}</td><td>${r.ra}</td>
+  </tr>`).join('') + '</tbody>';
+  document.getElementById(id).innerHTML = hdr + body;
+}
+renderStd('cl-table',[
+  {rank:1,team:'G',g:60,w:33,l:25,pct:'.569',diff:6,rg:3.30,ra:3.20},
+  {rank:2,team:'T',g:58,w:32,l:25,pct:'.561',diff:22,rg:3.78,ra:3.40},
+  {rank:3,team:'Sw',g:60,w:32,l:27,pct:'.542',diff:-11,rg:3.25,ra:3.43},
+  {rank:4,team:'DB',g:60,w:25,l:33,pct:'.431',diff:-29,rg:3.50,ra:3.98},
+  {rank:5,team:'C',g:57,w:21,l:33,pct:'.389',diff:-18,rg:2.95,ra:3.26},
+  {rank:6,team:'D',g:60,w:21,l:38,pct:'.356',diff:-25,rg:3.32,ra:3.73},
+]);
+renderStd('pl-table',[
+  {rank:1,team:'L',g:61,w:37,l:22,pct:'.627',diff:54,rg:3.87,ra:2.98},
+  {rank:2,team:'H',g:59,w:35,l:24,pct:'.593',diff:51,rg:4.44,ra:3.58},
+  {rank:3,team:'Bs',g:60,w:32,l:27,pct:'.542',diff:6,rg:3.58,ra:3.48},
+  {rank:4,team:'F',g:62,w:33,l:29,pct:'.532',diff:22,rg:3.97,ra:3.61},
+  {rank:5,team:'M',g:'—',w:'—',l:'—',pct:'—',diff:0,rg:'—',ra:'—'},
+  {rank:6,team:'E',g:'—',w:'—',l:'—',pct:'—',diff:0,rg:'—',ra:'—'},
+]);
+document.getElementById('cl-champ-logo').innerHTML = logoImg('T',40);
+document.getElementById('pl-champ-logo').innerHTML = logoImg('H',40);
+document.getElementById('js-champ-logo').innerHTML = logoImg('H',40);
+
+/* ── TODAY MATCHES ── */
+const MATCHES = [
+  {
+    home:'F', away:'DB', venue:'에스콘 필드 홋카이도', time:'18:00',
+    homeRec:'33승 29패 · PL 4위', awayRec:'25승 33패 · CL 4위',
+    probHome:58, featured:false,
+    tags:['tf:닛폰햄 5연승 기세','tb:DeNA 3연패 슬럼프'],
+    point:`닛폰햄은 5연승 기세 + 에스콘 홈이점. 리브스(.314/12HR)·미즈노(.289) 타선이 살아있다. DeNA는 3연패 슬럼프 중이며 원정에서 분위기 반전이 쉽지 않다. 닛폰햄의 확실한 홈이점 경기.`,
+    variable:`DeNA 히가시(東克樹)가 안정적인 투구를 한다면 접전 가능. DeNA 와타리(.289)·이시다·아주마 등 전력 자체는 나쁘지 않다. 닛폰햄 北山 亘基(WAR 1.6)가 선발로 나선다면 홈 이점이 더 강해진다.`,
+    issue:`닛폰햄 외국인 타자 리브스가 6월 초 10경기 연속 안타 행진 중. DeNA는 선발진 이탈로 불펜 부담 가중.`,
+    verdict:'닛폰햄 우세', verdictTxt:'홈 이점 + 연승 모멘텀. 단, 에스콘 특유의 타자 친화 환경으로 고득점 경기 가능성.'
+  },
+  {
+    home:'E', away:'G', venue:'라쿠텐 모바일 파크', time:'18:00',
+    homeRec:'PL 5~6위권', awayRec:'33승 25패 · CL 1위',
+    probHome:40, featured:false,
+    tags:['tf:요미우리 CL 1위','tb:라쿠텐 득점력 저조'],
+    point:`요미우리는 CL 수위를 달리며 공수 균형 유지 중. 大城 卓三(WAR 2.2)·坂本 誠志郎 등 포지션별 완성도가 높다. 라쿠텐은 시즌 내내 평균 득점이 리그 하위권이며 선발진도 불안정.`,
+    variable:`라쿠텐 홈에서 이시이 감독의 투수 운용이 변수. 요미우리도 원정 승률이 홈보다 낮은 편이라 안심할 수 없다.`,
+    issue:`요미우리 Raidel Martinez(WPA 2위) 불펜 복귀 시 마감력 강화. 라쿠텐 에이스 荘司(쇼지)의 상태가 관건.`,
+    verdict:'요미우리 우세', verdictTxt:'리그 1위 팀의 안정된 전력. 라쿠텐 홈이지만 전력 차이가 뚜렷한 매치업.'
+  },
+  {
+    home:'L', away:'C', venue:'벨루나 돔', time:'18:00',
+    homeRec:'37승 22패 · PL 1위', awayRec:'21승 33패 · CL 5위',
+    probHome:68, featured:false,
+    tags:['tf:세이부 PL 압도적 1위','ti:히로시마 선발 이탈 다수','tb:히로시마 5연패 부진'],
+    point:`세이부는 평균 실점 2.98로 리그 최강 투수진. 平良 海馬(WAR 1.7)·髙橋 光成(WPA 2.18)의 원투펀치 보유. 득실차 +54로 리그 압도. 히로시마는 秋山 翔吾(.296)가 분투하지만 선발진 이탈로 팀 전체가 침체.`,
+    variable:`히로시마 九里 亜蓮(WAR 1.5)이 선발 등판 시 경기는 팽팽해질 수 있다. 세이부도 원정보다 홈 승률이 확연히 높아 자연스러운 홈 경기.`,
+    issue:`히로시마 주요 선발 森下 暢仁(もりした まさと)가 부상 말소 상태. 세이부 外崎(소토자키)·源田 등 내야진 완편.`,
+    verdict:'세이부 강력 우세', verdictTxt:'득실차 +54 리그 최고 + 홈 이점. 오늘의 가장 명확한 강자. 히로시마는 전력 재건 시간 필요.'
+  },
+  {
+    home:'M', away:'D', venue:'ZOZO 마린 스타디움', time:'18:00',
+    homeRec:'PL 5~6위권', awayRec:'21승 38패 · CL 꼴찌',
+    probHome:55, featured:false,
+    tags:['tf:롯데 홈 강세','tb:주니치 CL 최하위'],
+    point:`주니치는 시즌 내내 득점력 부족(평균 3.32득점, 실점 3.73)으로 고전 중. 불펜 柳 裕也(WPA 2.25)가 복귀 후 안정감 있지만 선발이 약하다. 롯데는 ZOZO 마린의 해풍 효과로 홈 승률이 원정보다 높다.`,
+    variable:`주니치 細川 成也(호소카와)가 최근 타격감 상승 중이라 장타 한 방이 분위기 전환 가능. 롯데 마무리진의 안정성이 관건.`,
+    issue:`주니치 4번 다저스 출신 A.J. Alexy 선발 예상. 롯데 중심 타선 山口 航輝(.278/8HR) 컨디션 양호.`,
+    verdict:'롯데 소폭 우세', verdictTxt:'두 팀 모두 하위권이라 예측 어렵지만, 롯데 홈 이점이 결정적. 접전 예상.'
+  },
+  {
+    home:'Bs', away:'Sw', venue:'교세라 돔 오사카', time:'18:00',
+    homeRec:'32승 27패 · PL 3위', awayRec:'32승 27패 · CL 3위',
+    probHome:52, featured:false,
+    tags:['tf:오릭스 홈 강세','tt:야쿠르트 D.산타나 WPA 4위','tb:전날 야쿠르트 4-8 패'],
+    point:`승률이 거의 동일한 초접전 매치업. 전날(6/10) 오릭스가 야쿠르트를 8-4로 대파. 야쿠르트는 D.산타나(WPA 1.49)가 클러치 상황에서 강하지만, 오릭스의 교세라 돔 홈 이점이 크다. H2H 역사상 오릭스가 근소 우위(40승 vs 36승).`,
+    variable:`야쿠르트 무라카미 무네타카(.280/20HR)가 시즌 초 부진을 털고 6월 들어 살아났다. 오릭스 宮城 大弥(FIP- 63)가 선발이라면 야쿠르트 타선 봉쇄 가능.`,
+    issue:`야쿠르트 에이스 奥川 恭伸(오쿠가와)가 6월 1군 복귀, 컨디션 조율 중. 오릭스 T-岡田(.261/7HR) 부상 복귀 후 타선 가세.`,
+    verdict:'오릭스 근소 우세', verdictTxt:'홈 이점 + 전날 모멘텀이 관건. 야쿠르트도 CL 3위 전력으로 역전 충분히 가능. 오늘의 최대 접전.'
+  },
+  {
+    home:'H', away:'T', venue:'미즈호 페이페이 돔 후쿠오카', time:'18:00',
+    homeRec:'35승 24패 · PL 2위', awayRec:'32승 25패 · CL 2위',
+    probHome:60, featured:true,
+    tags:['tf:소뱅 평균 4.44득점 리그 최다','tb:한신 전날 2-6 완패','tf:소뱅 近藤·栗原 WPA 1·3위','tf:한신 WAR 1·2위 보유'],
+    point:`양 팀 모두 리그 최상위권의 교류전 빅매치. 소뱅은 평균 득점 4.44로 12팀 중 최다이며 近藤 健介(WPA 1위, WAR 2위)·栗原 陵矢(WPA 3위) 등 타선이 폭발적. 반면 한신은 WAR 1위 佐藤 輝明(4.2) + 투수 WAR 1위 髙橋 遥人(2.1/WPA 3.68)를 보유한 최강 전력. 전날 소뱅이 6-2로 이겼으나 한신 투수 로테이션 변수.`,
+    variable:`한신 髙橋 遥人이 오늘 선발로 나선다면 소뱅 타선도 봉쇄 가능. 소뱅 스타디움(페이페이 돔) 특성상 홈런이 나오기 쉬운 구장이라 佐藤 輝明의 장타에도 주목.`,
+    issue:`소뱅 柳田 悠岐(야나기타)가 6월 들어 .305 타율로 부활 중. 한신 森下 翔太(OPS+ 153, WAR 6.1)도 시즌 내내 타격감 유지 중.`,
+    verdict:'소뱅 우세 — 그러나 최고의 접전', verdictTxt:'소뱅 홈 + 타선 폭발력이 앞서지만, 한신 髙橋 遥人이 선발이라면 판이 뒤집힐 수 있다. 오늘 교류전 최고 빅매치.'
+  }
+];
+
+function tagHtml(tags) {
+  return tags.map(t => {
+    const [cls, txt] = t.split(':');
+    return `<span class="itag ${cls}">${txt}</span>`;
   }).join('');
 }
 
-function renderPitcherWarChart() {
-  const data = [
-    {name:'髙橋 遥人 (한신)',team:'T',war:2.1},{name:'平良 海馬 (세이부)',team:'L',war:1.7},
-    {name:'石田 裕太郎 (DeNA)',team:'DB',war:1.7},{name:'北山 亘基 (닛폰햄)',team:'F',war:1.6},
-    {name:'九里 亜蓮 (히로시마)',team:'B',war:1.5},{name:'柳 裕也 (주니치)',team:'Sw',war:1.4},
-    {name:'髙橋 光成 (세이부)',team:'L',war:1.3},
-  ];
-  const max=2.5;
-  document.getElementById('pitcher-war-chart').innerHTML = data.map(d=>{
-    const pct=(d.war/max*100).toFixed(1);
-    const col=TC[d.team]||'#888';
-    return `<div class="bar-row"><div class="bar-label">${d.name}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"><span class="bar-val">&nbsp;${d.war}</span></div></div><div class="bar-val-out">${d.war}</div></div>`;
-  }).join('');
-}
+const matchContainer = document.getElementById('match-container');
+matchContainer.innerHTML = MATCHES.map(m => {
+  const pAway = 100 - m.probHome;
+  return `<div class="mc2${m.featured?' featured':''}">
+    <div class="mh">
+      <span class="mh-venue">⚾ ${m.venue} · ${m.time}</span>
+      <span class="mh-badge${m.featured?' featured':''}">${m.featured?'⭐ 빅매치':'교류전'}</span>
+    </div>
+    <div class="teams-row">
+      <div class="team-side home">
+        ${logoLg(m.home)}
+        <div class="team-info">
+          <div class="team-fullname">${TN[m.home]}</div>
+          <div class="team-rec">${m.homeRec}</div>
+        </div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="team-side away">
+        ${logoLg(m.away)}
+        <div class="team-info right">
+          <div class="team-fullname">${TN[m.away]}</div>
+          <div class="team-rec">${m.awayRec}</div>
+        </div>
+      </div>
+    </div>
+    <div class="prob-wrap">
+      <div class="prob-bar">
+        <div class="pb-home" style="width:${m.probHome}%"></div>
+        <div class="pb-away" style="width:${pAway}%"></div>
+      </div>
+      <div class="prob-labels">
+        <span class="prob-pct ph">${TN[m.home]} ${m.probHome}%</span>
+        <span class="prob-pct pa">${TN[m.away]} ${pAway}%</span>
+      </div>
+    </div>
+    <div class="mbody">
+      <div class="issue-row">${tagHtml(m.tags)}</div>
+      <div class="analysis-block">
+        <div class="analysis-label">핵심</div>
+        <div class="analysis-text">${m.point}</div>
+      </div>
+      <div class="analysis-block">
+        <div class="analysis-label">변수</div>
+        <div class="analysis-text">${m.variable}</div>
+      </div>
+      <div class="analysis-block">
+        <div class="analysis-label">이슈</div>
+        <div class="analysis-text">${m.issue}</div>
+      </div>
+      <div class="verdict-box">
+        <span class="verdict-icon">${m.featured?'🔥':'🏆'}</span>
+        <div>
+          <div class="verdict-fav">판정: ${m.verdict}</div>
+          <div class="verdict-txt">${m.verdictTxt}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}).join('');
 </script>
 </body>
 </html>
