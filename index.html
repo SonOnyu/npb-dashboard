@@ -320,54 +320,61 @@ body:not(.light) .rdp{color:#4cde80}
 <section id="today" class="section">
   <div class="sec-hdr">
     <h2 class="sec-title">경기 분석</h2>
+    <span class="sec-desc" id="games-updated"></span>
     <span class="src">출처: <a href="https://npb.jp/" target="_blank">NPB 공식</a></span>
   </div>
 
-  <!-- 경기분석 서브탭 -->
   <div class="sub-tabs" style="margin-bottom:20px">
-    <button class="sub-tab active" onclick="switchGameTab('next-games',this)">다음 경기 분석</button>
-    <button class="sub-tab" onclick="switchGameTab('prev-results',this)">이전 경기 결과</button>
+    <button class="sub-tab active" id="tab-prev" onclick="switchGameTab('prev',this)">이전 경기 결과</button>
+    <button class="sub-tab" id="tab-next" onclick="switchGameTab('next',this)">다음 경기 분석</button>
   </div>
 
-  <!-- 다음 경기 분석 -->
-  <div id="next-games">
-    <div class="match-grid" id="match-container"></div>
-  <div class="card">
-    <div class="card-t">오늘의 요약</div>
-    <div class="grid3" style="padding-top:4px">
-      <div style="background:var(--surface2);border-radius:6px;padding:14px">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 최강팀</div>
-        <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:#2a9a2a">埼玉西武(세이부)</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">PL 1위, 득실차 +54 · 히로시마 상대 68% 우세</div>
-      </div>
-      <div style="background:var(--surface2);border-radius:6px;padding:14px">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 빅매치 ⭐</div>
-        <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:var(--accent)">ソフトバンク vs 阪神</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">WAR·WPA 최상위 선수 총출동</div>
-      </div>
-      <div style="background:var(--surface2);border-radius:6px;padding:14px">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 최대 접전</div>
-        <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:var(--accent2)">オリックス vs ヤクルト</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">동률 승률 52:48 박빙</div>
-      </div>
-    </div>
-  </div><!-- /next-games -->
-
   <!-- 이전 경기 결과 -->
-  <div id="prev-results" style="display:none">
-    <!-- 캘린더 -->
+  <div id="panel-prev">
     <div class="card mgb">
       <div class="card-t">날짜 선택</div>
       <div id="cal-container"></div>
     </div>
-    <!-- 결과 표시 -->
     <div id="results-container">
-      <div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">
-        날짜를 선택하면 경기 결과를 불러옵니다
+      <div id="results-loading" style="display:flex;align-items:center;justify-content:center;padding:50px;gap:12px;color:var(--muted)">
+        <div style="width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        <span>오늘 경기 결과 불러오는 중...</span>
       </div>
     </div>
   </div>
 
+  <!-- 다음 경기 분석 -->
+  <div id="panel-next" style="display:none">
+    <div id="next-loading" style="display:flex;align-items:center;justify-content:center;padding:50px;gap:12px;color:var(--muted)">
+      <div style="width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+      <span>다음 경기 일정 불러오는 중...</span>
+    </div>
+    <div id="next-container" style="display:none"></div>
+    <!-- 기존 경기 분석 카드 -->
+    <div id="match-analysis" style="display:none">
+      <div class="match-grid" id="match-container"></div>
+      <div class="card" id="today-summary">
+        <div class="card-t">오늘의 요약</div>
+        <div class="grid3" style="padding-top:4px">
+          <div style="background:var(--surface2);border-radius:6px;padding:14px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 최강팀</div>
+            <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:#2a9a2a">埼玉西武(세이부)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">PL 1위, 득실차 +54 · 히로시마 상대 68% 우세</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:14px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 빅매치 ⭐</div>
+            <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:var(--accent)">ソフトバンク vs 阪神</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">WAR·WPA 최상위 선수 총출동</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:14px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:5px">오늘의 최대 접전</div>
+            <div style="font-family:var(--fd);font-size:17px;font-weight:800;color:var(--accent2)">オリックス vs ヤクルト</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">동률 승률 52:48 박빙</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- ════ STATS ════ -->
@@ -1196,187 +1203,485 @@ document.getElementById('match-container').innerHTML=MATCHES.map(m=>{
 }).join('');
 
 /* ══════════════════════════════════════
-   경기 분석 탭 — 서브탭 / 캘린더 / 결과
+   경기 분석 — 이전결과 / 다음경기분석
 ══════════════════════════════════════ */
-const GAMES_API = '/.netlify/functions/npb-games';
+const GAMES_API   = '/.netlify/functions/npb-games';
+const ANALYZE_API = '/.netlify/functions/npb-analyze';
 
+// ── 탭 전환 ──
 function switchGameTab(id, btn) {
   document.querySelectorAll('#today .sub-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('next-games').style.display  = id === 'next-games' ? 'block' : 'none';
-  document.getElementById('prev-results').style.display = id === 'prev-results' ? 'block' : 'none';
   btn.classList.add('active');
-  if (id === 'prev-results' && !calInitialized) initCalendar();
+  document.getElementById('panel-prev').style.display = id==='prev' ? 'block' : 'none';
+  document.getElementById('panel-next').style.display = id==='next' ? 'block' : 'none';
 }
 
-/* ── 캘린더 ── */
-let calYear, calMonth, calSelectedDate = null, calInitialized = false;
-let calGameDays = {};  // "2026-06-11": true
+// ── 경기 분석 탭 진입 시 자동 로드 ──
+let gamesDataCache = null;
 
-function initCalendar() {
-  const now = new Date();
-  calYear  = now.getFullYear();
-  calMonth = now.getMonth() + 1;
-  calInitialized = true;
-  loadCalMonth(calYear, calMonth);
-}
-
-async function loadCalMonth(yyyy, mm) {
-  const mmStr = String(mm).padStart(2,'0');
-  const el = document.getElementById('cal-container');
-  el.innerHTML = `<div class="cal-wrap"><div class="cal-header">
-    <button class="cal-nav" onclick="calPrev()">‹</button>
-    <span class="cal-title">${yyyy}년 ${mm}월</span>
-    <button class="cal-nav" onclick="calNext()">›</button>
-  </div><div class="cal-grid" id="cal-grid"><div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted)">로딩 중...</div></div></div>`;
-
+async function loadGamesData(force=false) {
+  if (gamesDataCache && !force) return gamesDataCache;
   try {
-    const res = await fetch(`${GAMES_API}?action=month&yyyy=${yyyy}&mm=${mmStr}`);
-    const data = await res.json();
-    if (data.gameDays) {
-      data.gameDays.forEach(d => { calGameDays[d] = true; });
-    }
-  } catch(e) {
-    // 실패해도 캘린더는 렌더링
-  }
-  renderCalGrid(yyyy, mm);
+    const res = await fetch(`${GAMES_API}?action=today`);
+    gamesDataCache = await res.json();
+    return gamesDataCache;
+  } catch(e) { return null; }
 }
 
-function renderCalGrid(yyyy, mm) {
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0,10);
-  const firstDay = new Date(yyyy, mm-1, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(yyyy, mm, 0).getDate();
-  const grid = document.getElementById('cal-grid');
-  if (!grid) return;
+// switchTab 오버라이드 — 경기분석 탭 진입 시 자동갱신
+const _origSwitchTab = switchTab;
+function switchTab(id, btn) {
+  _origSwitchTab(id, btn);
+  if (id === 'today') {
+    gamesDataCache = null; // 강제 갱신
+    initGamesPanels();
+  }
+}
+
+async function initGamesPanels() {
+  // 두 패널 동시 초기화
+  showPrevLoading(true);
+  showNextLoading(true);
+  const data = await loadGamesData();
+  if (!data) {
+    showError('panel-prev', 'NPB 데이터 로드 실패');
+    showError('panel-next', 'NPB 데이터 로드 실패');
+    return;
+  }
+  // 업데이트 시각
+  const now = new Date();
+  document.getElementById('games-updated').textContent =
+    `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 기준`;
+
+  // 이전 경기 결과 렌더
+  renderPrevResults(data);
+  // 다음 경기 분석 렌더
+  renderNextGames(data);
+}
+
+function showPrevLoading(show) {
+  const el = document.getElementById('results-loading');
+  if (el) el.style.display = show ? 'flex' : 'none';
+}
+function showNextLoading(show) {
+  const el = document.getElementById('next-loading');
+  if (el) el.style.display = show ? 'flex' : 'none';
+}
+function showError(panelId, msg) {
+  const panel = document.getElementById(panelId);
+  if (panel) panel.innerHTML = `<div style="text-align:center;padding:40px;color:var(--accent3)">⚠️ ${msg}</div>`;
+}
+
+/* ══════════════════════════════════════
+   이전 경기 결과
+══════════════════════════════════════ */
+let calYear, calMonth, calSelected = null, calInitialized = false;
+let calCache = {}; // date → reviews
+
+async function renderPrevResults(data) {
+  showPrevLoading(false);
+  // 캘린더 초기화
+  if (!calInitialized) {
+    const now = new Date();
+    calYear = now.getFullYear(); calMonth = now.getMonth()+1;
+    calInitialized = true;
+    renderCalendar(calYear, calMonth);
+  }
+  // 오늘 결과 자동 표시
+  if (data.todayGames && data.todayGames.length > 0) {
+    const mmdd = data.mmdd;
+    const dateStr = `2026-${mmdd.slice(0,2)}-${mmdd.slice(2,4)}`;
+    calSelected = dateStr;
+    renderCalendar(calYear, calMonth);
+    await showDayResults(data.todayGames, dateStr, data.mmdd);
+  } else {
+    document.getElementById('results-container').innerHTML =
+      `<div style="text-align:center;padding:40px;color:var(--muted)">오늘 경기 정보가 없습니다</div>`;
+  }
+}
+
+function renderCalendar(yyyy, mm) {
+  const todayStr = new Date().toISOString().slice(0,10);
+  const firstDow = new Date(yyyy, mm-1, 1).getDay();
+  const daysInMon = new Date(yyyy, mm, 0).getDate();
+  const mmStr = String(mm).padStart(2,'0');
 
   const dows = ['일','월','화','수','목','금','토'];
-  let html = dows.map((d,i) => `<div class="cal-dow" style="${i===0?'color:#e85c40':i===6?'color:#3d9cf0':''}">${d}</div>`).join('');
-
-  // 빈 칸
-  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day cal-empty"></div>`;
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const mmStr = String(mm).padStart(2,'0');
-    const ddStr = String(d).padStart(2,'0');
-    const dateStr = `${yyyy}-${mmStr}-${ddStr}`;
-    const isFuture = dateStr > todayStr;
-    const isToday  = dateStr === todayStr;
-    const hasGame  = calGameDays[dateStr];
-    const isSel    = dateStr === calSelectedDate;
-    const dow = (firstDay + d - 1) % 7;
-    const color = dow===0?'color:#e85c40;':dow===6?'color:#3d9cf0;':'';
-
+  let h = `<div class="cal-wrap">
+  <div class="cal-header">
+    <button class="cal-nav" onclick="calMove(-1)">‹</button>
+    <span class="cal-title">${yyyy}년 ${mm}월</span>
+    <button class="cal-nav" onclick="calMove(1)">›</button>
+  </div>
+  <div class="cal-grid">`;
+  h += dows.map((d,i) => `<div class="cal-dow" style="${i===0?'color:#e85c40':i===6?'color:#3d9cf0':''}">${d}</div>`).join('');
+  for (let i=0; i<firstDow; i++) h += `<div class="cal-day cal-empty"></div>`;
+  for (let d=1; d<=daysInMon; d++) {
+    const dd = String(d).padStart(2,'0');
+    const dateStr = `${yyyy}-${mmStr}-${dd}`;
+    const future  = dateStr > todayStr;
+    const isToday = dateStr === todayStr;
+    const isSel   = dateStr === calSelected;
+    const dow = (firstDow+d-1)%7;
+    const col = dow===0?'color:#e85c40;':dow===6?'color:#3d9cf0;':'';
     let cls = 'cal-day';
-    if (isFuture) cls += ' cal-future';
-    if (hasGame && !isFuture) cls += ' has-game';
+    if (future) cls += ' cal-future';
     if (isToday) cls += ' today-marker';
-    if (isSel) cls += ' selected';
-
-    const dot = (hasGame && !isFuture) ? `<div class="cal-dot"></div>` : '';
-    const click = !isFuture ? `onclick="selectDate('${dateStr}')"` : '';
-    html += `<div class="${cls}" ${click} style="${color}">${d}${dot}</div>`;
+    if (isSel)   cls += ' selected';
+    const click = !future ? `onclick="calSelectDate('${dateStr}')"` : '';
+    h += `<div class="${cls}" ${click} style="${col}">${d}</div>`;
   }
-  grid.innerHTML = html;
+  h += `</div></div>`;
+  const el = document.getElementById('cal-container');
+  if (el) el.innerHTML = h;
 }
 
-function calPrev() {
-  calMonth--;
-  if (calMonth < 1) { calMonth = 12; calYear--; }
-  loadCalMonth(calYear, calMonth);
-}
-function calNext() {
+function calMove(dir) {
+  calMonth += dir;
+  if (calMonth < 1) { calMonth=12; calYear--; }
+  if (calMonth > 12) { calMonth=1; calYear++; }
+  // 미래 월 막기
   const now = new Date();
-  if (calYear > now.getFullYear() || (calYear === now.getFullYear() && calMonth >= now.getMonth()+1)) return;
-  calMonth++;
-  if (calMonth > 12) { calMonth = 1; calYear++; }
-  loadCalMonth(calYear, calMonth);
+  if (calYear > now.getFullYear() || (calYear===now.getFullYear() && calMonth > now.getMonth()+1)) {
+    calMonth -= dir; return;
+  }
+  renderCalendar(calYear, calMonth);
 }
 
-async function selectDate(dateStr) {
-  calSelectedDate = dateStr;
-  renderCalGrid(calYear, calMonth); // 선택 표시 업데이트
-
+async function calSelectDate(dateStr) {
+  calSelected = dateStr;
+  renderCalendar(calYear, calMonth);
+  const mmdd = dateStr.replace(/-/g,'').slice(4);
   const container = document.getElementById('results-container');
-  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:50px;gap:12px;color:var(--muted)">
-    <div style="width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:40px;gap:12px;color:var(--muted)">
+    <div style="width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
     <span>${dateStr} 경기 결과 불러오는 중...</span>
   </div>`;
-
   try {
-    const dateKey = dateStr.replace(/-/g,'');
-    const res = await fetch(`${GAMES_API}?action=day&date=${dateKey}`);
+    const res  = await fetch(`${GAMES_API}?action=day&mmdd=${mmdd}`);
     const data = await res.json();
-    renderResults(data, dateStr);
+    await showDayResults(data.games||[], dateStr, mmdd);
   } catch(e) {
-    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--accent3)">
-      ⚠️ 데이터 로드 실패: ${e.message}
-    </div>`;
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--accent3)">⚠️ 로드 실패: ${e.message}</div>`;
   }
 }
 
-function renderResults(data, dateStr) {
+async function showDayResults(games, dateStr, mmdd) {
   const container = document.getElementById('results-container');
-  const games = data.games || [];
-
-  if (games.length === 0) {
-    container.innerHTML = `<div style="text-align:center;padding:50px;color:var(--muted);font-size:13px">
-      ${dateStr} 경기 데이터가 없습니다
-    </div>`;
+  if (!games || games.length===0) {
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">${dateStr} 경기가 없습니다</div>`;
     return;
   }
 
-  // 날짜 포맷: 2026-06-11 → 2026년 6월 11일
+  // 1차: 결과 카드 표시
   const [y,m,d] = dateStr.split('-');
-  const dateLabel = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+  const label = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 · ${games.length}경기`;
 
-  const cards = games.map(g => {
-    const hasScore = g.awayScore !== null && g.homeScore !== null;
-    const awayWin  = hasScore && g.awayScore > g.homeScore;
-    const homeWin  = hasScore && g.homeScore > g.awayScore;
-
-    const awayLogo = logoImg(g.away, 36);
-    const homeLogo = logoImg(g.home, 36);
-    const awayName = TN_S[g.away] || g.away;
-    const homeName = TN_S[g.home] || g.home;
-
-    const scoreHtml = hasScore
-      ? `<div class="result-score ${awayWin?'win':'lose'}">${g.awayScore}</div>`
-      : `<div class="result-score" style="color:var(--muted)">-</div>`;
-    const scoreHtml2 = hasScore
-      ? `<div class="result-score ${homeWin?'win':'lose'}">${g.homeScore}</div>`
-      : `<div class="result-score" style="color:var(--muted)">-</div>`;
-
-    const status = hasScore
-      ? (awayWin ? `${awayName} 승` : homeWin ? `${homeName} 승` : '무승부')
-      : (g.time ? `${g.time} 예정` : '경기 예정');
-
-    return `<div class="result-card">
-      <div class="result-header">
-        <span>${g.venue || '−'}</span>
-        <span>${g.time || ''}</span>
+  container.innerHTML = `
+    <div style="font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:14px">${label}</div>
+    <div class="result-grid" id="result-cards">${games.map(g => renderResultCard(g)).join('')}</div>
+    <div id="review-section" style="margin-top:20px">
+      <div style="display:flex;align-items:center;gap:12px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+        <div style="width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+        <span style="font-size:13px;color:var(--muted)">경기 리뷰 분석 중 (MVP·최악·예측 적중 여부)...</span>
       </div>
-      <div class="result-teams">
-        <div class="result-team">
-          ${awayLogo}
-          ${scoreHtml}
-          <div class="result-team-name">${awayName}</div>
+    </div>`;
+
+  // 2차: Claude API로 리뷰 분석
+  const savedPredictions = getSavedPredictions(mmdd);
+  try {
+    const res = await fetch(`${ANALYZE_API}?mode=review`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        predictions: savedPredictions,
+        actualResults: games,
+        boxScores: [],
+      }),
+    });
+    const data = await res.json();
+    if (data.reviews) renderReviews(data.reviews, games);
+    else document.getElementById('review-section').innerHTML =
+      `<div style="padding:12px;color:var(--muted);font-size:12px">리뷰 데이터를 가져올 수 없습니다</div>`;
+  } catch(e) {
+    document.getElementById('review-section').innerHTML =
+      `<div style="padding:12px;color:var(--muted);font-size:12px">리뷰 로드 실패: ${e.message}</div>`;
+  }
+}
+
+function renderResultCard(g) {
+  const hasScore = g.awayScore!==null && g.homeScore!==null;
+  const awayWin  = hasScore && g.awayScore > g.homeScore;
+  const homeWin  = hasScore && g.homeScore > g.awayScore;
+  const tie      = hasScore && g.awayScore === g.homeScore;
+  const status   = g.status==='finished' ? '試合終了' : g.status==='live' ? '⚡ 試合中' : `${g.time||'18:00'} 予定`;
+
+  return `<div class="result-card">
+    <div class="result-header">
+      <span>${g.venue||'−'}</span>
+      <span style="${g.status==='live'?'color:#4cde80':''}">${status}</span>
+    </div>
+    <div class="result-teams">
+      <div class="result-team">
+        ${logoImg(g.away,36)}
+        <div class="result-score ${awayWin?'win':hasScore&&!awayWin?'lose':''}">${hasScore?g.awayScore:'−'}</div>
+        <div class="result-team-name">${TN_S[g.away]||g.away}</div>
+      </div>
+      <div class="result-vs">VS</div>
+      <div class="result-team">
+        ${logoImg(g.home,36)}
+        <div class="result-score ${homeWin?'win':hasScore&&!homeWin?'lose':''}">${hasScore?g.homeScore:'−'}</div>
+        <div class="result-team-name">${TN_S[g.home]||g.home}</div>
+      </div>
+    </div>
+    ${hasScore ? `<div class="result-status">${awayWin?TN_S[g.away]:homeWin?TN_S[g.home]:'무승부'} 승</div>` : ''}
+  </div>`;
+}
+
+function renderReviews(reviews, games) {
+  const sec = document.getElementById('review-section');
+  if (!sec) return;
+  const html = reviews.map(rv => {
+    const correct = rv.correct;
+    const hitBadge = correct
+      ? `<span style="background:rgba(77,222,128,0.2);color:#4cde80;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">✓ 예측 적중</span>`
+      : `<span style="background:rgba(232,92,64,0.2);color:#e85c40;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">✗ 예측 미스</span>`;
+
+    const mvpHtml = rv.mvp ? `
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(232,200,64,0.08);border-radius:6px;border-left:3px solid var(--accent)">
+        <span style="font-size:18px">🏆</span>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">최고 활약</div>
+          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--accent)">${rv.mvp.name}</div>
+          <div style="font-size:11px;color:var(--text);margin-top:2px">${rv.mvp.performance}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${rv.mvp.reason}</div>
         </div>
-        <div class="result-vs">VS</div>
-        <div class="result-team">
-          ${homeLogo}
-          ${scoreHtml2}
-          <div class="result-team-name">${homeName}</div>
+      </div>` : '';
+
+    const worstHtml = rv.worst ? `
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(232,92,64,0.06);border-radius:6px;border-left:3px solid var(--accent3)">
+        <span style="font-size:18px">💔</span>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">최악 활약</div>
+          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--accent3)">${rv.worst.name}</div>
+          <div style="font-size:11px;color:var(--text);margin-top:2px">${rv.worst.performance}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${rv.worst.reason}</div>
+        </div>
+      </div>` : '';
+
+    const hitHtml = correct && rv.hitReasons?.length
+      ? `<div style="font-size:11px;color:#4cde80;margin-top:6px">✓ ${rv.hitReasons.join(' / ')}</div>` : '';
+    const missHtml = !correct && rv.missReasons?.length
+      ? `<div style="font-size:11px;color:#e85c40;margin-top:6px">✗ ${rv.missReasons.join(' / ')}</div>` : '';
+
+    return `<div class="card mgb">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${logoImg(rv.awayTeam,24)} <span style="font-family:var(--fd);font-size:14px;font-weight:700">${TN_S[rv.awayTeam]||rv.awayTeam}</span>
+          <span style="color:var(--muted);font-size:12px">vs</span>
+          ${logoImg(rv.homeTeam,24)} <span style="font-family:var(--fd);font-size:14px;font-weight:700">${TN_S[rv.homeTeam]||rv.homeTeam}</span>
+          ${rv.score ? `<span style="font-family:var(--fd);font-size:16px;font-weight:800;color:var(--text);margin-left:4px">${rv.score}</span>` : ''}
+        </div>
+        ${hitBadge}
+      </div>
+      ${rv.highlight ? `<div style="font-size:12px;color:var(--text);margin-bottom:10px;padding:8px 10px;background:var(--surface2);border-radius:5px">${rv.highlight}</div>` : ''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        ${mvpHtml}
+        ${worstHtml}
+      </div>
+      ${hitHtml}${missHtml}
+    </div>`;
+  }).join('');
+  sec.innerHTML = html || `<div style="padding:12px;color:var(--muted);font-size:12px">리뷰 데이터 없음</div>`;
+}
+
+// 예측 저장/로드 (localStorage)
+function savePredictions(mmdd, analyses) {
+  try { localStorage.setItem(`npb_pred_${mmdd}`, JSON.stringify(analyses)); } catch(e) {}
+}
+function getSavedPredictions(mmdd) {
+  try { return JSON.parse(localStorage.getItem(`npb_pred_${mmdd}`)||'[]'); } catch(e) { return []; }
+}
+
+/* ══════════════════════════════════════
+   다음 경기 분석
+══════════════════════════════════════ */
+async function renderNextGames(data) {
+  showNextLoading(false);
+  const container = document.getElementById('next-container');
+  const analysis  = document.getElementById('match-analysis');
+  if (!container) return;
+
+  const games = data.tomorrowGames || [];
+  const starters = data.starters || {};
+  const tmrMmdd = data.tmrMmdd || '';
+
+  if (games.length === 0) {
+    container.style.display = 'block';
+    container.innerHTML = `<div style="text-align:center;padding:50px;color:var(--muted)">내일 예정 경기가 없습니다</div>`;
+    if (analysis) analysis.style.display = 'none';
+    return;
+  }
+
+  const tmrM = tmrMmdd ? parseInt(tmrMmdd.slice(0,2)) : '';
+  const tmrD = tmrMmdd ? parseInt(tmrMmdd.slice(2,4)) : '';
+  const tmrLabel = tmrMmdd ? `${tmrM}월 ${tmrD}일 예정 경기` : '다음 경기';
+
+  // 1차: 기본 카드 표시
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div style="font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:16px">
+      📅 ${tmrLabel} · ${games.length}경기
+    </div>
+    <div class="match-grid" id="next-basic-cards">
+      ${games.map(g => `
+        <div class="mc2">
+          <div class="mh">
+            <span class="mh-venue">⚾ ${g.venue||'−'} · ${g.time||'18:00'}</span>
+            <span class="mh-badge">예정</span>
+          </div>
+          <div class="teams-row">
+            <div class="team-side home">${logoLg(g.home)}<div class="team-info"><div class="team-fullname">${TN_S[g.home]||g.home}</div></div></div>
+            <div class="vs-badge">VS</div>
+            <div class="team-side away">${logoLg(g.away)}<div class="team-info right"><div class="team-fullname">${TN_S[g.away]||g.away}</div></div></div>
+          </div>
+          ${starters[g.home]||starters[g.away] ? `
+          <div style="padding:6px 14px 10px;font-size:11px;color:var(--muted)">
+            ${starters[g.home]?`홈 선발: <strong>${starters[g.home]}</strong>`:''}
+            ${starters[g.home]&&starters[g.away]?' · ':''}
+            ${starters[g.away]?`원정 선발: <strong>${starters[g.away]}</strong>`:''}
+          </div>` : ''}
+        </div>`).join('')}
+    </div>
+    <div id="ai-analysis-section" style="margin-top:24px">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+        <div style="width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+        <span style="font-size:13px;color:var(--muted)">🤖 AI 심층 분석 중 (선발진·타선·이슈 분석)...</span>
+      </div>
+    </div>`;
+
+  // 기존 match-analysis 숨기기
+  if (analysis) analysis.style.display = 'none';
+
+  // 2차: Claude API 심층 분석
+  try {
+    const res = await fetch(`${ANALYZE_API}?mode=predict`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ games, starters }),
+    });
+    const aiData = await res.json();
+    if (aiData.analyses) {
+      savePredictions(tmrMmdd, aiData.analyses);
+      renderAIAnalyses(aiData.analyses, games);
+    } else {
+      document.getElementById('ai-analysis-section').innerHTML =
+        `<div style="padding:12px;color:var(--muted);font-size:12px">AI 분석 데이터를 가져올 수 없습니다</div>`;
+    }
+  } catch(e) {
+    document.getElementById('ai-analysis-section').innerHTML =
+      `<div style="padding:12px;color:var(--muted);font-size:12px">AI 분석 로드 실패: ${e.message}</div>`;
+  }
+}
+
+function renderAIAnalyses(analyses, games) {
+  const sec = document.getElementById('ai-analysis-section');
+  if (!sec) return;
+
+  const html = analyses.map(a => {
+    const homeProb = a.winProb?.home ?? 50;
+    const awayProb = a.winProb?.away ?? 50;
+    const confColor = a.confidence==='high'?'#4cde80':a.confidence==='low'?'#e85c40':'#e8c840';
+
+    const battersHtml = (a.keyBatters||[]).map(b => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+        ${logoImg(b.team,18)}
+        <div style="flex:1">
+          <span style="font-size:13px;font-weight:500">${b.name}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:6px">${b.stat}</span>
+        </div>
+        <span style="font-size:11px;color:var(--muted)">${b.note}</span>
+      </div>`).join('');
+
+    const pitchersHtml = (a.keyPitchers||[]).map(p => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+        ${logoImg(p.team,18)}
+        <div style="flex:1">
+          <span style="font-size:13px;font-weight:500">${p.name}</span>
+          <span style="font-size:10px;padding:1px 5px;border-radius:2px;margin-left:4px;background:var(--surface2);color:var(--muted)">${p.role}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:4px">ERA ${p.era}</span>
+        </div>
+        <span style="font-size:11px;color:var(--muted)">${p.note}</span>
+      </div>`).join('');
+
+    return `<div class="card mgb" style="${a.confidence==='high'?'border-color:rgba(77,222,128,0.3)':''}">
+      <!-- 헤더 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${logoLg(a.awayTeam)}
+          <div>
+            <div style="font-size:11px;color:var(--muted)">원정</div>
+            <div style="font-family:var(--fd);font-size:16px;font-weight:700">${TN_S[a.awayTeam]||a.awayTeam}</div>
+            ${a.starter?.away?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starter.away}</div>`:''}
+          </div>
+          <span style="font-family:var(--fd);font-size:20px;color:var(--muted2);padding:0 8px">VS</span>
+          <div>
+            <div style="font-size:11px;color:var(--muted)">홈</div>
+            <div style="font-family:var(--fd);font-size:16px;font-weight:700">${TN_S[a.homeTeam]||a.homeTeam}</div>
+            ${a.starter?.home?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starter.home}</div>`:''}
+          </div>
+          ${logoLg(a.homeTeam)}
+        </div>
+        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px;background:rgba(255,255,255,0.08);color:${confColor}">
+          신뢰도 ${a.confidence==='high'?'높음':a.confidence==='low'?'낮음':'중간'}
+        </span>
+      </div>
+
+      <!-- 승률 바 -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:5px">
+          <div style="width:${awayProb}%;background:var(--accent3)"></div>
+          <div style="width:${homeProb}%;background:var(--accent2)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--accent3)">${TN_S[a.awayTeam]||a.awayTeam} ${awayProb}%</span>
+          <span style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--accent2)">${TN_S[a.homeTeam]||a.homeTeam} ${homeProb}%</span>
         </div>
       </div>
-      <div class="result-status">${status}</div>
+
+      <!-- 핵심 타자/투수 -->
+      ${(a.keyBatters?.length||a.keyPitchers?.length) ? `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        ${a.keyBatters?.length ? `<div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px">주목 타자</div>
+          ${battersHtml}
+        </div>` : ''}
+        ${a.keyPitchers?.length ? `<div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px">주목 투수</div>
+          ${pitchersHtml}
+        </div>` : ''}
+      </div>` : ''}
+
+      <!-- 분석 섹션 -->
+      <div style="display:grid;gap:8px">
+        ${a['핵심근거']?`<div><div class="analysis-label">핵심</div><div class="analysis-text">${a['핵심근거']}</div></div>`:''}
+        ${a['변수']?`<div><div class="analysis-label">변수</div><div class="analysis-text">${a['변수']}</div></div>`:''}
+        ${a['이슈']?`<div><div class="analysis-label">이슈</div><div class="analysis-text">${a['이슈']}</div></div>`:''}
+        ${a['판정']?`<div class="verdict-box">
+          <span class="verdict-icon">🏆</span>
+          <div><div class="verdict-fav">판정: ${a['판정']}</div></div>
+        </div>`:''}
+      </div>
     </div>`;
   }).join('');
 
-  container.innerHTML = `
-    <div style="font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text)">${dateLabel} · ${games.length}경기</div>
-    <div class="result-grid">${cards}</div>`;
+  sec.innerHTML = `<div style="font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:16px">🤖 AI 경기 분석</div>` + html;
 }
+
+// 경기분석 탭이 이미 열려있으면 페이지 로드 시에도 초기화
+document.addEventListener('DOMContentLoaded', () => {
+  // 기본 탭이 경기분석이 아니므로 클릭 시에만 로드됨
+});
 
 </script>
 </body>
-</html>
