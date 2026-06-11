@@ -449,6 +449,7 @@ function switchTab(id,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
+  if (id === 'stats' && !statsLoaded) loadAllStats();
 }
 function switchStats(id,btn){
   document.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
@@ -765,12 +766,7 @@ function switchStats(id, btn) {
   }
 }
 
-// 리그 성적 탭 클릭 시 로드 (최초 1회)
-const origSwitchTab = switchTab;
-function switchTab(id, btn) {
-  origSwitchTab(id, btn);
-  if (id === 'stats' && !statsLoaded) loadAllStats();
-}
+// (리그성적 탭 로드는 switchTab 내부에서 직접 처리)
 
 // 페이지 로드 시 자동갱신 스케줄 등록
 scheduleAutoRefresh();
