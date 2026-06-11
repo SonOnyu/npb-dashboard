@@ -624,9 +624,27 @@ const STAT_CACHE = {};
 let activeStatsTab = 'top';
 let statsLoaded = false;
 
-// 타자 컬럼 헤더 (일본어→한국어)
-const BAT_HEADERS_KO = ['순위','선수명','팀','타율','경기','타석','타수','안타','2루타','3루타','홈런','누타','타점','득점','삼진','볼넷','사구','희타','희비','도루','도루실','병살','출루율','장타율','OPS','득점권','실책'];
-const PIT_HEADERS_KO = ['순위','선수명','팀','방어율','등판','선발','완투','완봉','QS','승','패','홀드','HP','세이브','승률','투구이닝','피안타','피홈런','탈삼진','K/9','볼넷','사구','폭투','보크','실점','자책','WHIP'];
+// NPB 일본어 헤더 → 한국어 매핑
+const HEADER_MAP = {
+  '順位':'순위','選手名':'선수명','チーム':'팀','打率':'타율','試合':'경기',
+  '打席':'타석','打数':'타수','安打':'안타','二塁打':'2루타','三塁打':'3루타',
+  '本塁打':'홈런','塁打':'누타','打点':'타점','得点':'득점','三振':'삼진',
+  '四球':'볼넷','死球':'사구','犠打':'희타','犠飛':'희비','盗塁':'도루',
+  '盗塁死':'도루실','併殺打':'병살','出塁率':'출루율','長打率':'장타율',
+  'ＯＰＳ':'OPS','OPS':'OPS','得点圏':'득점권','失策':'실책',
+  // 투수
+  '防御率':'방어율','登板':'등판','先発':'선발','完投':'완투','完封':'완봉',
+  'ＱＳ':'QS','QS':'QS','勝利':'승','敗戦':'패','ホールド':'홀드',
+  'ＨＰ':'HP','HP':'HP','セーブ':'세이브','勝率':'승률','投球回':'투구이닝',
+  '被安打':'피안타','被本塁打':'피홈런','奪三振':'탈삼진','奪三振率':'K/9',
+  '与四球':'볼넷허용','与死球':'사구허용','暴投':'폭투','ボーク':'보크',
+  '失点':'실점','自責点':'자책','ＷＨＩＰ':'WHIP','WHIP':'WHIP',
+};
+function translateHeader(h) {
+  // 전각→반각 변환 후 매핑
+  const norm = h.replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  return HEADER_MAP[norm] || HEADER_MAP[h] || h;
+}
 
 // NPB 팀명 → 약어 매핑
 const NPB_TEAM_MAP = {
@@ -646,7 +664,10 @@ function renderStatsTable(data, isBatter) {
   if (!data || !data.rows || data.rows.length === 0) {
     return `<div class="card"><div style="padding:40px;text-align:center;color:var(--muted)">데이터 없음 (규정 미달 선수 없음)</div></div>`;
   }
-  const headers = isBatter ? BAT_HEADERS_KO : PIT_HEADERS_KO;
+  // 실제 NPB 헤더를 한국어로 번역해서 사용
+  const headers = (data.headers && data.headers.length > 0)
+    ? data.headers.map(translateHeader)
+    : (isBatter ? ['순위','선수명','팀','타율','경기','타수','안타','홈런','타점','득점','삼진','볼넷','출루율','장타율','OPS'] : ['순위','선수명','팀','방어율','등판','선발','승','패','세이브','투구이닝','탈삼진','볼넷','WHIP']);
   const keyCol  = isBatter ? 3 : 3; // 타율 or 방어율 index
   const rows = data.rows;
 
