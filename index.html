@@ -314,7 +314,8 @@ body:not(.light) .rdp{color:#4cde80}
   </div>
 
   <div class="sub-tabs">
-    <button class="sub-tab active" onclick="switchStats('top',this)">톱</button>
+    <button class="sub-tab active" onclick="switchStats('cl-top',this)">セ 톱</button>
+    <button class="sub-tab" onclick="switchStats('pl-top',this)">パ 톱</button>
     <button class="sub-tab" onclick="switchStats('cl-bat',this)">セ · 타자</button>
     <button class="sub-tab" onclick="switchStats('cl-pit',this)">セ · 투수</button>
     <button class="sub-tab" onclick="switchStats('pl-bat',this)">パ · 타자</button>
@@ -331,7 +332,8 @@ body:not(.light) .rdp{color:#4cde80}
   </div>
   <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
-  <div id="stats-top"     class="stats-panel" style="display:none"></div>
+  <div id="stats-cl-top"  class="stats-panel" style="display:none"></div>
+  <div id="stats-pl-top"  class="stats-panel" style="display:none"></div>
   <div id="stats-cl-bat"  class="stats-panel" style="display:none"></div>
   <div id="stats-cl-pit"  class="stats-panel" style="display:none"></div>
   <div id="stats-pl-bat"  class="stats-panel" style="display:none"></div>
@@ -621,7 +623,7 @@ document.getElementById('js-champ-logo').innerHTML=logoImg('H',40);
 /* ── LIVE STATS from NPB via Netlify Function ── */
 const API = '/.netlify/functions/npb-stats';
 const STAT_CACHE = {};
-let activeStatsTab = 'top';
+let activeStatsTab = 'cl-top';
 let statsLoaded = false;
 
 // NPB 일본어 헤더 → 한국어 매핑
@@ -730,17 +732,16 @@ async function loadAllStats() {
     }
 
     // 각 패널 렌더링
-    const topHTML = `
-      <div class="grid2 mgb">
-        <div>${renderStatsTable({rows: clBat.rows?.slice(0,10)}, true).replace('<div class="card">','<div class="card"><div class="card-t">セ 타자 Top10</div>')}</div>
-        <div>${renderStatsTable({rows: plBat.rows?.slice(0,10)}, true).replace('<div class="card">','<div class="card"><div class="card-t">パ 타자 Top10</div>')}</div>
-      </div>
-      <div class="grid2">
-        <div>${renderStatsTable({rows: clPit.rows?.slice(0,10)}, false).replace('<div class="card">','<div class="card"><div class="card-t">セ 투수 Top10</div>')}</div>
-        <div>${renderStatsTable({rows: plPit.rows?.slice(0,10)}, false).replace('<div class="card">','<div class="card"><div class="card-t">パ 투수 Top10</div>')}</div>
-      </div>`;
+    const clTopHTML = `
+      <div class="mgb">${renderStatsTable({headers: clBat.headers, rows: clBat.rows?.slice(0,10)}, true).replace('<div class="card">','<div class="card"><div class="card-t">セ 타자 Top10</div>')}</div>
+      <div>${renderStatsTable({headers: clPit.headers, rows: clPit.rows?.slice(0,10)}, false).replace('<div class="card">','<div class="card"><div class="card-t">セ 투수 Top10</div>')}</div>`;
 
-    document.getElementById('stats-top').innerHTML    = topHTML;
+    const plTopHTML = `
+      <div class="mgb">${renderStatsTable({headers: plBat.headers, rows: plBat.rows?.slice(0,10)}, true).replace('<div class="card">','<div class="card"><div class="card-t">パ 타자 Top10</div>')}</div>
+      <div>${renderStatsTable({headers: plPit.headers, rows: plPit.rows?.slice(0,10)}, false).replace('<div class="card">','<div class="card"><div class="card-t">パ 투수 Top10</div>')}</div>`;
+
+    document.getElementById('stats-cl-top').innerHTML = clTopHTML;
+    document.getElementById('stats-pl-top').innerHTML = plTopHTML;
     document.getElementById('stats-cl-bat').innerHTML = renderStatsTable(clBat, true);
     document.getElementById('stats-cl-pit').innerHTML = renderStatsTable(clPit, false);
     document.getElementById('stats-pl-bat').innerHTML = renderStatsTable(plBat, true);
@@ -750,7 +751,8 @@ async function loadAllStats() {
     document.getElementById('stats-op-bat').innerHTML = renderStatsTable(opBat, true);
 
     loading.style.display = 'none';
-    document.getElementById('stats-' + activeStatsTab).style.display = 'block';
+    document.getElementById('stats-cl-top').style.display = 'block';
+    activeStatsTab = 'cl-top';
     statsLoaded = true;
 
   } catch (err) {
@@ -786,6 +788,11 @@ function switchStats(id, btn) {
     document.getElementById('stats-' + id).style.display = 'block';
   }
 }
+// 초기 활성 탭 버튼 설정
+document.addEventListener('DOMContentLoaded', () => {
+  const firstSubTab = document.querySelector('.sub-tab');
+  if (firstSubTab) firstSubTab.classList.add('active');
+});
 
 // (리그성적 탭 로드는 switchTab 내부에서 직접 처리)
 
