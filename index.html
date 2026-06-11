@@ -1278,7 +1278,8 @@ async function renderPrevResults(data) {
     const now = new Date();
     calYear = now.getFullYear(); calMonth = now.getMonth()+1;
     calInitialized = true;
-    renderCalendar(calYear, calMonth);
+    // 스케줄 로드로 경기 있는 날 마킹
+    await loadCalMonth(calYear, calMonth);
   }
   // 오늘 결과 자동 표시
   if (data.todayGames && data.todayGames.length > 0) {
@@ -1329,6 +1330,22 @@ function renderCalendar(yyyy, mm) {
   if (el) el.innerHTML = h;
 }
 
+async function loadCalMonth(yyyy, mm) {
+  const mmStr = String(mm).padStart(2,'0');
+  renderCalendar(yyyy, mm);
+  try {
+    const res  = await fetch(`${GAMES_API}?action=schedule&mm=${mmStr}`);
+    const data = await res.json();
+    if (data.byDate) {
+      Object.keys(data.byDate).forEach(mmdd => {
+        const mo = mmdd.slice(0,2), dd = mmdd.slice(2,4);
+        calGameDays[`${yyyy}-${mo}-${dd}`] = true;
+      });
+      renderCalendar(yyyy, mm);
+    }
+  } catch(e) {}
+}
+
 function calMove(dir) {
   calMonth += dir;
   if (calMonth < 1) { calMonth=12; calYear--; }
@@ -1344,7 +1361,7 @@ function calMove(dir) {
 async function calSelectDate(dateStr) {
   calSelected = dateStr;
   renderCalendar(calYear, calMonth);
-  const mmdd = dateStr.replace(/-/g,'').slice(4);
+  const mmdd = dateStr.slice(5,7) + dateStr.slice(8,10); // YYYY-MM-DD → MMDD
   const container = document.getElementById('results-container');
   container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:40px;gap:12px;color:var(--muted)">
     <div style="width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
