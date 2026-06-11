@@ -1,7 +1,3 @@
-netlify/
-  functions/
-    npb-stats.js
-
 const https = require('https');
 
 // NPB 공식 URL 목록
