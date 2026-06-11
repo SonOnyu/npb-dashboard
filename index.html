@@ -524,6 +524,7 @@ function switchTab(id,btn){
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
   if (id === 'stats' && !statsLoaded) loadAllStats();
+  if (id === 'today') { gamesDataCache = null; initGamesPanels(); }
 }
 function switchStats(id,btn){
   document.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
@@ -1228,15 +1229,7 @@ async function loadGamesData(force=false) {
   } catch(e) { return null; }
 }
 
-// switchTab 오버라이드 — 경기분석 탭 진입 시 자동갱신
-const _origSwitchTab = switchTab;
-function switchTab(id, btn) {
-  _origSwitchTab(id, btn);
-  if (id === 'today') {
-    gamesDataCache = null; // 강제 갱신
-    initGamesPanels();
-  }
-}
+// (switchTab 오버라이드 제거 — 기존 switchTab 내부에서 직접 처리)
 
 async function initGamesPanels() {
   // 두 패널 동시 초기화
