@@ -83,6 +83,14 @@ main{padding:28px 40px 60px}
 .sub-tab.cur-tab.active{background:#8b5a2b;color:#fff;border-color:#8b5a2b}
 .sub-tab.js-tab.active{background:#d61f3c;color:#fff;border-color:#d61f3c}
 
+/* 타자/투수 토글 */
+.bp-toggle{display:flex;gap:4px;margin-bottom:18px}
+.bp-btn{font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:0.05em;padding:8px 22px;
+        border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;
+        border-radius:4px;transition:all 0.15s}
+.bp-btn:hover{color:var(--text);border-color:var(--muted)}
+.bp-btn.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+
 /* TABLE */
 .lb{width:100%;border-collapse:collapse}
 .lb thead th{font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text);padding:7px 10px;text-align:right;border-bottom:1px solid var(--border2);white-space:nowrap}
@@ -433,21 +441,20 @@ body:not(.light) .rdp{color:#4cde80}
   </div>
 
   <div class="sub-tabs">
-    <button class="sub-tab active cl-tab" onclick="switchStats('cl-bat',this)">セントラル · 타자</button>
-    <button class="sub-tab cl-tab" onclick="switchStats('cl-pit',this)">セントラル · 투수</button>
-    <button class="sub-tab pl-tab" onclick="switchStats('pl-bat',this)">パシフィック · 타자</button>
-    <button class="sub-tab pl-tab" onclick="switchStats('pl-pit',this)">パシフィック · 투수</button>
-    <button class="sub-tab" onclick="switchStats('ko-bat',this)">교류전 · 타자</button>
-    <button class="sub-tab" onclick="switchStats('ko-pit',this)">교류전 · 투수</button>
-    <button class="sub-tab" onclick="switchStats('op-bat',this)">오픈전 · 타자</button>
-    <button class="sub-tab cur-tab" onclick="switchStats('cur-bat',this)">현재 전체 순위 · 타자</button>
-    <button class="sub-tab cur-tab" onclick="switchStats('cur-pit',this)">현재 전체 순위 · 투수</button>
-    <button class="sub-tab cl-tab" onclick="switchStats('clps-bat',this)">센트럴 포스트시즌 · 타자</button>
-    <button class="sub-tab cl-tab" onclick="switchStats('clps-pit',this)">센트럴 포스트시즌 · 투수</button>
-    <button class="sub-tab pl-tab" onclick="switchStats('plps-bat',this)">퍼시픽 포스트시즌 · 타자</button>
-    <button class="sub-tab pl-tab" onclick="switchStats('plps-pit',this)">퍼시픽 포스트시즌 · 투수</button>
-    <button class="sub-tab js-tab" onclick="switchStats('js-bat',this)">일본시리즈 · 타자</button>
-    <button class="sub-tab js-tab" onclick="switchStats('js-pit',this)">일본시리즈 · 투수</button>
+    <button class="sub-tab active cur-tab" onclick="switchStatGroup('cur',this)">전체 순위</button>
+    <button class="sub-tab pl-tab" onclick="switchStatGroup('pl',this)">퍼시픽</button>
+    <button class="sub-tab cl-tab" onclick="switchStatGroup('cl',this)">센트럴</button>
+    <button class="sub-tab" onclick="switchStatGroup('ko',this)">교류전</button>
+    <button class="sub-tab pl-tab" onclick="switchStatGroup('plps',this)">포스트시즌 퍼시픽</button>
+    <button class="sub-tab cl-tab" onclick="switchStatGroup('clps',this)">포스트시즌 센트럴</button>
+    <button class="sub-tab js-tab" onclick="switchStatGroup('js',this)">일본시리즈</button>
+    <button class="sub-tab" onclick="switchStatGroup('op',this)">오픈전</button>
+  </div>
+
+  <!-- 타자/투수 토글 -->
+  <div class="bp-toggle">
+    <button class="bp-btn active" onclick="switchStatType('bat',this)">타자</button>
+    <button class="bp-btn" onclick="switchStatType('pit',this)">투수</button>
   </div>
 
   <!-- 로딩 스피너 -->
@@ -464,7 +471,8 @@ body:not(.light) .rdp{color:#4cde80}
   <div id="stats-ko-bat"  class="stats-panel" style="display:none"></div>
   <div id="stats-ko-pit"  class="stats-panel" style="display:none"></div>
   <div id="stats-op-bat"  class="stats-panel" style="display:none"></div>
-  <div id="stats-cur-bat" class="stats-panel" style="display:none"></div>
+  <div id="stats-op-pit"  class="stats-panel" style="display:none"></div>
+  <div id="stats-cur-bat" class="stats-panel" style="display:block"></div>
   <div id="stats-cur-pit" class="stats-panel" style="display:none"></div>
   <div id="stats-clps-bat" class="stats-panel" style="display:none"></div>
   <div id="stats-clps-pit" class="stats-panel" style="display:none"></div>
@@ -1150,7 +1158,7 @@ async function loadAllStats() {
   const loading = document.getElementById('stats-loading');
   try {
     // 모든 탭 병렬 로드
-    const [clBat, clPit, plBat, plPit, koBat, koPit, opBat] = await Promise.all([
+    const [clBat, clPit, plBat, plPit, koBat, koPit, opBat, opPit] = await Promise.all([
       fetchStats('bat_c'),
       fetchStats('pit_c'),
       fetchStats('bat_p'),
@@ -1158,6 +1166,7 @@ async function loadAllStats() {
       fetchStats('bat_inter'),
       fetchStats('pit_inter'),
       fetchStats('bat_op'),
+      fetchStats('pit_op'),
     ]);
 
     // 업데이트 날짜 표시
@@ -1173,6 +1182,7 @@ async function loadAllStats() {
     document.getElementById('stats-ko-bat').innerHTML = renderStatsTable(koBat, true);
     document.getElementById('stats-ko-pit').innerHTML = renderStatsTable(koPit, false);
     document.getElementById('stats-op-bat').innerHTML = renderStatsTable(opBat, true);
+    document.getElementById('stats-op-pit').innerHTML = renderStatsTable(opPit, false);
 
     // 현재 전체 순위 (CL+PL 통합, 타율/방어율 기준 재정렬)
     const curBatRows = [...(clBat.rows||[]), ...(plBat.rows||[])]
@@ -1199,8 +1209,7 @@ async function loadAllStats() {
     document.getElementById('stats-js-pit').innerHTML = notReady('일본시리즈 · 투수');
 
     loading.style.display = 'none';
-    document.getElementById('stats-cl-bat').style.display = 'block';
-    activeStatsTab = 'cl-bat';
+    showActiveStatPanel();
     statsLoaded = true;
 
   } catch (err) {
@@ -1227,14 +1236,29 @@ function scheduleAutoRefresh() {
   console.log(`[NPB] 다음 자동갱신: ${next5am.toLocaleString('ko-KR')}`);
 }
 
-function switchStats(id, btn) {
-  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.stats-panel').forEach(p => p.style.display = 'none');
-  activeStatsTab = id;
+let activeStatGroup = 'cur';
+let activeStatType  = 'bat';
+
+function switchStatGroup(group, btn) {
+  document.querySelectorAll('#stats .sub-tabs .sub-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  if (statsLoaded) {
-    document.getElementById('stats-' + id).style.display = 'block';
-  }
+  activeStatGroup = group;
+  showActiveStatPanel();
+}
+
+function switchStatType(type, btn) {
+  document.querySelectorAll('.bp-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeStatType = type;
+  showActiveStatPanel();
+}
+
+function showActiveStatPanel() {
+  document.querySelectorAll('.stats-panel').forEach(p => p.style.display = 'none');
+  const id = activeStatGroup + '-' + activeStatType;
+  activeStatsTab = id;
+  const el = document.getElementById('stats-' + id);
+  if (el) el.style.display = 'block';
 }
 // 초기 활성 탭 버튼 설정
 document.addEventListener('DOMContentLoaded', () => {
