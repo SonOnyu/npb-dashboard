@@ -245,8 +245,14 @@ ${JSON.stringify(starters, null, 2)}
     } else if (mode === 'review') {
       const { predictions, actualResults, boxScores } = bodyData;
 
-      prompt = `당신은 NPB 애널리스트입니다. 어제(또는 선택된 날짜) 경기 예측과 실제 결과를 비교 분석해주세요.
-당신의 NPB 지식과 최근 뉴스 정보를 활용해, 예측 당시 알 수 없었던 경기 중 돌발 상황(부상, 교체, 극심한 부진, 폭투, 실책 등)이 있었다면 함께 짚어주세요.
+      prompt = `당신은 NPB 애널리스트입니다. 아래에 주어진 실제 경기 데이터(팀 키, 점수)를 기반으로 분석해주세요.
+
+## 절대 규칙 (매우 중요)
+- "실제 결과"에 주어진 homeTeam, awayTeam 팀 키(G/Sw/DB/D/T/C/H/F/Bs/E/L/M)와 점수만을 사실로 취급할 것.
+- 주어진 팀 키 외의 다른 팀 이름(예: DeNA, 소프트뱅크 등)을 임의로 등장시키지 말 것. gameId의 팀 키와 homeTeam/awayTeam 필드를 그대로 사용할 것.
+- "예측 당시 분석"이 빈 배열이거나 해당 경기 정보가 없으면, predictedWinner는 빈 문자열로, predictionAccuracy는 "예측 없음"으로, hitAnalysis와 missAnalysis는 빈 문자열로 둘 것. 가상의 예측 근거를 만들어내지 말 것.
+- 박스스코어가 제공되지 않으면 MVP/최악 선수의 이름을 "정보 없음"으로 표기하고, 가상의 선수명이나 활약상을 지어내지 말 것. 대신 mvpPerformance/worstPerformance에는 "박스스코어 미제공"이라고만 적을 것.
+- highlight는 주어진 팀 키와 점수를 사실대로만 서술할 것 (예: "F가 D를 9-5로 이겼다" 등 팀 키 기반 서술, 임의의 팀명 사용 금지).
 
 ## 예측 당시 분석
 ${JSON.stringify(predictions, null, 2)}
