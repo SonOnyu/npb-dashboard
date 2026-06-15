@@ -562,6 +562,7 @@ function switchTab(id,btn){
   btn.classList.add('active');
   if (id === 'stats' && !statsLoaded) loadAllStats();
   if (id === 'today') { gamesDataCache = null; initGamesPanels(); }
+  if (id === 'standings') loadStandings();
 }
 function switchStats(id,btn){
   document.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
@@ -699,36 +700,44 @@ renderBar('pitcher-war-chart',[
 ],2.5);
 
 /* ── STANDINGS ── */
-function renderStd(id,rows){
-  const hdr=`<thead><tr><th>구단</th><th>G</th><th>W</th><th>L</th><th>승률</th><th>득실</th><th>R/G</th><th>RA/G</th></tr></thead>`;
-  const body='<tbody>'+rows.map(r=>`<tr>
-    <td><span class="rk rk${r.rank}">${r.rank}</span><span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle">${logoImg(r.team,20)}<span style="font-size:12px">${TN_S[r.team]}</span></span></td>
-    <td>${r.g}</td><td>${r.w}</td><td>${r.l}</td>
-    <td><span class="wpct ${r.w>r.l?'vg':''}">${r.pct}</span></td>
-    <td class="${r.diff>0?'rdp':'rdn'}">${r.diff>0?'+'+r.diff:r.diff}</td>
-    <td>${r.rg}</td><td>${r.ra}</td>
-  </tr>`).join('')+'</tbody>';
-  document.getElementById(id).innerHTML=hdr+body;
+function renderStd(id, rows, updatedAt) {
+  if (!rows || rows.length === 0) {
+    document.getElementById(id).innerHTML = `<tbody><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">데이터 로드 중...</td></tr></tbody>`;
+    return;
+  }
+  const hdr = `<thead><tr><th>구단</th><th>G</th><th>W</th><th>L</th><th>무</th><th>승률</th><th>차</th><th>홈</th><th>원정</th></tr></thead>`;
+  const body = '<tbody>' + rows.map(r => `<tr>
+    <td><span class="rk rk${r.rank}">${r.rank}</span><span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle">${logoImg(r.team,20)}<span style="font-size:12px">${TN_S[r.team]||r.team}</span></span></td>
+    <td>${r.g}</td><td>${r.w}</td><td>${r.l}</td><td>${r.draw}</td>
+    <td><span class="wpct ${parseFloat(r.w)>parseFloat(r.l)?'vg':''}">${r.pct}</span></td>
+    <td>${r.gb}</td>
+    <td style="font-size:11px">${r.home}</td><td style="font-size:11px">${r.away}</td>
+  </tr>`).join('') + '</tbody>';
+  document.getElementById(id).innerHTML = hdr + body;
 }
-renderStd('cl-table',[
-  {rank:1,team:'G',g:60,w:33,l:25,pct:'.569',diff:6,rg:3.30,ra:3.20},
-  {rank:2,team:'T',g:58,w:32,l:25,pct:'.561',diff:22,rg:3.78,ra:3.40},
-  {rank:3,team:'Sw',g:60,w:32,l:27,pct:'.542',diff:-11,rg:3.25,ra:3.43},
-  {rank:4,team:'DB',g:60,w:25,l:33,pct:'.431',diff:-29,rg:3.50,ra:3.98},
-  {rank:5,team:'C',g:57,w:21,l:33,pct:'.389',diff:-18,rg:2.95,ra:3.26},
-  {rank:6,team:'D',g:60,w:21,l:38,pct:'.356',diff:-25,rg:3.32,ra:3.73},
-]);
-renderStd('pl-table',[
-  {rank:1,team:'L',g:61,w:37,l:22,pct:'.627',diff:54,rg:3.87,ra:2.98},
-  {rank:2,team:'H',g:59,w:35,l:24,pct:'.593',diff:51,rg:4.44,ra:3.58},
-  {rank:3,team:'Bs',g:60,w:32,l:27,pct:'.542',diff:6,rg:3.58,ra:3.48},
-  {rank:4,team:'F',g:62,w:33,l:29,pct:'.532',diff:22,rg:3.97,ra:3.61},
-  {rank:5,team:'M',g:'—',w:'—',l:'—',pct:'—',diff:0,rg:'—',ra:'—'},
-  {rank:6,team:'E',g:'—',w:'—',l:'—',pct:'—',diff:0,rg:'—',ra:'—'},
-]);
+
+async function loadStandings() {
+  try {
+    const res  = await fetch('/.netlify/functions/npb-stats?type=standings');
+    const data = await res.json();
+    renderStd('cl-table', data.cl?.rows, data.cl?.updatedAt);
+    renderStd('pl-table', data.pl?.rows, data.pl?.updatedAt);
+
+    // 리그 선두팀 로고 갱신
+    const clTop = data.cl?.rows?.[0];
+    const plTop = data.pl?.rows?.[0];
+    if (clTop) document.getElementById('cl-champ-logo').innerHTML = logoImg(clTop.team, 40);
+    if (plTop) document.getElementById('pl-champ-logo').innerHTML = logoImg(plTop.team, 40);
+    if (plTop) document.getElementById('js-champ-logo').innerHTML = logoImg(plTop.team, 40);
+  } catch(e) {
+    console.error('Standings load failed:', e.message);
+  }
+}
+
 document.getElementById('cl-champ-logo').innerHTML=logoImg('T',40);
 document.getElementById('pl-champ-logo').innerHTML=logoImg('H',40);
 document.getElementById('js-champ-logo').innerHTML=logoImg('H',40);
+
 
 /* ── LIVE STATS from NPB via Netlify Function ── */
 const API = '/.netlify/functions/npb-stats';
