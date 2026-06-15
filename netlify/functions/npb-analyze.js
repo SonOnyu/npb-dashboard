@@ -1,5 +1,15 @@
 // AI 분석 — 캐시 우선, 없으면 실시간 호출 (사용자 요청 기반이라 호출 빈도 낮음)
 const { getStore } = require('@netlify/blobs');
+
+function npbStore() {
+  // 명시적 환경변수 fallback (직접 호출 시에도 동작하도록)
+  const opts = { name: 'npb-data', consistency: 'strong' };
+  if (process.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN) {
+    opts.siteID = process.env.NETLIFY_SITE_ID;
+    opts.token  = process.env.NETLIFY_AUTH_TOKEN;
+  }
+  return getStore(opts);
+}
 const https = require('https');
 
 function callClaude(prompt) {
@@ -45,7 +55,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const store = getStore('npb-data');
+    const store = npbStore();
 
     // ── 캐시 확인 (predict 모드만 — 매일 한번 분석하면 충분) ──
     if (mode === 'predict') {
