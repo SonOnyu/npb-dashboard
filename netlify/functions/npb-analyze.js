@@ -155,26 +155,47 @@ ${JSON.stringify(starters, null, 2)}
 - 주니치(D): CL 최하위 .356 불펜 柳裕也 복귀
 - 라쿠텐(E): PL 하위권 득점력 저조
 
-각 경기마다 다음 JSON 구조로 분석하세요 (JSON 배열, 마크다운 없이 순수 JSON만):
+각 경기마다 다음 JSON 구조로 분석하세요. 정확히 이 키 이름과 순서를 사용하세요 (JSON 배열, 마크다운 없이 순수 JSON만):
 [
   {
     "gameId": "F-DB",
     "homeTeam": "팀키",
     "awayTeam": "팀키",
-    "starter": {"home":"선수명(없으면 미정)","away":"선수명(없으면 미정)"},
-    "keyBatters": [{"name":"선수명(한국어)","team":"팀키","stat":"수치","note":"한줄"}],
-    "keyPitchers": [{"name":"선수명(한국어)","team":"팀키","role":"선발/중계/마무리","era":"방어율","note":"한줄"}],
-    "winProb": {"home": 55, "away": 45},
-    "favorTeam": "홈 또는 원정",
-    "confidence": "high/medium/low",
-    "핵심근거": "2~3문장",
-    "변수": "1~2문장",
-    "이슈": "최근 이슈",
-    "판정": "최종 한줄"
+    "starterHome": "홈 예고선발 선수명 또는 미정",
+    "starterAway": "원정 예고선발 선수명 또는 미정",
+    "batter1Name": "주목 타자1 이름(한국어)",
+    "batter1Team": "팀키",
+    "batter1Stat": "타율/OPS 등 수치",
+    "batter1Note": "한줄 설명",
+    "batter2Name": "주목 타자2 이름(한국어)",
+    "batter2Team": "팀키",
+    "batter2Stat": "수치",
+    "batter2Note": "한줄 설명",
+    "pitcher1Name": "주목 투수1 이름(한국어)",
+    "pitcher1Team": "팀키",
+    "pitcher1Role": "선발 또는 중계 또는 마무리",
+    "pitcher1Era": "방어율",
+    "pitcher1Note": "한줄 설명",
+    "pitcher2Name": "주목 투수2 이름(한국어)",
+    "pitcher2Team": "팀키",
+    "pitcher2Role": "선발 또는 중계 또는 마무리",
+    "pitcher2Era": "방어율",
+    "pitcher2Note": "한줄 설명",
+    "winProbHome": 55,
+    "winProbAway": 45,
+    "confidence": "high 또는 medium 또는 low",
+    "coreReason": "핵심 근거 2~3문장",
+    "variable": "변수 1~2문장",
+    "issue": "최근 이슈 1~2문장",
+    "verdict": "최종 판정 한 문장"
   }
 ]
 
-CRITICAL: 출력은 반드시 유효한 JSON이어야 합니다. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성하고, 문자열 내부에 쌍따옴표를 쓰지 마세요. 코드블록 마커 없이 순수 JSON 배열만 출력하세요.`;
+매우 중요한 규칙:
+1. 출력은 순수 JSON 배열 하나만. 코드블록 마커(백틱) 쓰지 말 것.
+2. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성.
+3. 문자열 내부에 쌍따옴표(") 절대 쓰지 말 것. 필요하면 따옴표 없이 표현.
+4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 ""을 넣을 것.`;
 
       const raw = await callClaude(prompt);
       const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
