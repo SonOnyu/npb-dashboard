@@ -1599,29 +1599,39 @@ function renderAIAnalyses(analyses, games) {
   if (!sec) return;
 
   const html = analyses.map(a => {
-    const homeProb = a.winProb?.home ?? 50;
-    const awayProb = a.winProb?.away ?? 50;
+    const homeProb = a.winProbHome ?? 50;
+    const awayProb = a.winProbAway ?? 50;
     const confColor = a.confidence==='high'?'#4cde80':a.confidence==='low'?'#e85c40':'#e8c840';
 
-    const battersHtml = (a.keyBatters||[]).map(b => `
+    const batters = [
+      { name:a.batter1Name, team:a.batter1Team, stat:a.batter1Stat, note:a.batter1Note },
+      { name:a.batter2Name, team:a.batter2Team, stat:a.batter2Stat, note:a.batter2Note },
+    ].filter(b => b.name);
+
+    const pitchers = [
+      { name:a.pitcher1Name, team:a.pitcher1Team, role:a.pitcher1Role, era:a.pitcher1Era, note:a.pitcher1Note },
+      { name:a.pitcher2Name, team:a.pitcher2Team, role:a.pitcher2Role, era:a.pitcher2Era, note:a.pitcher2Note },
+    ].filter(p => p.name);
+
+    const battersHtml = batters.map(b => `
       <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
         ${logoImg(b.team,18)}
         <div style="flex:1">
           <span style="font-size:13px;font-weight:500">${b.name}</span>
-          <span style="font-size:11px;color:var(--muted);margin-left:6px">${b.stat}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:6px">${b.stat||''}</span>
         </div>
-        <span style="font-size:11px;color:var(--muted)">${b.note}</span>
+        <span style="font-size:11px;color:var(--muted)">${b.note||''}</span>
       </div>`).join('');
 
-    const pitchersHtml = (a.keyPitchers||[]).map(p => `
+    const pitchersHtml = pitchers.map(p => `
       <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
         ${logoImg(p.team,18)}
         <div style="flex:1">
           <span style="font-size:13px;font-weight:500">${p.name}</span>
-          <span style="font-size:10px;padding:1px 5px;border-radius:2px;margin-left:4px;background:var(--surface2);color:var(--muted)">${p.role}</span>
-          <span style="font-size:11px;color:var(--muted);margin-left:4px">ERA ${p.era}</span>
+          ${p.role?`<span style="font-size:10px;padding:1px 5px;border-radius:2px;margin-left:4px;background:var(--surface2);color:var(--muted)">${p.role}</span>`:''}
+          ${p.era?`<span style="font-size:11px;color:var(--muted);margin-left:4px">ERA ${p.era}</span>`:''}
         </div>
-        <span style="font-size:11px;color:var(--muted)">${p.note}</span>
+        <span style="font-size:11px;color:var(--muted)">${p.note||''}</span>
       </div>`).join('');
 
     return `<div class="card mgb" style="${a.confidence==='high'?'border-color:rgba(77,222,128,0.3)':''}">
@@ -1632,13 +1642,13 @@ function renderAIAnalyses(analyses, games) {
           <div>
             <div style="font-size:11px;color:var(--muted)">원정</div>
             <div style="font-family:var(--fd);font-size:16px;font-weight:700">${TN_S[a.awayTeam]||a.awayTeam}</div>
-            ${a.starter?.away?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starter.away}</div>`:''}
+            ${a.starterAway?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starterAway}</div>`:''}
           </div>
           <span style="font-family:var(--fd);font-size:20px;color:var(--muted2);padding:0 8px">VS</span>
           <div>
             <div style="font-size:11px;color:var(--muted)">홈</div>
             <div style="font-family:var(--fd);font-size:16px;font-weight:700">${TN_S[a.homeTeam]||a.homeTeam}</div>
-            ${a.starter?.home?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starter.home}</div>`:''}
+            ${a.starterHome?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starterHome}</div>`:''}
           </div>
           ${logoLg(a.homeTeam)}
         </div>
@@ -1660,13 +1670,13 @@ function renderAIAnalyses(analyses, games) {
       </div>
 
       <!-- 핵심 타자/투수 -->
-      ${(a.keyBatters?.length||a.keyPitchers?.length) ? `
+      ${(batters.length||pitchers.length) ? `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        ${a.keyBatters?.length ? `<div>
+        ${batters.length ? `<div>
           <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px">주목 타자</div>
           ${battersHtml}
         </div>` : ''}
-        ${a.keyPitchers?.length ? `<div>
+        ${pitchers.length ? `<div>
           <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px">주목 투수</div>
           ${pitchersHtml}
         </div>` : ''}
@@ -1674,12 +1684,12 @@ function renderAIAnalyses(analyses, games) {
 
       <!-- 분석 섹션 -->
       <div style="display:grid;gap:8px">
-        ${a['핵심근거']?`<div><div class="analysis-label">핵심</div><div class="analysis-text">${a['핵심근거']}</div></div>`:''}
-        ${a['변수']?`<div><div class="analysis-label">변수</div><div class="analysis-text">${a['변수']}</div></div>`:''}
-        ${a['이슈']?`<div><div class="analysis-label">이슈</div><div class="analysis-text">${a['이슈']}</div></div>`:''}
-        ${a['판정']?`<div class="verdict-box">
+        ${a.coreReason?`<div><div class="analysis-label">핵심</div><div class="analysis-text">${a.coreReason}</div></div>`:''}
+        ${a.variable?`<div><div class="analysis-label">변수</div><div class="analysis-text">${a.variable}</div></div>`:''}
+        ${a.issue?`<div><div class="analysis-label">이슈</div><div class="analysis-text">${a.issue}</div></div>`:''}
+        ${a.verdict?`<div class="verdict-box">
           <span class="verdict-icon">🏆</span>
-          <div><div class="verdict-fav">판정: ${a['판정']}</div></div>
+          <div><div class="verdict-fav">판정: ${a.verdict}</div></div>
         </div>`:''}
       </div>
     </div>`;
