@@ -1,3 +1,5 @@
+// AI 분석 — 캐시 우선, 없으면 실시간 호출 (사용자 요청 기반이라 호출 빈도 낮음)
+const { getStore } = require('@netlify/blobs');
 const https = require('https');
 
 function callClaude(prompt) {
@@ -37,19 +39,39 @@ exports.handler = async (event) => {
   const params = event.queryStringParameters||{};
   const mode = params.mode||'predict';
 
-  // POST body도 허용
   let bodyData = {};
   if (event.body) {
     try { bodyData = JSON.parse(event.body); } catch(e) {}
   }
 
   try {
+    const store = getStore('npb-data');
+
+    // ── 캐시 확인 (predict 모드만 — 매일 한번 분석하면 충분) ──
+    if (mode === 'predict') {
+      const cached = await store.get('predict-analysis', { type: 'json' });
+      const gamesCache = await store.get('games', { type: 'json' });
+
+      // 캐시가 오늘 내일 경기 기준으로 유효한지 확인
+      if (cached && gamesCache && cached.tmrMmdd === gamesCache.tmrMmdd) {
+        return ok({ analyses: cached.analyses, cached: true });
+      }
+    }
+
+    if (mode === 'review') {
+      const cached = await store.get('review-analysis', { type: 'json' });
+      const targetMmdd = bodyData.actualResults?.[0]?.mmdd;
+      if (cached && cached.mmdd === targetMmdd) {
+        return ok({ reviews: cached.reviews, cached: true });
+      }
+    }
+
+    // ── 캐시 없음 → 실시간 분석 ──
     let prompt = '';
     let result = {};
 
     if (mode === 'predict') {
-      // 다음 경기 분석 — 예고선발 + 팀 현황 → 심층 예측
-      const { games, starters, stats } = bodyData;
+      const { games, starters } = bodyData;
 
       prompt = `당신은 NPB(일본프로야구) 전문 애널리스트입니다.
 아래 경기 데이터를 기반으로 각 경기의 심층 분석을 JSON으로만 반환하세요.
@@ -67,9 +89,9 @@ ${JSON.stringify(starters, null, 2)}
 - 요미우리(G): CL 1위 .569 득실+6
 - 오릭스(Bs): PL 3위 .542 宮城大弥 FIP-63
 - 야쿠르트(Sw): CL 3위 .542 무라카미 6월 부활
-- DeNA(DB): CL 4위 .431 원정 3연패 중
+- DeNA(DB): CL 4위 .431 원정 부진
 - 히로시마(C): CL 5위 .389 선발 부상이탈 다수
-- 닛폰햄(F): PL 4위 .532 에스콘 홈 5연승
+- 닛폰햄(F): PL 4위 .532 에스콘 홈 강세
 - 롯데(M): PL 중위권 홈 강세
 - 주니치(D): CL 최하위 .356 불펜 柳裕也 복귀
 - 라쿠텐(E): PL 하위권 득점력 저조
@@ -77,41 +99,39 @@ ${JSON.stringify(starters, null, 2)}
 각 경기마다 다음 JSON 구조로 분석하세요 (JSON 배열, 마크다운 없이 순수 JSON만):
 [
   {
-    "gameId": "경기 식별자 (예: F-DB)",
-    "homeTeam": "홈팀 키(G/H/T/DB 등)",
-    "awayTeam": "원정팀 키",
-    "starter": {
-      "home": "홈 예고선발 선수명(없으면 미정)",
-      "away": "원정 예고선발 선수명(없으면 미정)"
-    },
-    "keyBatters": [
-      {"name":"선수명(한국어)", "team":"팀키", "stat":"타율/OPS 등", "note":"한 줄 포인트"}
-    ],
-    "keyPitchers": [
-      {"name":"선수명(한국어)", "team":"팀키", "role":"선발/중계/마무리", "era":"방어율", "note":"한 줄 포인트"}
-    ],
+    "gameId": "F-DB",
+    "homeTeam": "팀키",
+    "awayTeam": "팀키",
+    "starter": {"home":"선수명(없으면 미정)","away":"선수명(없으면 미정)"},
+    "keyBatters": [{"name":"선수명(한국어)","team":"팀키","stat":"수치","note":"한줄"}],
+    "keyPitchers": [{"name":"선수명(한국어)","team":"팀키","role":"선발/중계/마무리","era":"방어율","note":"한줄"}],
     "winProb": {"home": 55, "away": 45},
     "favorTeam": "홈 또는 원정",
     "confidence": "high/medium/low",
-    "핵심근거": "2~3문장 핵심 분석 (선발 방어율·타선 OPS 수치 포함)",
-    "변수": "경기 흐름 바꿀 변수 1~2문장",
-    "이슈": "최근 부상·이적·컨디션 이슈",
-    "판정": "최종 한 줄 판정"
+    "핵심근거": "2~3문장",
+    "변수": "1~2문장",
+    "이슈": "최근 이슈",
+    "판정": "최종 한줄"
   }
 ]`;
 
       const raw = await callClaude(prompt);
-      // JSON 파싱
       const jsonMatch = raw.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        try { result = { analyses: JSON.parse(jsonMatch[0]) }; }
-        catch(e) { result = { raw, error: 'parse_failed' }; }
+        try {
+          const analyses = JSON.parse(jsonMatch[0]);
+          result = { analyses };
+          // 캐시 저장
+          const gamesCache = await store.get('games', { type: 'json' });
+          await store.setJSON('predict-analysis', {
+            tmrMmdd: gamesCache?.tmrMmdd, analyses, savedAt: new Date().toISOString(),
+          });
+        } catch(e) { result = { raw, error: 'parse_failed' }; }
       } else {
         result = { raw, error: 'no_json' };
       }
 
     } else if (mode === 'review') {
-      // 이전 경기 결과 리뷰 — 예측 vs 실제 비교
       const { predictions, actualResults, boxScores } = bodyData;
 
       prompt = `당신은 NPB 애널리스트입니다. 어제 경기 예측과 실제 결과를 비교 분석해주세요.
@@ -122,59 +142,39 @@ ${JSON.stringify(predictions, null, 2)}
 ## 실제 결과
 ${JSON.stringify(actualResults, null, 2)}
 
-## 박스스코어 요약
-${JSON.stringify(boxScores, null, 2)}
-
 각 경기마다 다음 JSON으로 반환 (순수 JSON 배열만):
 [
   {
-    "gameId": "F-DB 등",
-    "homeTeam": "팀키",
-    "awayTeam": "팀키",
+    "gameId": "F-DB",
+    "homeTeam": "팀키", "awayTeam": "팀키",
     "predictedWinner": "예측한 우세팀",
     "actualWinner": "실제 승팀",
     "correct": true,
-    "score": "3-0 형태",
+    "score": "3-0",
     "predictionAccuracy": "적중/미적중",
-    "hitReasons": ["맞은 근거 1", "맞은 근거 2"],
-    "missReasons": ["틀린 이유 (미적중 시)"],
-    "mvp": {
-      "name": "MVP 선수명(한국어 병기)",
-      "team": "팀키",
-      "performance": "활약 내용 (안타수/타점/방어율 등)",
-      "reason": "MVP 선정 이유"
-    },
-    "worst": {
-      "name": "최악의 선수명(한국어 병기)",
-      "team": "팀키",
-      "performance": "부진 내용 (실책/0안타/홈런허용 등)",
-      "reason": "최악 선정 이유"
-    },
-    "highlight": "경기 하이라이트 한 문장"
+    "hitReasons": ["근거1"],
+    "missReasons": ["미스 이유"],
+    "mvp": {"name":"선수명(한국어 병기)","team":"팀키","performance":"내용","reason":"이유"},
+    "worst": {"name":"선수명(한국어 병기)","team":"팀키","performance":"내용","reason":"이유"},
+    "highlight": "한 문장"
   }
 ]`;
 
       const raw = await callClaude(prompt);
       const jsonMatch = raw.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        try { result = { reviews: JSON.parse(jsonMatch[0]) }; }
-        catch(e) { result = { raw, error: 'parse_failed' }; }
+        try {
+          const reviews = JSON.parse(jsonMatch[0]);
+          result = { reviews };
+          const targetMmdd = actualResults?.[0]?.mmdd;
+          await store.setJSON('review-analysis', { mmdd: targetMmdd, reviews, savedAt: new Date().toISOString() });
+        } catch(e) { result = { raw, error: 'parse_failed' }; }
       } else {
         result = { raw, error: 'no_json' };
       }
     }
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-      body: JSON.stringify(result),
-    };
+    return ok(result);
   } catch(err) {
     return {
       statusCode: 500,
@@ -183,3 +183,17 @@ ${JSON.stringify(boxScores, null, 2)}
     };
   }
 };
+
+function ok(data) {
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+    body: JSON.stringify(data),
+  };
+}
