@@ -134,7 +134,10 @@ ${JSON.stringify(starters, null, 2)}
 
       const raw = await callClaude(prompt);
       const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      console.log('[npb-analyze] cleaned (first 200):', cleaned.slice(0,200));
+      console.log('[npb-analyze] cleaned (last 200):', cleaned.slice(-200));
       const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+      console.log('[npb-analyze] jsonMatch found:', !!jsonMatch);
       if (jsonMatch) {
         try {
           const analyses = JSON.parse(jsonMatch[0]);
@@ -144,9 +147,12 @@ ${JSON.stringify(starters, null, 2)}
           await store.setJSON('predict-analysis', {
             tmrMmdd: gamesCache?.tmrMmdd, analyses, savedAt: new Date().toISOString(),
           });
-        } catch(e) { result = { raw, error: 'parse_failed' }; }
+        } catch(e) {
+          console.error('[npb-analyze] JSON.parse failed:', e.message);
+          result = { raw: cleaned, error: 'parse_failed', parseError: e.message };
+        }
       } else {
-        result = { raw, error: 'no_json' };
+        result = { raw: cleaned, error: 'no_json' };
       }
 
     } else if (mode === 'review') {
