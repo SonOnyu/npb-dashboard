@@ -2,6 +2,16 @@
 // NPB 공식에서 데이터 수집 → Netlify Blobs에 저장
 const { schedule } = require('@netlify/functions');
 const { getStore } = require('@netlify/blobs');
+
+function npbStore() {
+  // 명시적 환경변수 fallback (직접 호출 시에도 동작하도록)
+  const opts = { name: 'npb-data', consistency: 'strong' };
+  if (process.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN) {
+    opts.siteID = process.env.NETLIFY_SITE_ID;
+    opts.token  = process.env.NETLIFY_AUTH_TOKEN;
+  }
+  return getStore(opts);
+}
 const https = require('https');
 
 function fetchUrl(url) {
@@ -194,7 +204,7 @@ function parseNPBStatsTable(html) {
 
 const task = async () => {
   console.log('[scheduled-fetch] Starting NPB data collection...');
-  const store = getStore('npb-data');
+  const store = npbStore();
   const { mm, mmdd } = jstNow();
   const tmrMmdd = addDay(mmdd);
   const tmrMm = tmrMmdd.slice(0,2);
