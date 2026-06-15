@@ -12,6 +12,20 @@ function npbStore() {
 }
 const https = require('https');
 
+
+// JSON 파싱 실패 시 일반적인 오류 자동 복구 시도
+function tryFixJson(str) {
+  let fixed = str;
+  // 1. 문자열 값 내부의 실제 줄바꿈을 \n으로 치환 (가장 흔한 오류)
+  //    "key": "value
+  //    continues" → "key": "value\ncontinues"
+  fixed = fixed.replace(/"((?:[^"\\]|\\.)*)"/gs, (match, inner) => {
+    const escaped = inner.replace(/\n/g, '\\n').replace(/\r/g, '');
+    return '"' + escaped + '"';
+  });
+  return fixed;
+}
+
 function callClaude(prompt) {
   return new Promise((resolve, reject) => {
     console.log('[npb-analyze] API key present:', !!process.env.ANTHROPIC_API_KEY, 'length:', (process.env.ANTHROPIC_API_KEY||'').length);
@@ -130,7 +144,9 @@ ${JSON.stringify(starters, null, 2)}
     "이슈": "최근 이슈",
     "판정": "최종 한줄"
   }
-]`;
+]
+
+CRITICAL: 출력은 반드시 유효한 JSON이어야 합니다. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성하고, 문자열 내부에 쌍따옴표를 쓰지 마세요. 코드블록 마커 없이 순수 JSON 배열만 출력하세요.`;
 
       const raw = await callClaude(prompt);
       const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
@@ -148,8 +164,20 @@ ${JSON.stringify(starters, null, 2)}
             tmrMmdd: gamesCache?.tmrMmdd, analyses, savedAt: new Date().toISOString(),
           });
         } catch(e) {
-          console.error('[npb-analyze] JSON.parse failed:', e.message);
-          result = { raw: cleaned, error: 'parse_failed', parseError: e.message };
+          console.error('[npb-analyze] JSON.parse failed, attempting fix:', e.message);
+          try {
+            const fixed = tryFixJson(jsonMatch[0]);
+            const analyses = JSON.parse(fixed);
+            result = { analyses };
+            const gamesCache = await store.get('games', { type: 'json' });
+            await store.setJSON('predict-analysis', {
+              tmrMmdd: gamesCache?.tmrMmdd, analyses, savedAt: new Date().toISOString(),
+            });
+            console.log('[npb-analyze] Fixed and parsed successfully');
+          } catch(e2) {
+            console.error('[npb-analyze] Fix also failed:', e2.message);
+            result = { raw: cleaned, error: 'parse_failed', parseError: e.message };
+          }
         }
       } else {
         result = { raw: cleaned, error: 'no_json' };
@@ -182,7 +210,9 @@ ${JSON.stringify(actualResults, null, 2)}
     "worst": {"name":"선수명(한국어 병기)","team":"팀키","performance":"내용","reason":"이유"},
     "highlight": "한 문장"
   }
-]`;
+]
+
+CRITICAL: 출력은 반드시 유효한 JSON이어야 합니다. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성하고, 문자열 내부에 쌍따옴표를 쓰지 마세요. 코드블록 마커 없이 순수 JSON 배열만 출력하세요.`;
 
       const raw = await callClaude(prompt);
       const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
