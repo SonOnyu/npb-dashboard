@@ -32,7 +32,7 @@ function fetchUrl(url) {
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
     });
-    req.setTimeout(9000, () => { req.destroy(); reject(new Error('timeout')); });
+    req.setTimeout(7000, () => { req.destroy(); reject(new Error('timeout')); });
     req.on('error', reject);
   });
 }
@@ -209,16 +209,25 @@ const task = async () => {
   const tmrMmdd = addDay(mmdd);
   const tmrMm = tmrMmdd.slice(0,2);
 
-  // ── 1. 경기 스케줄 (이번달 + 필요시 다음달) ──
+  // ── 1. 경기 스케줄 (시즌 시작 3월 ~ 다음날이 속한 월까지 전체) ──
   try {
-    const months = new Set([mm]);
-    if (tmrMm !== mm) months.add(tmrMm);
-
-    const allGames = [];
-    for (const mo of months) {
-      const html = await fetchUrl(`https://npb.jp/games/2026/schedule_${mo}_detail.html`);
-      allGames.push(...parseSchedule(html));
+    const months = new Set();
+    const curMonthNum = parseInt(tmrMm); // 다음날 달까지 포함
+    for (let mo = 3; mo <= Math.max(curMonthNum, parseInt(mm)); mo++) {
+      months.add(String(mo).padStart(2,'0'));
     }
+
+    // 병렬로 가져오기 (월별 페이지 수가 많아도 빠르게)
+    const monthResults = await Promise.all([...months].map(async mo => {
+      try {
+        const html = await fetchUrl(`https://npb.jp/games/2026/schedule_${mo}_detail.html`);
+        return parseSchedule(html);
+      } catch(e) {
+        console.error(`[scheduled-fetch] Month ${mo} fetch failed:`, e.message);
+        return [];
+      }
+    }));
+    const allGames = monthResults.flat();
 
     const starterHtml = await fetchUrl('https://npb.jp/announcement/starter/').catch(()=>'');
     const starters = parseStarters(starterHtml);
