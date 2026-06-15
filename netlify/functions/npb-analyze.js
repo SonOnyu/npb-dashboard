@@ -133,7 +133,8 @@ ${JSON.stringify(starters, null, 2)}
 ]`;
 
       const raw = await callClaude(prompt);
-      const jsonMatch = raw.match(/\[[\s\S]*\]/);
+      const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         try {
           const analyses = JSON.parse(jsonMatch[0]);
@@ -178,7 +179,8 @@ ${JSON.stringify(actualResults, null, 2)}
 ]`;
 
       const raw = await callClaude(prompt);
-      const jsonMatch = raw.match(/\[[\s\S]*\]/);
+      const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         try {
           const reviews = JSON.parse(jsonMatch[0]);
