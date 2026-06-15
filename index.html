@@ -63,7 +63,7 @@ main{padding:28px 40px 60px}
 
 /* CARD */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px 20px;box-shadow:var(--card-shadow)}
-.card-t{font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.card-t{font-size:14px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:6px}
 .card-t::before{content:'';display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px}
 
 /* METRIC */
@@ -78,11 +78,15 @@ main{padding:28px 40px 60px}
 .sub-tab{font-family:var(--fd);font-size:12px;font-weight:600;letter-spacing:0.05em;padding:6px 14px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;transition:all 0.15s}
 .sub-tab:hover{color:var(--text);border-color:var(--muted)}
 .sub-tab.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.sub-tab.cl-tab.active{background:#0f8f2e;color:#fff;border-color:#0f8f2e}
+.sub-tab.pl-tab.active{background:#3fb1e5;color:#fff;border-color:#3fb1e5}
+.sub-tab.cur-tab.active{background:#8b5a2b;color:#fff;border-color:#8b5a2b}
+.sub-tab.js-tab.active{background:#d61f3c;color:#fff;border-color:#d61f3c}
 
 /* TABLE */
 .lb{width:100%;border-collapse:collapse}
-.lb thead th{font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:7px 10px;text-align:right;border-bottom:1px solid var(--border2);white-space:nowrap}
-.lb thead th:nth-child(1),.lb thead th:nth-child(2){text-align:left}
+.lb thead th{font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text);padding:7px 10px;text-align:right;border-bottom:1px solid var(--border2);white-space:nowrap}
+.lb thead th:nth-child(1),.lb thead th:nth-child(2),.lb thead th:nth-child(3){text-align:left}
 .lb tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s}
 .lb tbody tr:hover{background:var(--surface2)}
 .lb tbody td{padding:8px 10px;text-align:right;font-size:13px;white-space:nowrap}
@@ -101,7 +105,7 @@ body:not(.light) .vg{color:#4cde80}
 /* STATS TABLE — wide scroll */
 .stats-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .stats-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
-.stats-tbl thead th{font-size:10px;font-weight:600;letter-spacing:0.06em;color:var(--muted);padding:7px 8px;text-align:right;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
+.stats-tbl thead th{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--text);padding:7px 8px;text-align:right;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
 .stats-tbl thead th:nth-child(1){text-align:center;width:32px}
 .stats-tbl thead th:nth-child(2){text-align:left;min-width:130px}
 .stats-tbl thead th:nth-child(3){text-align:left;min-width:60px}
@@ -169,7 +173,7 @@ body:not(.light) .tb{color:#e8c840}
 .ll{font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:10px;display:inline-block}
 .lc{background:rgba(126,200,126,0.15);color:var(--cl)}.lp{background:rgba(111,174,232,0.15);color:var(--pl)}
 .std{width:100%;border-collapse:collapse}
-.std thead th{font-size:10px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);padding:5px 7px;border-bottom:1px solid var(--border2);text-align:right}
+.std thead th{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--text);padding:5px 7px;border-bottom:1px solid var(--border2);text-align:right}
 .std thead th:first-child{text-align:left}
 .std tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s}
 .std tbody tr:hover{background:var(--surface2)}
@@ -253,71 +257,114 @@ body:not(.light) .rdp{color:#4cde80}
 </head>
 <body>
 
-<header>
+<header onclick="location.reload()" style="cursor:pointer" title="새로고침">
   <div>
-    <span class="logo-main">NPB Sabermetrics</span>
-    <span class="logo-sub">1.02 · Yahoo Sports</span>
+    <span class="logo-main">NPB Information</span>
   </div>
   <div class="header-right">
-    <span style="font-size:11px;color:var(--muted)"><span class="live-dot"></span>2026.06.11 기준</span>
+    <span style="font-size:11px;color:var(--muted)"><span class="live-dot"></span><span id="header-updated">로딩 중</span></span>
     <span class="season-badge">2026 시즌</span>
-    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙 다크</button>
+    <button class="theme-btn" onclick="event.stopPropagation();toggleTheme()" id="theme-btn">🌙 다크</button>
   </div>
 </header>
 
 <nav class="nav-tabs">
-  <button class="nav-tab active" onclick="switchTab('overview',this)">오버뷰</button>
-  <button class="nav-tab" onclick="switchTab('today',this)">경기 분석</button>
-  <button class="nav-tab" onclick="switchTab('stats',this)">리그 성적</button>
-  <button class="nav-tab" onclick="switchTab('batting',this)">타자 세이버</button>
-  <button class="nav-tab" onclick="switchTab('pitching',this)">투수 세이버</button>
+  <button class="nav-tab active" onclick="switchTab('today',this)">경기 분석</button>
   <button class="nav-tab" onclick="switchTab('standings',this)">순위표</button>
+  <button class="nav-tab" onclick="switchTab('stats',this)">리그 성적</button>
   <button class="nav-tab" onclick="switchTab('glossary',this)">용어 해설</button>
+  <button class="nav-tab" onclick="switchTab('saber',this)">세이버매트릭스</button>
 </nav>
 
 <main>
 
-<!-- ════ OVERVIEW ════ -->
-<section id="overview" class="section active">
+<!-- ════ SABERMETRICS ════ -->
+<section id="saber" class="section">
   <div class="sec-hdr">
-    <h2 class="sec-title">2026 시즌 현황</h2>
-    <span class="sec-desc">2026.06.10 종료 기준</span>
+    <h2 class="sec-title">세이버매트릭스</h2>
     <span class="src">출처: <a href="https://1point02.jp" target="_blank">1point02.jp</a></span>
   </div>
-  <div class="metric-grid">
-    <div class="mc"><div class="mc-label">야수 WAR 1위</div><div class="mc-val">4.2</div><div class="mc-sub">佐藤 輝明(사토 테루아키) — 한신</div></div>
-    <div class="mc"><div class="mc-label">투수 WAR 1위</div><div class="mc-val">2.1</div><div class="mc-sub">髙橋 遥人(타카하시 하루토) — 한신</div></div>
-    <div class="mc"><div class="mc-label">PL 선두</div><div class="mc-val">.627</div><div class="mc-sub">埼玉西武(세이부) 37승 22패</div></div>
-    <div class="mc"><div class="mc-label">CL 선두</div><div class="mc-val">.569</div><div class="mc-sub">読売(요미우리) 33승 25패</div></div>
+
+  <div class="sub-tabs" style="margin-bottom:20px">
+    <button class="sub-tab active" onclick="switchSaber('ov',this)">오버뷰</button>
+    <button class="sub-tab" onclick="switchSaber('bat',this)">타자 세이버</button>
+    <button class="sub-tab" onclick="switchSaber('pit',this)">투수 세이버</button>
   </div>
-  <div class="grid2 mgb">
-    <div class="card">
-      <div class="card-t">WAR 랭킹 — 야수</div>
-      <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>WPA</th></tr></thead>
-      <tbody id="war-bat-table"></tbody></table>
+
+  <!-- 오버뷰 -->
+  <div id="saber-ov">
+    <span class="sec-desc" style="display:inline-block;margin-bottom:14px">2026.06.10 종료 기준</span>
+    <div class="metric-grid">
+      <div class="mc"><div class="mc-label">야수 WAR 1위</div><div class="mc-val">4.2</div><div class="mc-sub">佐藤 輝明(사토 테루아키) — 한신</div></div>
+      <div class="mc"><div class="mc-label">투수 WAR 1위</div><div class="mc-val">2.1</div><div class="mc-sub">髙橋 遥人(타카하시 하루토) — 한신</div></div>
+      <div class="mc"><div class="mc-label">PL 선두</div><div class="mc-val">.627</div><div class="mc-sub">埼玉西武(세이부) 37승 22패</div></div>
+      <div class="mc"><div class="mc-label">CL 선두</div><div class="mc-val">.569</div><div class="mc-sub">読売(요미우리) 33승 25패</div></div>
     </div>
-    <div class="card">
-      <div class="card-t">WAR 랭킹 — 투수</div>
-      <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>WPA</th></tr></thead>
-      <tbody id="war-pit-table"></tbody></table>
+    <div class="grid2 mgb">
+      <div class="card">
+        <div class="card-t">WAR 랭킹 — 야수</div>
+        <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>WPA</th></tr></thead>
+        <tbody id="war-bat-table"></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-t">WAR 랭킹 — 투수</div>
+        <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>WPA</th></tr></thead>
+        <tbody id="war-pit-table"></tbody></table>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">WPA 랭킹 — 야수</div>
+        <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WPA</th></tr></thead>
+        <tbody id="wpa-bat-table"></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-t">WPA 랭킹 — 투수</div>
+        <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WPA</th></tr></thead>
+        <tbody id="wpa-pit-table"></tbody></table>
+      </div>
     </div>
   </div>
-  <div class="grid2">
-    <div class="card">
-      <div class="card-t">WPA 랭킹 — 야수</div>
-      <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WPA</th></tr></thead>
-      <tbody id="wpa-bat-table"></tbody></table>
+
+  <!-- 타자 세이버 -->
+  <div id="saber-bat" style="display:none">
+    <span class="sec-desc" style="display:inline-block;margin-bottom:14px">2025시즌 최종</span>
+    <div class="card mgb"><div class="card-t">2026 야수 WAR 바 차트</div><div id="war-chart" style="padding:6px 0"></div></div>
+    <div class="grid2 mgb">
+      <div class="card">
+        <div class="card-t">OPS+ 리더보드 (2025)</div>
+        <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>OPS+</th><th>HR</th></tr></thead>
+        <tbody id="ops-table"></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-t">종합 지표 (2025)</div>
+        <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>OBP</th></tr></thead>
+        <tbody id="bat-misc-table"></tbody></table>
+      </div>
     </div>
-    <div class="card">
-      <div class="card-t">WPA 랭킹 — 투수</div>
-      <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WPA</th></tr></thead>
-      <tbody id="wpa-pit-table"></tbody></table>
+  </div>
+
+  <!-- 투수 세이버 -->
+  <div id="saber-pit" style="display:none">
+    <span class="sec-desc" style="display:inline-block;margin-bottom:14px">2025시즌 최종</span>
+    <div class="card mgb"><div class="card-t">2026 투수 WAR 바 차트</div><div id="pitcher-war-chart" style="padding:6px 0"></div></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">선발 투수 (2025)</div>
+        <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>ERA</th><th>K%</th></tr></thead>
+        <tbody id="sp-table"></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-t">불펜 투수 (2025)</div>
+        <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>SV</th><th>K%</th></tr></thead>
+        <tbody id="rp-table"></tbody></table>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ════ TODAY ════ -->
-<section id="today" class="section">
+<section id="today" class="section active">
   <div class="sec-hdr">
     <h2 class="sec-title">경기 분석</h2>
     <span class="sec-desc" id="games-updated"></span>
@@ -386,15 +433,21 @@ body:not(.light) .rdp{color:#4cde80}
   </div>
 
   <div class="sub-tabs">
-    <button class="sub-tab active" onclick="switchStats('cl-top',this)">セ 톱</button>
-    <button class="sub-tab" onclick="switchStats('pl-top',this)">パ 톱</button>
-    <button class="sub-tab" onclick="switchStats('cl-bat',this)">セ · 타자</button>
-    <button class="sub-tab" onclick="switchStats('cl-pit',this)">セ · 투수</button>
-    <button class="sub-tab" onclick="switchStats('pl-bat',this)">パ · 타자</button>
-    <button class="sub-tab" onclick="switchStats('pl-pit',this)">パ · 투수</button>
+    <button class="sub-tab active cl-tab" onclick="switchStats('cl-bat',this)">セントラル · 타자</button>
+    <button class="sub-tab cl-tab" onclick="switchStats('cl-pit',this)">セントラル · 투수</button>
+    <button class="sub-tab pl-tab" onclick="switchStats('pl-bat',this)">パシフィック · 타자</button>
+    <button class="sub-tab pl-tab" onclick="switchStats('pl-pit',this)">パシフィック · 투수</button>
     <button class="sub-tab" onclick="switchStats('ko-bat',this)">교류전 · 타자</button>
     <button class="sub-tab" onclick="switchStats('ko-pit',this)">교류전 · 투수</button>
     <button class="sub-tab" onclick="switchStats('op-bat',this)">오픈전 · 타자</button>
+    <button class="sub-tab cur-tab" onclick="switchStats('cur-bat',this)">현재 전체 순위 · 타자</button>
+    <button class="sub-tab cur-tab" onclick="switchStats('cur-pit',this)">현재 전체 순위 · 투수</button>
+    <button class="sub-tab cl-tab" onclick="switchStats('clps-bat',this)">센트럴 포스트시즌 · 타자</button>
+    <button class="sub-tab cl-tab" onclick="switchStats('clps-pit',this)">센트럴 포스트시즌 · 투수</button>
+    <button class="sub-tab pl-tab" onclick="switchStats('plps-bat',this)">퍼시픽 포스트시즌 · 타자</button>
+    <button class="sub-tab pl-tab" onclick="switchStats('plps-pit',this)">퍼시픽 포스트시즌 · 투수</button>
+    <button class="sub-tab js-tab" onclick="switchStats('js-bat',this)">일본시리즈 · 타자</button>
+    <button class="sub-tab js-tab" onclick="switchStats('js-pit',this)">일본시리즈 · 투수</button>
   </div>
 
   <!-- 로딩 스피너 -->
@@ -404,8 +457,6 @@ body:not(.light) .rdp{color:#4cde80}
   </div>
   <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
-  <div id="stats-cl-top"  class="stats-panel" style="display:none"></div>
-  <div id="stats-pl-top"  class="stats-panel" style="display:none"></div>
   <div id="stats-cl-bat"  class="stats-panel" style="display:none"></div>
   <div id="stats-cl-pit"  class="stats-panel" style="display:none"></div>
   <div id="stats-pl-bat"  class="stats-panel" style="display:none"></div>
@@ -413,51 +464,43 @@ body:not(.light) .rdp{color:#4cde80}
   <div id="stats-ko-bat"  class="stats-panel" style="display:none"></div>
   <div id="stats-ko-pit"  class="stats-panel" style="display:none"></div>
   <div id="stats-op-bat"  class="stats-panel" style="display:none"></div>
-</section>
-
-<section id="batting" class="section">
-  <div class="sec-hdr"><h2 class="sec-title">타자 세이버매트릭스</h2><span class="sec-desc">2025시즌 최종</span></div>
-  <div class="card mgb"><div class="card-t">2026 야수 WAR 바 차트</div><div id="war-chart" style="padding:6px 0"></div></div>
-  <div class="grid2 mgb">
-    <div class="card">
-      <div class="card-t">OPS+ 리더보드 (2025)</div>
-      <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>OPS+</th><th>HR</th></tr></thead>
-      <tbody id="ops-table"></tbody></table>
-    </div>
-    <div class="card">
-      <div class="card-t">종합 지표 (2025)</div>
-      <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>WAR</th><th>OBP</th></tr></thead>
-      <tbody id="bat-misc-table"></tbody></table>
-    </div>
-  </div>
-</section>
-
-<!-- ════ PITCHING SABERMETRICS ════ -->
-<section id="pitching" class="section">
-  <div class="sec-hdr"><h2 class="sec-title">투수 세이버매트릭스</h2><span class="sec-desc">2025시즌 최종</span></div>
-  <div class="card mgb"><div class="card-t">2026 투수 WAR 바 차트</div><div id="pitcher-war-chart" style="padding:6px 0"></div></div>
-  <div class="grid2">
-    <div class="card">
-      <div class="card-t">선발 투수 (2025)</div>
-      <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>ERA</th><th>K%</th></tr></thead>
-      <tbody id="sp-table"></tbody></table>
-    </div>
-    <div class="card">
-      <div class="card-t">불펜 투수 (2025)</div>
-      <table class="lb"><thead><tr><th>#</th><th>선수</th><th>팀</th><th>SV</th><th>K%</th></tr></thead>
-      <tbody id="rp-table"></tbody></table>
-    </div>
-  </div>
+  <div id="stats-cur-bat" class="stats-panel" style="display:none"></div>
+  <div id="stats-cur-pit" class="stats-panel" style="display:none"></div>
+  <div id="stats-clps-bat" class="stats-panel" style="display:none"></div>
+  <div id="stats-clps-pit" class="stats-panel" style="display:none"></div>
+  <div id="stats-plps-bat" class="stats-panel" style="display:none"></div>
+  <div id="stats-plps-pit" class="stats-panel" style="display:none"></div>
+  <div id="stats-js-bat" class="stats-panel" style="display:none"></div>
+  <div id="stats-js-pit" class="stats-panel" style="display:none"></div>
 </section>
 
 <!-- ════ STANDINGS ════ -->
 <section id="standings" class="section">
-  <div class="sec-hdr"><h2 class="sec-title">리그 순위표</h2><span class="sec-desc">2026.06.10 기준</span>
-  <span class="src">출처: <a href="https://1point02.jp/op/gnav/standings/standing.aspx?cp=101" target="_blank">1point02.jp</a></span></div>
+  <div class="sec-hdr"><h2 class="sec-title">리그 순위표</h2><span class="sec-desc" id="standings-updated"></span>
+  <span class="src">출처: <a href="https://npb.jp/bis/2026/stats/" target="_blank">NPB 공식</a></span></div>
   <div class="std-wrap">
     <div class="card"><div><span class="ll lc">セ · Central League</span></div><table class="std" id="cl-table"></table></div>
     <div class="card"><div><span class="ll lp">パ · Pacific League</span></div><table class="std" id="pl-table"></table></div>
   </div>
+
+  <div class="card mgb">
+    <div class="card-t" style="color:#f0a020">교류전 순위 (交流戦)</div>
+    <table class="std" id="inter-table"></table>
+  </div>
+
+  <div class="card mgb">
+    <div class="card-t" style="color:#0f8f2e">센트럴 포스트시즌 순위</div>
+    <div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">시즌 종료 후 표시됩니다.</div>
+  </div>
+  <div class="card mgb">
+    <div class="card-t" style="color:#3fb1e5">퍼시픽 포스트시즌 순위</div>
+    <div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">시즌 종료 후 표시됩니다.</div>
+  </div>
+  <div class="card mgb">
+    <div class="card-t" style="color:#d61f3c">일본시리즈 순위</div>
+    <div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">시즌 종료 후 표시됩니다.</div>
+  </div>
+
   <div class="card">
     <div class="card-t">2025시즌 최종 결과</div>
     <div class="grid3" style="padding-top:4px">
@@ -564,11 +607,12 @@ function switchTab(id,btn){
   if (id === 'today') { gamesDataCache = null; initGamesPanels(); }
   if (id === 'standings') loadStandings();
 }
-function switchStats(id,btn){
-  document.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.stats-panel').forEach(p=>p.style.display='none');
-  document.getElementById('stats-'+id).style.display='block';
+function switchSaber(id, btn) {
+  document.querySelectorAll('#saber .sub-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
+  document.getElementById('saber-ov').style.display  = id==='ov'  ? 'block' : 'none';
+  document.getElementById('saber-bat').style.display = id==='bat' ? 'block' : 'none';
+  document.getElementById('saber-pit').style.display = id==='pit' ? 'block' : 'none';
 }
 
 /* ── TEAM DATA ── */
@@ -723,12 +767,21 @@ async function loadStandings() {
     renderStd('cl-table', data.cl?.rows, data.cl?.updatedAt);
     renderStd('pl-table', data.pl?.rows, data.pl?.updatedAt);
 
-    // 리그 선두팀 로고 갱신
-    const clTop = data.cl?.rows?.[0];
-    const plTop = data.pl?.rows?.[0];
-    if (clTop) document.getElementById('cl-champ-logo').innerHTML = logoImg(clTop.team, 40);
-    if (plTop) document.getElementById('pl-champ-logo').innerHTML = logoImg(plTop.team, 40);
-    if (plTop) document.getElementById('js-champ-logo').innerHTML = logoImg(plTop.team, 40);
+    // 교류전 순위 (12팀 통합, 승률 기준 재정렬)
+    if (data.inter?.rows?.length) {
+      const sorted = [...data.inter.rows]
+        .sort((a,b) => parseFloat(b.pct) - parseFloat(a.pct))
+        .map((r,i) => ({...r, rank: i+1}));
+      renderStd('inter-table', sorted, data.inter.updatedAt);
+    }
+
+    // 갱신 시각 표시
+    if (data.updatedAt) {
+      const d = new Date(data.updatedAt);
+      const dateStr = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} 기준`;
+      document.getElementById('standings-updated').textContent = dateStr;
+      document.getElementById('header-updated').textContent = dateStr;
+    }
   } catch(e) {
     console.error('Standings load failed:', e.message);
   }
@@ -1053,13 +1106,15 @@ function renderStatsTable(data, isBatter) {
     const logoHtml = tkey ? `${logoImg(tkey,20)}&nbsp;` : '';
     const cells = r.map((v,ci) => {
       if (ci === 1) { // 선수명 — 일본어 + 한국어 서브텍스트
-        // "佐藤 輝明(神)" → 이름 "佐藤 輝明", 팀약자 "神"
-        const nameMatch = v.match(/^(.+?)\((.+?)\)$/);
-        const jpName  = nameMatch ? nameMatch[1].trim() : v;
+        // "佐藤 輝明(神)" 또는 "佐藤　輝明（神）" → 이름, 팀약자 분리 (전각/반각 괄호 모두 처리)
+        const nameMatch = v.match(/^(.+?)[\(（](.+?)[\)）]$/);
+        const jpNameRaw = nameMatch ? nameMatch[1].trim() : v;
         const teamAbr = nameMatch ? nameMatch[2] : '';
-        const koName  = PLAYER_KO[jpName] || '';
+        // 한국어 매핑은 일본어 이름의 공백을 정규화(전각 스페이스 → 반각)해서 조회
+        const jpNameKey = jpNameRaw.replace(/[\u3000]/g, ' ').trim();
+        const koName = PLAYER_KO[jpNameKey] || PLAYER_KO[jpNameRaw] || '';
         return `<td>
-          <div style="font-size:13px;font-weight:500;white-space:nowrap">${jpName}(${teamAbr})</div>
+          <div style="font-size:13px;font-weight:500;white-space:nowrap">${jpNameRaw}${teamAbr?`(${teamAbr})`:''}</div>
           ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
         </td>`;
       }
@@ -1111,17 +1166,6 @@ async function loadAllStats() {
       document.getElementById('stats-updated').textContent = `${latestDate} 기준 · NPB 공식`;
     }
 
-    // 각 패널 렌더링
-    const clTopHTML = `
-      <div class="mgb">${renderStatsTable({headers: clBat.headers, rows: clBat.rows?.slice(0,10)}, true).replace('<div class="card">','<div class="card"><div class="card-t">セ 타자 Top10</div>')}</div>
-      <div>${renderStatsTable({headers: clPit.headers, rows: clPit.rows?.slice(0,10)}, false).replace('<div class="card">','<div class="card"><div class="card-t">セ 투수 Top10</div>')}</div>`;
-
-    const plTopHTML = `
-      <div class="mgb">${renderStatsTable({headers: plBat.headers, rows: plBat.rows?.slice(0,10)}, true).replace('<div class="card">','<div class="card"><div class="card-t">パ 타자 Top10</div>')}</div>
-      <div>${renderStatsTable({headers: plPit.headers, rows: plPit.rows?.slice(0,10)}, false).replace('<div class="card">','<div class="card"><div class="card-t">パ 투수 Top10</div>')}</div>`;
-
-    document.getElementById('stats-cl-top').innerHTML = clTopHTML;
-    document.getElementById('stats-pl-top').innerHTML = plTopHTML;
     document.getElementById('stats-cl-bat').innerHTML = renderStatsTable(clBat, true);
     document.getElementById('stats-cl-pit').innerHTML = renderStatsTable(clPit, false);
     document.getElementById('stats-pl-bat').innerHTML = renderStatsTable(plBat, true);
@@ -1130,9 +1174,33 @@ async function loadAllStats() {
     document.getElementById('stats-ko-pit').innerHTML = renderStatsTable(koPit, false);
     document.getElementById('stats-op-bat').innerHTML = renderStatsTable(opBat, true);
 
+    // 현재 전체 순위 (CL+PL 통합, 타율/방어율 기준 재정렬)
+    const curBatRows = [...(clBat.rows||[]), ...(plBat.rows||[])]
+      .sort((a,b) => parseFloat(b[2]) - parseFloat(a[2]))
+      .map((r,i) => [String(i+1), ...r.slice(1)]);
+    const curPitRows = [...(clPit.rows||[]), ...(plPit.rows||[])]
+      .sort((a,b) => parseFloat(a[2]) - parseFloat(b[2]))
+      .map((r,i) => [String(i+1), ...r.slice(1)]);
+
+    document.getElementById('stats-cur-bat').innerHTML = renderStatsTable({headers: clBat.headers, rows: curBatRows, updatedAt: clBat.updatedAt}, true);
+    document.getElementById('stats-cur-pit').innerHTML = renderStatsTable({headers: clPit.headers, rows: curPitRows, updatedAt: clPit.updatedAt}, false);
+
+    // 포스트시즌 / 일본시리즈 — 시즌 진행 중이므로 안내 표시
+    const notReady = (title) => `<div class="card"><div class="card-t">${title}</div>
+      <div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">
+        시즌 종료 후 표시됩니다.
+      </div></div>`;
+
+    document.getElementById('stats-clps-bat').innerHTML = notReady('센트럴 포스트시즌 · 타자');
+    document.getElementById('stats-clps-pit').innerHTML = notReady('센트럴 포스트시즌 · 투수');
+    document.getElementById('stats-plps-bat').innerHTML = notReady('퍼시픽 포스트시즌 · 타자');
+    document.getElementById('stats-plps-pit').innerHTML = notReady('퍼시픽 포스트시즌 · 투수');
+    document.getElementById('stats-js-bat').innerHTML = notReady('일본시리즈 · 타자');
+    document.getElementById('stats-js-pit').innerHTML = notReady('일본시리즈 · 투수');
+
     loading.style.display = 'none';
-    document.getElementById('stats-cl-top').style.display = 'block';
-    activeStatsTab = 'cl-top';
+    document.getElementById('stats-cl-bat').style.display = 'block';
+    activeStatsTab = 'cl-bat';
     statsLoaded = true;
 
   } catch (err) {
@@ -1754,9 +1822,11 @@ function renderAIAnalyses(analyses, games) {
   sec.innerHTML = `<div style="font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:16px">🤖 AI 경기 분석</div>` + html;
 }
 
-// 경기분석 탭이 이미 열려있으면 페이지 로드 시에도 초기화
+// 페이지 로드 시: 기본 탭(경기 분석) 초기화 + 헤더 갱신시각 로드
 document.addEventListener('DOMContentLoaded', () => {
-  // 기본 탭이 경기분석이 아니므로 클릭 시에만 로드됨
+  gamesDataCache = null;
+  initGamesPanels();
+  loadStandings();
 });
 
 </script>
