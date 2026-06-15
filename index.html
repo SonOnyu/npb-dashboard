@@ -1424,15 +1424,21 @@ async function showDayResults(games, dateStr, mmdd) {
   const [y,m,d] = dateStr.split('-');
   const label = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 · ${games.length}경기`;
 
+  // AI 리뷰 분석은 2026-06-16 이후 날짜부터 제공 (그 이전은 캐시가 없어 실시간 호출 시 타임아웃/토큰 낭비 위험)
+  const REVIEW_CUTOFF = '2026-06-16';
+  const reviewAvailable = dateStr >= REVIEW_CUTOFF;
+
   container.innerHTML = `
     <div style="font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:14px">${label}</div>
     <div class="result-grid" id="result-cards">${games.map(g => renderResultCard(g)).join('')}</div>
-    <div id="review-section" style="margin-top:20px">
+    ${reviewAvailable ? `<div id="review-section" style="margin-top:20px">
       <div style="display:flex;align-items:center;gap:12px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
         <div style="width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
         <span style="font-size:13px;color:var(--muted)">경기 리뷰 분석 중 (MVP·최악·예측 적중 여부)...</span>
       </div>
-    </div>`;
+    </div>` : ''}`;
+
+  if (!reviewAvailable) return;
 
   // 2차: Claude API로 리뷰 분석
   const savedPredictions = getSavedPredictions(mmdd);
@@ -1449,10 +1455,10 @@ async function showDayResults(games, dateStr, mmdd) {
     const data = await res.json();
     if (data.reviews) renderReviews(data.reviews, games);
     else document.getElementById('review-section').innerHTML =
-      `<div style="padding:12px;color:var(--muted);font-size:12px">리뷰 데이터를 가져올 수 없습니다</div>`;
+      `<div style="padding:12px;color:var(--muted);font-size:12px">AI 분석 데이터가 아직 준비되지 않았습니다. 다음 05:00 자동 갱신 시 반영됩니다.</div>`;
   } catch(e) {
     document.getElementById('review-section').innerHTML =
-      `<div style="padding:12px;color:var(--muted);font-size:12px">리뷰 로드 실패: ${e.message}</div>`;
+      `<div style="padding:12px;color:var(--muted);font-size:12px">AI 분석 데이터가 아직 준비되지 않았습니다. 다음 05:00 자동 갱신 시 반영됩니다.</div>`;
   }
 }
 
