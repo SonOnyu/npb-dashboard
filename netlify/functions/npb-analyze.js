@@ -274,7 +274,7 @@ ${JSON.stringify(boxScores||[], null, 2)}
     "predictedWinner": "예측한 우세팀(팀키)",
     "actualWinner": "실제 승팀(팀키)",
     "correct": true,
-    "score": "3-0",
+    "score": "원정팀점수-홈팀점수 형식, 예: awayScore가 5이고 homeScore가 9면 5-9",
     "predictionAccuracy": "적중 또는 미적중",
     "hitAnalysis": "예측이 적중했다면 어떤 분석 근거(선발 방어율, 타선 OPS, 최근 흐름 등)가 실제로 작용했는지 2~3문장으로 구체적으로 설명. 미적중이면 빈 문자열.",
     "missAnalysis": "예측이 빗나갔다면 어떤 부분에서 미스가 있었는지 2~3문장으로 구체적으로 설명. 적중이면 빈 문자열.",
