@@ -107,7 +107,7 @@ exports.handler = async (event) => {
     const store = npbStore();
 
     // ── 캐시 확인 (predict 모드만 — 매일 한번 분석하면 충분) ──
-    if (mode === 'predict') {
+    if (mode === 'predict' && !force) {
       const cached = await store.get('predict-analysis', { type: 'json' });
       const gamesCache = await store.get('games', { type: 'json' });
 
@@ -117,7 +117,9 @@ exports.handler = async (event) => {
       }
     }
 
-    if (mode === 'review') {
+    const force = params.force === '1' || bodyData.force === true;
+
+    if (mode === 'review' && !force) {
       const cached = await store.get('review-analysis', { type: 'json' });
       const targetMmdd = bodyData.actualResults?.[0]?.mmdd;
       if (cached && cached.mmdd === targetMmdd) {
