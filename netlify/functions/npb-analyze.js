@@ -125,6 +125,8 @@ exports.handler = async (event) => {
       if (cached && cached.mmdd === targetMmdd) {
         return ok({ reviews: cached.reviews, cached: true });
       }
+      // 캐시 없음 → 실시간 호출 시 타임아웃/토큰 낭비 위험이 크므로 스킵
+      return ok({ reviews: [], error: 'no_cache', message: '아직 AI 분석이 준비되지 않았습니다.' });
     }
 
     // ── 캐시 없음 → 실시간 분석 ──
