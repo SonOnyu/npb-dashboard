@@ -202,6 +202,189 @@ function parseNPBStatsTable(html) {
   return { headers, rows, updatedAt };
 }
 
+
+// ── Claude API 호출 ──
+function callClaude(prompt) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      messages: [{ role:'user', content: prompt }],
+    });
+    const req = https.request({
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(chunks).toString());
+          const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+          resolve(text);
+        } catch(e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// JSON 파싱 실패 시 자동 복구: 문자열 내부의 줄바꿈/탭 이스케이프
+function tryFixJson(str) {
+  let result = '';
+  let inString = false;
+  let escapeNext = false;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (escapeNext) { result += ch; escapeNext = false; continue; }
+    if (ch === '\\') { result += ch; escapeNext = true; continue; }
+    if (ch === '"') { inString = !inString; result += ch; continue; }
+    if (inString) {
+      if (ch === '\n') { result += '\\n'; continue; }
+      if (ch === '\r') { continue; }
+      if (ch === '\t') { result += '\\t'; continue; }
+    }
+    result += ch;
+  }
+  return result;
+}
+
+function parseAIJson(raw) {
+  const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  const m = cleaned.match(/\[[\s\S]*\]/);
+  if (!m) return null;
+  try { return JSON.parse(m[0]); }
+  catch(e) {
+    try { return JSON.parse(tryFixJson(m[0])); }
+    catch(e2) { return null; }
+  }
+}
+
+const TEAM_CONTEXT = `## 팀 시즌 성적 컨텍스트 (2026 현재)
+- 세이부(L): PL 1위 .627 득실+54, 선발 평균자책 2.3
+- 소프트뱅크(H): PL 2위 .593 득실+51, 타선 평균득점 4.44
+- 한신(T): CL 2위 .561 득실+22, 佐藤輝明 WAR4.2
+- 요미우리(G): CL 1위 .569 득실+6
+- 오릭스(Bs): PL 3위 .542 宮城大弥 FIP-63
+- 야쿠르트(Sw): CL 3위 .542 무라카미 6월 부활
+- DeNA(DB): CL 4위 .431 원정 부진
+- 히로시마(C): CL 5위 .389 선발 부상이탈 다수
+- 닛폰햄(F): PL 4위 .532 에스콘 홈 강세
+- 롯데(M): PL 중위권 홈 강세
+- 주니치(D): CL 최하위 .356 불펜 柳裕也 복귀
+- 라쿠텐(E): PL 하위권 득점력 저조`;
+
+function buildPredictPrompt(games, starters) {
+  return `당신은 NPB(일본프로야구) 전문 애널리스트입니다.
+아래 경기 데이터를 기반으로 각 경기의 매우 상세한 심층 분석을 JSON으로만 반환하세요.
+당신의 NPB 지식(2026 시즌 각 팀의 최근 선발 로테이션, 타선 구성, 불펜 운용, 최근 부상/이적/컨디션 뉴스 등)을 최대한 활용해 구체적인 수치와 근거를 제시하세요.
+
+## 경기 데이터
+${JSON.stringify(games, null, 2)}
+
+## 예고선발
+${JSON.stringify(starters, null, 2)}
+
+${TEAM_CONTEXT}
+
+각 경기마다 다음 JSON 구조로 분석하세요. 정확히 이 키 이름과 순서를 사용하세요 (JSON 배열, 마크다운 없이 순수 JSON만):
+[
+  {
+    "gameId": "F-DB",
+    "homeTeam": "팀키",
+    "awayTeam": "팀키",
+    "starterHome": "홈 예고선발 선수명 또는 미정",
+    "starterAway": "원정 예고선발 선수명 또는 미정",
+    "batter1Name": "주목 타자1 이름(한국어)",
+    "batter1Team": "팀키",
+    "batter1Stat": "타율/OPS 등 수치",
+    "batter1Note": "한줄 설명",
+    "batter2Name": "주목 타자2 이름(한국어)",
+    "batter2Team": "팀키",
+    "batter2Stat": "수치",
+    "batter2Note": "한줄 설명",
+    "pitcher1Name": "주목 투수1 이름(한국어)",
+    "pitcher1Team": "팀키",
+    "pitcher1Role": "선발 또는 중계 또는 마무리",
+    "pitcher1Era": "방어율",
+    "pitcher1Note": "한줄 설명",
+    "pitcher2Name": "주목 투수2 이름(한국어)",
+    "pitcher2Team": "팀키",
+    "pitcher2Role": "선발 또는 중계 또는 마무리",
+    "pitcher2Era": "방어율",
+    "pitcher2Note": "한줄 설명",
+    "winProbHome": 55,
+    "winProbAway": 45,
+    "confidence": "high 또는 medium 또는 low",
+    "lineupAnalysis": "당일 선발 라인업 분석 4~6문장. 양팀 선발투수의 최근 방어율/구위, 핵심 타자들의 최근 타율과 OPS, 중계진과 마무리 투수의 최근 방어율을 구체적 수치와 함께 비교하고 어느 쪽이 우세한지 근거를 제시할 것.",
+    "newsAnalysis": "최근 뉴스 및 선수 동향 분석 3~5문장. 최근 부상자, 이적/콜업, 연승연패 흐름, 감독 인터뷰, 컨디션 이슈 등을 바탕으로 어느 팀에 유리한 흐름인지 분석할 것.",
+    "coreReason": "핵심 근거 2~3문장. winProbHome/Away 수치를 결정한 가장 핵심적인 이유 요약.",
+    "variable": "변수 1~2문장",
+    "issue": "최근 이슈 1~2문장 (요약, newsAnalysis와 중복되지 않는 추가 정보 위주)",
+    "verdict": "최종 판정 한 문장"
+  }
+]
+
+매우 중요한 규칙:
+1. 출력은 순수 JSON 배열 하나만. 코드블록 마커(백틱) 쓰지 말 것.
+2. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성.
+3. 문자열 내부에 쌍따옴표(") 절대 쓰지 말 것. 필요하면 따옴표 없이 표현.
+4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 ""을 넣을 것.
+5. lineupAnalysis와 newsAnalysis는 반드시 구체적인 선수명과 수치(타율·OPS·방어율·최근 경기 성적 등)를 포함해 상세하게 작성할 것.`;
+}
+
+function buildReviewPrompt(predictions, actualResults) {
+  return `당신은 NPB 애널리스트입니다. 어제(또는 선택된 날짜) 경기 예측과 실제 결과를 비교 분석해주세요.
+당신의 NPB 지식과 최근 뉴스 정보를 활용해, 예측 당시 알 수 없었던 경기 중 돌발 상황(부상, 교체, 극심한 부진, 폭투, 실책 등)이 있었다면 함께 짚어주세요.
+
+## 예측 당시 분석
+${JSON.stringify(predictions, null, 2)}
+
+## 실제 결과
+${JSON.stringify(actualResults, null, 2)}
+
+각 경기마다 다음 JSON 구조로 분석하세요. 정확히 이 키 이름과 순서를 사용하세요 (JSON 배열, 마크다운 없이 순수 JSON만):
+[
+  {
+    "gameId": "F-DB",
+    "homeTeam": "팀키",
+    "awayTeam": "팀키",
+    "predictedWinner": "예측한 우세팀(팀키)",
+    "actualWinner": "실제 승팀(팀키)",
+    "correct": true,
+    "score": "3-0",
+    "predictionAccuracy": "적중 또는 미적중",
+    "hitAnalysis": "예측이 적중했다면 어떤 분석 근거(선발 방어율, 타선 OPS, 최근 흐름 등)가 실제로 작용했는지 2~3문장으로 구체적으로 설명. 미적중이면 빈 문자열.",
+    "missAnalysis": "예측이 빗나갔다면 어떤 부분에서 미스가 있었는지 2~3문장으로 구체적으로 설명. 적중이면 빈 문자열.",
+    "unexpectedEvents": "예측 당시 예상하지 못했던 경기 중 변수(부상, 급격한 컨디션 저하, 깜짝 선발 교체, 결정적 실책, 폭투, 끝내기 등) 1~3문장. 없으면 빈 문자열.",
+    "mvpName": "최고 활약 선수명(한국어 병기)",
+    "mvpTeam": "팀키",
+    "mvpPerformance": "구체적 활약 내용 (예: 4타수 3안타 2타점 1홈런)",
+    "mvpReason": "MVP 선정 이유 1문장",
+    "worstName": "최악 활약 선수명(한국어 병기)",
+    "worstTeam": "팀키",
+    "worstPerformance": "구체적 부진 내용 (예: 4타수 무안타, 실책 2개, 5이닝 6실점 등)",
+    "worstReason": "최악 선정 이유 1문장",
+    "highlight": "경기 하이라이트 한 문장"
+  }
+]
+
+매우 중요한 규칙:
+1. 출력은 순수 JSON 배열 하나만. 코드블록 마커(백틱) 쓰지 말 것.
+2. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성.
+3. 문자열 내부에 쌍따옴표(") 절대 쓰지 말 것.
+4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 ""을 넣을 것.`;
+}
+
 const task = async () => {
   console.log('[scheduled-fetch] Starting NPB data collection...');
   const store = npbStore();
@@ -264,6 +447,66 @@ const task = async () => {
     console.log('[scheduled-fetch] Stats saved');
   } catch(e) {
     console.error('[scheduled-fetch] Stats fetch failed:', e.message);
+  }
+
+  // ── 3. 내일 경기 AI 예측 분석 ──
+  try {
+    const gamesData = await store.get('games', { type: 'json' });
+    if (gamesData && gamesData.tomorrowGames && gamesData.tomorrowGames.length > 0) {
+      const existingPredict = await store.get('predict-analysis', { type: 'json' });
+      if (!existingPredict || existingPredict.tmrMmdd !== gamesData.tmrMmdd) {
+        console.log(`[scheduled-fetch] Running predict analysis for ${gamesData.tomorrowGames.length} games...`);
+        const prompt = buildPredictPrompt(gamesData.tomorrowGames, gamesData.starters || {});
+        const raw = await callClaude(prompt);
+        const analyses = parseAIJson(raw);
+        if (analyses) {
+          await store.setJSON('predict-analysis', {
+            tmrMmdd: gamesData.tmrMmdd, analyses, savedAt: new Date().toISOString(),
+          });
+          console.log(`[scheduled-fetch] Predict analysis saved: ${analyses.length} games`);
+        } else {
+          console.error('[scheduled-fetch] Predict analysis JSON parse failed');
+        }
+      } else {
+        console.log('[scheduled-fetch] Predict analysis already up to date');
+      }
+    }
+  } catch(e) {
+    console.error('[scheduled-fetch] Predict analysis failed:', e.message);
+  }
+
+  // ── 4. 오늘(어제 기준) 경기 결과 리뷰 분석 ──
+  try {
+    const gamesData = await store.get('games', { type: 'json' });
+    if (gamesData && gamesData.todayGames && gamesData.todayGames.length > 0) {
+      const finishedGames = gamesData.todayGames.filter(g => g.status === 'finished');
+      if (finishedGames.length > 0) {
+        const existingReview = await store.get('review-analysis', { type: 'json' });
+        if (!existingReview || existingReview.mmdd !== gamesData.mmdd) {
+          // 전날 저장된 예측 가져오기 (predict-analysis는 그날 경기를 "tomorrowGames"로 분석했던 캐시)
+          const predictCache = await store.get('predict-analysis', { type: 'json' });
+          const predictions = (predictCache && predictCache.tmrMmdd === gamesData.mmdd)
+            ? predictCache.analyses : [];
+
+          console.log(`[scheduled-fetch] Running review analysis for ${finishedGames.length} games...`);
+          const prompt = buildReviewPrompt(predictions, finishedGames);
+          const raw = await callClaude(prompt);
+          const reviews = parseAIJson(raw);
+          if (reviews) {
+            await store.setJSON('review-analysis', {
+              mmdd: gamesData.mmdd, reviews, savedAt: new Date().toISOString(),
+            });
+            console.log(`[scheduled-fetch] Review analysis saved: ${reviews.length} games`);
+          } else {
+            console.error('[scheduled-fetch] Review analysis JSON parse failed');
+          }
+        } else {
+          console.log('[scheduled-fetch] Review analysis already up to date');
+        }
+      }
+    }
+  } catch(e) {
+    console.error('[scheduled-fetch] Review analysis failed:', e.message);
   }
 
   console.log('[scheduled-fetch] Done.');
