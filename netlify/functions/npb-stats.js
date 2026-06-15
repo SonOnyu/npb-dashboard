@@ -16,6 +16,30 @@ exports.handler = async (event) => {
 
   try {
     const store = npbStore();
+
+    if (type === 'standings') {
+      const cached = await store.get('standings', { type: 'json' });
+      if (!cached) {
+        return {
+          statusCode: 200,
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({ type, cl:{rows:[],updatedAt:null}, pl:{rows:[],updatedAt:null}, error:'no_cache' }),
+        };
+      }
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'public, max-age=300',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({ type, ...cached }),
+      };
+    }
+
     const cached = await store.get('stats', { type: 'json' });
 
     if (!cached || !cached[type]) {
