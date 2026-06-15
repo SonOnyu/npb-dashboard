@@ -178,6 +178,7 @@ const STAT_URLS = {
 const STANDINGS_URLS = {
   cl: 'https://npb.jp/bis/2026/stats/std_c.html',
   pl: 'https://npb.jp/bis/2026/stats/std_p.html',
+  inter: 'https://npb.jp/bis/2026/stats/std_inter.html',
 };
 
 // 순위표(チーム勝敗表) 파싱 — 行: チーム名 | 試合 | 勝利 | 敗北 | 引分 | 勝率 | 差 | ホーム | ロード | ...対戦成績 | 交流戦
@@ -526,7 +527,7 @@ const task = async () => {
     }
     standingsData.updatedAt = new Date().toISOString();
     await store.setJSON('standings', standingsData);
-    console.log(`[scheduled-fetch] Standings saved: cl=${standingsData.cl.rows.length}, pl=${standingsData.pl.rows.length}`);
+    console.log(`[scheduled-fetch] Standings saved: cl=${standingsData.cl.rows.length}, pl=${standingsData.pl.rows.length}, inter=${standingsData.inter?.rows.length||0}`);
   } catch(e) {
     console.error('[scheduled-fetch] Standings fetch failed:', e.message);
   }
