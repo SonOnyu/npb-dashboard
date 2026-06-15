@@ -1,11 +1,21 @@
 // Blobs에서 캐시된 리그 성적 데이터를 읽기만 함
 const { getStore } = require('@netlify/blobs');
 
+function npbStore() {
+  // 명시적 환경변수 fallback (직접 호출 시에도 동작하도록)
+  const opts = { name: 'npb-data', consistency: 'strong' };
+  if (process.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN) {
+    opts.siteID = process.env.NETLIFY_SITE_ID;
+    opts.token  = process.env.NETLIFY_AUTH_TOKEN;
+  }
+  return getStore(opts);
+}
+
 exports.handler = async (event) => {
   const type = (event.queryStringParameters || {}).type || 'bat_c';
 
   try {
-    const store = getStore('npb-data');
+    const store = npbStore();
     const cached = await store.get('stats', { type: 'json' });
 
     if (!cached || !cached[type]) {
