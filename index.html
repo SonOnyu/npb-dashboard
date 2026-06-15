@@ -113,19 +113,17 @@ body:not(.light) .vg{color:#4cde80}
 /* STATS TABLE — wide scroll */
 .stats-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .stats-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
-.stats-tbl thead th{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--text);padding:7px 8px;text-align:right;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
+.stats-tbl thead th{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--text);padding:7px 6px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
 .stats-tbl thead th:nth-child(1){text-align:center;width:32px}
-.stats-tbl thead th:nth-child(2){text-align:left;min-width:130px}
-.stats-tbl thead th:nth-child(3){text-align:left;min-width:60px}
+.stats-tbl thead th:nth-child(2){text-align:left;min-width:140px}
 .stats-tbl thead th:hover{color:var(--accent)}
 .stats-tbl thead th.sort-asc::after{content:' ▲';font-size:8px;color:var(--accent)}
 .stats-tbl thead th.sort-desc::after{content:' ▼';font-size:8px;color:var(--accent)}
 .stats-tbl tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s}
 .stats-tbl tbody tr:hover{background:var(--surface2)}
-.stats-tbl tbody td{padding:7px 8px;text-align:right;white-space:nowrap}
+.stats-tbl tbody td{padding:7px 6px;text-align:center;white-space:nowrap}
 .stats-tbl tbody td:nth-child(1){text-align:center;font-family:var(--fd);font-size:13px;font-weight:700;color:var(--muted)}
 .stats-tbl tbody td:nth-child(2){text-align:left;font-weight:500}
-.stats-tbl tbody td:nth-child(3){text-align:left}
 .stats-tbl .top1{color:var(--accent);font-weight:700}
 .stats-tbl .top3{color:var(--accent2);font-weight:600}
 .tcell-s{display:flex;align-items:center;gap:6px}
@@ -1057,6 +1055,35 @@ const PLAYER_KO = {
   '星 知弥':'호시 토모야', '梅野 雄吾':'우메노 유고',
   '濱田 太貴':'하마다 히로키', '宮本 丈':'미야모토 다케루',
   '並木 秀尊':'나미키 히데타카', '太田 賢吾':'오타 켄고',
+  // ── 2026 규정타석/이닝 충족 상위권 선수 추가 ──
+  // 巨人(G)
+  '松本 剛':'마쓰모토 고우',
+  // 西武(L)
+  '長谷川 信哉':'하세가와 신야', '栗山 巧':'구리야마 타쿠미', '上田 希由翔':'우에다 きゆと',
+  '加藤 豪将':'카토 고쇼', '渡部 健人':'와타나베 켄토', '中村 剛也':'나카무라 고야',
+  // ロッテ(M)
+  'ソト':'소토', 'ポランコ':'폴란코',
+  // オリックス(Bs)
+  '山中 稜真':'야마나카 료마',
+  // 日本ハム(F)
+  'アルモンテ':'알몬테',
+  // DeNA(DB)
+  '三森 大貴':'미모리 마사키', '度会 隆輝':'와타라이 류키', '牧 秀悟':'마키 슈고',
+  '宮崎 敏郎':'미야자키 토시로', '林 琢真':'하야시 타쿠마', '蝦名 達夫':'에비나 타쓰오',
+  // 阪神(T)
+  '森下 翔太':'모리시타 쇼타', '近本 光司':'치카모토 코지', '糸原 健斗':'이토하라 켄토',
+  '坂本 誠志郎':'사카모토 세이시로', '熊谷 敬宥':'구마가이 히로야스',
+  // ヤクルト(Sw)
+  '上田 大河':'우에다 타이가',
+  // 中日(D)
+  '岡林 勇希':'오카바야시 유키', '石川 昂弥':'이시카와 코야', '中島 宏之':'나카지마 히로유키',
+  // 広島(C)
+  '末包 昇大':'스에쓰구 쇼다이',
+  // ソフトバンク(H)
+  '柳田 悠岐':'야나기타 유키', '今宮 健太':'이마미야 켄타', '周東 佑京':'슈토 유키',
+  '甲斐 拓也':'카이 타쿠야', '牧原 大成':'마키하라 다이세이',
+  // 楽天(E)
+  '浅村 栄斗':'아사무라 에이토', '岡島 豪郎':'오카지마 고로', '鈴木 大地':'스즈키 다이치',
   '赤羽 由紘':'아카바 요시히로',
 };
 
