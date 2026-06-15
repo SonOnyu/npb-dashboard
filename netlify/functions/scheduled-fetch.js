@@ -49,6 +49,13 @@ const NAME_TEAM = {
   '日本ハム':'F','オリックス':'Bs','楽天':'E','西武':'L','ロッテ':'M',
 };
 
+function nameToKey(name) {
+  for (const [k, v] of Object.entries(NAME_TEAM)) {
+    if (name.includes(k)) return v;
+  }
+  return null;
+}
+
 function jstNow() {
   const d = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Tokyo'}));
   const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -167,6 +174,56 @@ const STAT_URLS = {
   bat_op: 'https://npb.jp/bis/2026/stats/bat_op.html',
   pit_op: 'https://npb.jp/bis/2026/stats/pit_op.html',
 };
+
+const STANDINGS_URLS = {
+  cl: 'https://npb.jp/bis/2026/stats/std_c.html',
+  pl: 'https://npb.jp/bis/2026/stats/std_p.html',
+};
+
+// 순위표(チーム勝敗表) 파싱 — 行: チーム名 | 試合 | 勝利 | 敗北 | 引分 | 勝率 | 差 | ホーム | ロード | ...対戦成績 | 交流戦
+function parseStandingsTable(html) {
+  const dateMatch = html.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*現在/);
+  const updatedAt = dateMatch ? `${dateMatch[1]}.${String(dateMatch[2]).padStart(2,'0')}.${String(dateMatch[3]).padStart(2,'0')}` : null;
+
+  const tables = [];
+  const tblRe = /<table[\s\S]*?<\/table>/gi;
+  let tm;
+  while ((tm = tblRe.exec(html)) !== null) tables.push(tm[0]);
+
+  // 순위표는 "チーム勝敗表" 직후 첫 테이블. 헤더에 "勝率"이 포함된 첫 테이블을 찾음
+  let target = null;
+  for (const t of tables) {
+    if (t.includes('勝率') && t.includes('試合')) { target = t; break; }
+  }
+  if (!target) return { rows: [], updatedAt };
+
+  const rows = [];
+  const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let m;
+  let rank = 0;
+  while ((m = trRe.exec(target)) !== null) {
+    const cells = [...m[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(c => clean(c[1]));
+    if (cells.length < 6) continue;
+
+    const teamKey = nameToKey(cells[0]);
+    if (!teamKey) continue; // 헤더 행 등 스킵
+
+    rank++;
+    rows.push({
+      rank,
+      team: teamKey,
+      g: cells[1] || '',
+      w: cells[2] || '',
+      l: cells[3] || '',
+      draw: cells[4] || '',
+      pct: cells[5] || '',
+      gb: cells[6] || '',
+      home: cells[7] || '',
+      away: cells[8] || '',
+    });
+  }
+  return { rows, updatedAt };
+}
 
 function parseNPBStatsTable(html) {
   const dateMatch = html.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*現在/);
@@ -453,6 +510,25 @@ const task = async () => {
     console.log('[scheduled-fetch] Stats saved');
   } catch(e) {
     console.error('[scheduled-fetch] Stats fetch failed:', e.message);
+  }
+
+  // ── 2.5. 순위표 (CL/PL 順位表) ──
+  try {
+    const standingsData = {};
+    for (const [league, url] of Object.entries(STANDINGS_URLS)) {
+      try {
+        const html = await fetchUrl(url);
+        standingsData[league] = parseStandingsTable(html);
+      } catch(e) {
+        console.error(`[scheduled-fetch] Standings ${league} failed:`, e.message);
+        standingsData[league] = { rows: [], updatedAt: null };
+      }
+    }
+    standingsData.updatedAt = new Date().toISOString();
+    await store.setJSON('standings', standingsData);
+    console.log(`[scheduled-fetch] Standings saved: cl=${standingsData.cl.rows.length}, pl=${standingsData.pl.rows.length}`);
+  } catch(e) {
+    console.error('[scheduled-fetch] Standings fetch failed:', e.message);
   }
 
   // ── 3. 내일 경기 AI 예측 분석 ──
