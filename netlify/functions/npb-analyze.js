@@ -14,6 +14,7 @@ const https = require('https');
 
 function callClaude(prompt) {
   return new Promise((resolve, reject) => {
+    console.log('[npb-analyze] API key present:', !!process.env.ANTHROPIC_API_KEY, 'length:', (process.env.ANTHROPIC_API_KEY||'').length);
     const body = JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
@@ -33,11 +34,16 @@ function callClaude(prompt) {
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => {
+        const raw = Buffer.concat(chunks).toString();
+        console.log('[npb-analyze] HTTP status:', res.statusCode, 'raw (first 300):', raw.slice(0,300));
         try {
-          const data = JSON.parse(Buffer.concat(chunks).toString());
+          const data = JSON.parse(raw);
           const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
           resolve(text);
-        } catch(e) { reject(e); }
+        } catch(e) {
+          console.error('[npb-analyze] JSON parse error:', e.message);
+          reject(e);
+        }
       });
     });
     req.on('error', reject);
