@@ -26,6 +26,7 @@ function callClaude(prompt) {
       headers: {
         'Content-Type': 'application/json',
         'anthropic-version': '2023-06-01',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
         'Content-Length': Buffer.byteLength(body),
       },
     }, (res) => {
