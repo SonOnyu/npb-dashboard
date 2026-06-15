@@ -485,22 +485,59 @@ body:not(.light) .rdp{color:#4cde80}
 
 <!-- ════ GLOSSARY ════ -->
 <section id="glossary" class="section">
-  <div class="sec-hdr"><h2 class="sec-title">세이버매트릭스 용어 해설</h2></div>
-  <div class="gls-grid">
-    <div class="gc"><div class="gt">WAR</div><div class="gf">Wins Above Replacement</div><div class="gd">대체 선수 대비 팀 승리 기여도. 타격·수비·주루 종합. 2↑ 우수, 6↑ MVP급. NPB는 1.02 독자 산출.</div></div>
-    <div class="gc"><div class="gt">WPA</div><div class="gf">Win Probability Added</div><div class="gd">각 타석·투구가 팀 승리 확률에 미친 영향 누적합. 클러치 활약 반영.</div></div>
-    <div class="gc"><div class="gt">OPS+</div><div class="gf">On-base Plus Slugging Plus</div><div class="gd">OPS를 리그 평균(100)·파크팩터 보정. 150=평균보다 50% 우수.</div></div>
-    <div class="gc"><div class="gt">FIP</div><div class="gf">Fielding Independent Pitching</div><div class="gd">삼진·볼넷·홈런만으로 수비 영향 배제한 투수 지표. ERA 스케일.</div></div>
-    <div class="gc"><div class="gt">FIP-</div><div class="gf">FIP Minus</div><div class="gd">FIP를 리그 평균(100)·파크팩터 보정. 낮을수록 우수.</div></div>
-    <div class="gc"><div class="gt">wRC+</div><div class="gf">Weighted Runs Created Plus</div><div class="gd">타격 이벤트 득점가치 가중 합산 후 리그·파크 보정. 100=평균.</div></div>
-    <div class="gc"><div class="gt">BABIP</div><div class="gf">Batting Average on Balls in Play</div><div class="gd">인플레이 타구 안타율. 리그 평균 .290~.300. 운 지표로도 활용.</div></div>
-    <div class="gc"><div class="gt">K-BB%</div><div class="gf">Strikeout minus Walk Rate</div><div class="gd">삼진율−볼넷율. 투수 커맨드·압도성 동시 측정. 20%↑ 엘리트.</div></div>
-    <div class="gc"><div class="gt">CSW%</div><div class="gf">Called Strike + Whiff Rate</div><div class="gd">루킹 스트라이크+헛스윙 비율 합. 구위 지표. 30%↑ 최상위.</div></div>
-    <div class="gc"><div class="gt">DRS</div><div class="gf">Defensive Runs Saved</div><div class="gd">수비로 절약한 실점수. 양수=평균 이상 수비.</div></div>
-    <div class="gc"><div class="gt">UZR</div><div class="gf">Ultimate Zone Rating</div><div class="gd">타구 위치·속도 기반 수비 지표. NPB는 1.02 독자 산출.</div></div>
-    <div class="gc"><div class="gt">ISO</div><div class="gf">Isolated Power</div><div class="gd">장타율−타율. 순수 장타력. .200↑ 파워히터.</div></div>
+  <div class="sec-hdr"><h2 class="sec-title">용어 해설</h2></div>
+
+  <div class="sub-tabs" style="margin-bottom:20px">
+    <button class="sub-tab active" onclick="switchGlossary('basic',this)">기본 용어</button>
+    <button class="sub-tab" onclick="switchGlossary('saber',this)">세이버매트릭스 용어</button>
+  </div>
+
+  <!-- 기본 야구 용어 -->
+  <div id="gls-basic" class="gls-grid">
+    <div class="gc"><div class="gt">三振</div><div class="gf">삼진 (さんしん)</div><div class="gd">스트라이크 3개를 당해 아웃되는 것. 헛스윙 삼진(空振り三振), 루킹 삼진(見逃し三振)으로 구분.</div></div>
+    <div class="gc"><div class="gt">四球</div><div class="gf">볼넷 (よんきゅう / フォアボール)</div><div class="gd">투수가 볼을 4개 던져 타자가 1루로 진루하는 것. 고의사구는 故意四球(こいよんきゅう).</div></div>
+    <div class="gc"><div class="gt">フルカウント</div><div class="gf">풀카운트</div><div class="gd">볼 3개, 스트라이크 2개(3-2)가 된 상태. 다음 투구로 삼진 또는 볼넷, 인플레이 중 하나로 결정됨.</div></div>
+    <div class="gc"><div class="gt">本塁打</div><div class="gf">홈런 (ほんるいだ / ホームラン)</div><div class="gd">타구가 페어 지역의 펜스를 넘어가 한 번에 홈까지 들어오는 것. 만루 홈런은 満塁本塁打(まんるいほんるいだ).</div></div>
+    <div class="gc"><div class="gt">打率</div><div class="gf">타율 (だりつ)</div><div class="gd">안타 수 ÷ 타수. .300 이상이면 우수한 타자로 평가됨. 영어로는 AVG(Batting Average).</div></div>
+    <div class="gc"><div class="gt">防御率</div><div class="gf">방어율/평균자책점 (ぼうぎょりつ / ERA)</div><div class="gd">투수가 9이닝당 평균 몇 점의 자책점을 내주는지 나타내는 지표. (자책점 ÷ 이닝) × 9. 낮을수록 우수.</div></div>
+    <div class="gc"><div class="gt">ＯＰＳ</div><div class="gf">OPS (On-base Plus Slugging)</div><div class="gd">출루율 + 장타율. 타자의 종합적인 공격력을 가장 직관적으로 보여주는 기본 지표 중 하나. .800 이상이면 우수.</div></div>
+    <div class="gc"><div class="gt">出塁率</div><div class="gf">출루율 (しゅつるいりつ / OBP)</div><div class="gd">타석에서 안타·볼넷·사구로 1루에 나간 비율. (안타+볼넷+사구) ÷ 타석수. 타율보다 타자의 진짜 가치를 더 잘 반영.</div></div>
+    <div class="gc"><div class="gt">長打率</div><div class="gf">장타율 (ちょうだりつ / SLG)</div><div class="gd">타석당 평균 누타(베이스 진루 개수). 단타=1, 2루타=2, 3루타=3, 홈런=4로 계산해 타수로 나눈 값. 장타력을 측정.</div></div>
+    <div class="gc"><div class="gt">盗塁</div><div class="gf">도루 (とうるい)</div><div class="gd">투수의 투구 동작 중 주자가 다음 베이스로 진루를 시도해 성공하는 것. 실패하면 盗塁死(도루실패).</div></div>
+    <div class="gc"><div class="gt">犠打 / 犠飛</div><div class="gf">희생타 / 희생플라이</div><div class="gd">犠打(희생번트)는 자신은 아웃되지만 주자를 진루시키는 번트. 犠飛(희생플라이)는 외야 플라이로 3루 주자를 홈으로 불러들이는 것.</div></div>
+    <div class="gc"><div class="gt">先発 / 中継 / 抑え</div><div class="gf">선발 / 중계(중간계투) / 마무리</div><div class="gd">先発(선발)은 경기를 시작하는 투수, 中継(중계)는 중간 이닝을 책임지는 불펜 투수, 抑え(마무리)는 최종회를 막는 클로저(セーブ).</div></div>
+    <div class="gc"><div class="gt">完投 / 完封</div><div class="gf">완투 / 완봉</div><div class="gd">完投(완투)는 선발투수가 경기를 끝까지 책임지는 것. 完封(완봉)은 완투하면서 무실점으로 막는 것.</div></div>
+    <div class="gc"><div class="gt">勝利 / 敗戦 / セーブ / ホールド</div><div class="gf">승리 / 패전 / 세이브 / 홀드</div><div class="gd">勝利投手(승리투수)·敗戦投手(패전투수)는 팀의 승패가 결정될 때 책임투수. セーブ(세이브)는 리드 상황에서 경기를 마무리한 투수, ホールド(홀드)는 리드를 지킨 중간계투에게 부여.</div></div>
+    <div class="gc"><div class="gt">併殺打</div><div class="gf">병살타 (へいさつだ / 더블플레이)</div><div class="gd">한 번의 타격으로 2명의 주자(또는 주자+타자)가 동시에 아웃되는 것. 타자에게는 불리한 결과로 기록됨.</div></div>
+    <div class="gc"><div class="gt">交流戦</div><div class="gf">교류전 (こうりゅうせん)</div><div class="gd">매년 5월 하순~6월 중순, 세리그와 파리그 팀이 서로 맞붙는 시리즈. 시즌 성적에 그대로 반영됨.</div></div>
+    <div class="gc"><div class="gt">予告先発</div><div class="gf">예고선발 (よこくせんぱつ)</div><div class="gd">경기 전날 각 팀이 발표하는 다음 경기 선발투수. NPB는 의무적으로 사전 공시.</div></div>
+  </div>
+
+  <!-- 세이버매트릭스 용어 -->
+  <div id="gls-saber" class="gls-grid" style="display:none">
+    <div class="gc"><div class="gt">WAR</div><div class="gf">Wins Above Replacement</div><div class="gd">"대체 선수 대비 몇 승을 더 만들어냈는가"를 하나의 숫자로 표현한 지표. 타격·수비·주루(타자) 또는 투구 가치(투수)를 모두 종합해 계산. WAR 2 이상이면 평균 이상의 주전급, 4 이상이면 올스타급, 6 이상이면 MVP급으로 평가됨. NPB에서는 1.02(deltagraphs)가 독자적인 계산식을 사용.</div></div>
+    <div class="gc"><div class="gt">WPA</div><div class="gf">Win Probability Added</div><div class="gd">경기 중 한 번의 타석이나 투구가 "팀의 승리 확률"을 얼마나 변화시켰는지 누적한 값. 예를 들어 9회 동점 상황 끝내기 안타는 WPA가 매우 높게 기록됨. 단순 성적보다 '클러치(승부처) 활약도'를 잘 보여주지만, 어떤 상황에 등장했는지(기회의 질)에 영향을 받는다는 한계가 있음.</div></div>
+    <div class="gc"><div class="gt">OPS+</div><div class="gf">On-base Plus Slugging Plus</div><div class="gd">단순 OPS(출루율+장타율)에 "리그 평균"과 "구장 효과(파크팩터)"를 보정한 지표. 100이 정확히 리그 평균이며, 150이면 평균보다 50% 더 뛰어난 타격을 했다는 뜻. 서로 다른 시즌, 다른 구장에서 뛴 타자들을 공정하게 비교할 수 있게 해줌.</div></div>
+    <div class="gc"><div class="gt">wRC+</div><div class="gf">Weighted Runs Created Plus</div><div class="gd">타자가 만들어낸 "득점 생산력"을 가중치를 적용해 계산하고, 이를 리그 평균(100) 및 파크팩터로 보정한 지표. 단타, 2루타, 홈런, 볼넷 등 각 이벤트가 실제로 득점에 기여하는 정도가 다르다는 점을 반영하기 때문에 OPS+보다 더 정밀한 타격 종합 지표로 평가됨.</div></div>
+    <div class="gc"><div class="gt">FIP</div><div class="gf">Fielding Independent Pitching</div><div class="gd">"수비와 무관하게 투수 본인의 능력만으로" 평가하는 평균자책점 추정치. 삼진·볼넷·홈런 등 수비수의 개입이 없는 결과만으로 계산하며, 일반 ERA와 같은 스케일(예: 3.50)로 표시됨. FIP가 ERA보다 훨씬 낮다면 수비의 도움 없이도 잘 던지고 있다는 뜻이고, 반대로 FIP가 ERA보다 높다면 수비 덕분에 ERA가 좋게 나온 것일 수 있음.</div></div>
+    <div class="gc"><div class="gt">FIP-</div><div class="gf">FIP Minus (FIP マイナス)</div><div class="gd">FIP에 리그 평균(100)과 구장 효과를 추가로 보정한 지표. OPS+/wRC+와 마찬가지로 100이 리그 평균이며, 낮을수록 우수함 (ERA와 반대 방향). 예를 들어 FIP-가 63이라면 리그 평균보다 37% 더 우수한 투수라는 의미. 투수 친화 구장과 타자 친화 구장에서 뛰는 투수를 공정하게 비교할 수 있음.</div></div>
+    <div class="gc"><div class="gt">BABIP</div><div class="gf">Batting Average on Balls in Play</div><div class="gd">"필드 안으로 들어간 타구"만 대상으로 한 타율(홈런과 삼진은 제외). 리그 평균은 대략 .290~.300 수준. 타자의 경우 타구 속도와 발 빠르기가 영향을 주지만, 투수의 경우 시즌이 길어질수록 평균으로 회귀하는 경향이 강해서 "운"의 영향을 가늠하는 지표로도 활용됨.</div></div>
+    <div class="gc"><div class="gt">K-BB%</div><div class="gf">Strikeout Rate minus Walk Rate</div><div class="gd">투수의 삼진율(K%)에서 볼넷율(BB%)을 뺀 값. 단순히 삼진을 많이 잡는 것뿐 아니라, 볼넷을 적게 내주면서 동시에 압도적인 구위를 보여주는지를 측정. 20% 이상이면 리그 정상급 컨트롤+구위를 갖춘 투수로 평가됨.</div></div>
+    <div class="gc"><div class="gt">CSW%</div><div class="gf">Called Strike + Whiff Rate</div><div class="gd">전체 투구 중 "루킹 스트라이크(타자가 그냥 본 스트라이크)"와 "헛스윙"의 합산 비율. 타자가 얼마나 그 투수의 공에 제대로 반응하지 못하는지를 보여주는 '구위' 지표로, 30% 이상이면 리그 상위권 구위를 가진 투수로 평가됨.</div></div>
+    <div class="gc"><div class="gt">DRS</div><div class="gf">Defensive Runs Saved</div><div class="gd">한 선수의 수비가 평균적인 선수에 비해 몇 점의 실점을 "절약"했는지를 나타내는 지표. 양수(+)면 평균 이상의 수비력, 음수(-)면 평균 이하를 의미. 다만 포지션마다 수비 부담이 다르기 때문에, 포지션이 다른 선수 간 직접 비교에는 주의가 필요함.</div></div>
+    <div class="gc"><div class="gt">UZR</div><div class="gf">Ultimate Zone Rating</div><div class="gd">구장을 세밀한 구역(zone)으로 나누고, 각 타구가 그 구역에서 처리될 확률을 기반으로 수비 기여도를 계산하는 지표. DRS와 목적은 비슷하지만 계산 방식이 더 세밀한 편. NPB에서는 1.02(deltagraphs)가 독자적인 추적 데이터를 기반으로 산출.</div></div>
+    <div class="gc"><div class="gt">ISO</div><div class="gf">Isolated Power</div><div class="gd">장타율에서 타율을 뺀 값(SLG - AVG). 단타의 영향을 제거하고 "순수한 장타력"만을 측정. .200 이상이면 확실한 파워 히터, .250 이상이면 리그 최상위권 장타력을 가진 타자로 평가됨.</div></div>
   </div>
 </section>
+
+<script>
+function switchGlossary(id, btn) {
+  document.querySelectorAll('#glossary .sub-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('gls-basic').style.display = id==='basic' ? 'grid' : 'none';
+  document.getElementById('gls-saber').style.display = id==='saber' ? 'grid' : 'none';
+}
+</script>
 
 </main>
 
@@ -1457,32 +1494,34 @@ function renderReviews(reviews, games) {
       ? `<span style="background:rgba(77,222,128,0.2);color:#4cde80;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">✓ 예측 적중</span>`
       : `<span style="background:rgba(232,92,64,0.2);color:#e85c40;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">✗ 예측 미스</span>`;
 
-    const mvpHtml = rv.mvp ? `
+    const mvpHtml = rv.mvpName ? `
       <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(232,200,64,0.08);border-radius:6px;border-left:3px solid var(--accent)">
         <span style="font-size:18px">🏆</span>
         <div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:2px">최고 활약</div>
-          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--accent)">${rv.mvp.name}</div>
-          <div style="font-size:11px;color:var(--text);margin-top:2px">${rv.mvp.performance}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:1px">${rv.mvp.reason}</div>
+          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--accent)">${rv.mvpName}${rv.mvpTeam?` <span style="font-size:11px;color:var(--muted)">(${TN_S[rv.mvpTeam]||rv.mvpTeam})</span>`:''}</div>
+          <div style="font-size:11px;color:var(--text);margin-top:2px">${rv.mvpPerformance||''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${rv.mvpReason||''}</div>
         </div>
       </div>` : '';
 
-    const worstHtml = rv.worst ? `
+    const worstHtml = rv.worstName ? `
       <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(232,92,64,0.06);border-radius:6px;border-left:3px solid var(--accent3)">
         <span style="font-size:18px">💔</span>
         <div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:2px">최악 활약</div>
-          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--accent3)">${rv.worst.name}</div>
-          <div style="font-size:11px;color:var(--text);margin-top:2px">${rv.worst.performance}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:1px">${rv.worst.reason}</div>
+          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--accent3)">${rv.worstName}${rv.worstTeam?` <span style="font-size:11px;color:var(--muted)">(${TN_S[rv.worstTeam]||rv.worstTeam})</span>`:''}</div>
+          <div style="font-size:11px;color:var(--text);margin-top:2px">${rv.worstPerformance||''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${rv.worstReason||''}</div>
         </div>
       </div>` : '';
 
-    const hitHtml = correct && rv.hitReasons?.length
-      ? `<div style="font-size:11px;color:#4cde80;margin-top:6px">✓ ${rv.hitReasons.join(' / ')}</div>` : '';
-    const missHtml = !correct && rv.missReasons?.length
-      ? `<div style="font-size:11px;color:#e85c40;margin-top:6px">✗ ${rv.missReasons.join(' / ')}</div>` : '';
+    const hitHtml = rv.hitAnalysis
+      ? `<div style="margin-top:8px"><div class="analysis-label" style="color:#4cde80">예측 적중 분석</div><div class="analysis-text">${rv.hitAnalysis}</div></div>` : '';
+    const missHtml = rv.missAnalysis
+      ? `<div style="margin-top:8px"><div class="analysis-label" style="color:#e85c40">예측 미스 분석</div><div class="analysis-text">${rv.missAnalysis}</div></div>` : '';
+    const unexpectedHtml = rv.unexpectedEvents
+      ? `<div style="margin-top:8px"><div class="analysis-label">예상치 못한 변수</div><div class="analysis-text">⚡ ${rv.unexpectedEvents}</div></div>` : '';
 
     return `<div class="card mgb">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
@@ -1499,7 +1538,7 @@ function renderReviews(reviews, games) {
         ${mvpHtml}
         ${worstHtml}
       </div>
-      ${hitHtml}${missHtml}
+      ${hitHtml}${missHtml}${unexpectedHtml}
     </div>`;
   }).join('');
   sec.innerHTML = html || `<div style="padding:12px;color:var(--muted);font-size:12px">리뷰 데이터 없음</div>`;
@@ -1684,6 +1723,8 @@ function renderAIAnalyses(analyses, games) {
 
       <!-- 분석 섹션 -->
       <div style="display:grid;gap:8px">
+        ${a.lineupAnalysis?`<div><div class="analysis-label">선발 라인업 분석</div><div class="analysis-text">${a.lineupAnalysis}</div></div>`:''}
+        ${a.newsAnalysis?`<div><div class="analysis-label">최근 동향 분석</div><div class="analysis-text">${a.newsAnalysis}</div></div>`:''}
         ${a.coreReason?`<div><div class="analysis-label">핵심</div><div class="analysis-text">${a.coreReason}</div></div>`:''}
         ${a.variable?`<div><div class="analysis-label">변수</div><div class="analysis-text">${a.variable}</div></div>`:''}
         ${a.issue?`<div><div class="analysis-label">이슈</div><div class="analysis-text">${a.issue}</div></div>`:''}
