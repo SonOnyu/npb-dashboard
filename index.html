@@ -445,16 +445,21 @@ body:not(.light) .rdp{color:#4cde80}
     <button class="sub-tab pl-tab" onclick="switchStatGroup('pl',this)">퍼시픽</button>
     <button class="sub-tab cl-tab" onclick="switchStatGroup('cl',this)">센트럴</button>
     <button class="sub-tab" onclick="switchStatGroup('ko',this)">교류전</button>
-    <button class="sub-tab pl-tab" onclick="switchStatGroup('plps',this)">포스트시즌 퍼시픽</button>
-    <button class="sub-tab cl-tab" onclick="switchStatGroup('clps',this)">포스트시즌 센트럴</button>
+    <button class="sub-tab js-tab" onclick="switchStatGroup('cs',this)">클라이막스 시리즈</button>
     <button class="sub-tab js-tab" onclick="switchStatGroup('js',this)">일본시리즈</button>
     <button class="sub-tab" onclick="switchStatGroup('op',this)">오픈전</button>
   </div>
 
-  <!-- 타자/투수 토글 -->
-  <div class="bp-toggle">
+  <!-- 타자/투수 토글 (클라이막스 시리즈 제외) -->
+  <div class="bp-toggle" id="bp-toggle">
     <button class="bp-btn active" onclick="switchStatType('bat',this)">타자</button>
     <button class="bp-btn" onclick="switchStatType('pit',this)">투수</button>
+  </div>
+
+  <!-- 클라이막스 시리즈 전용: 센트럴/퍼시픽 토글 -->
+  <div class="bp-toggle" id="cs-toggle" style="display:none">
+    <button class="bp-btn cl-tab active" onclick="switchCSLeague('cl',this)">센트럴</button>
+    <button class="bp-btn pl-tab" onclick="switchCSLeague('pl',this)">퍼시픽</button>
   </div>
 
   <!-- 로딩 스피너 -->
@@ -474,12 +479,11 @@ body:not(.light) .rdp{color:#4cde80}
   <div id="stats-op-pit"  class="stats-panel" style="display:none"></div>
   <div id="stats-cur-bat" class="stats-panel" style="display:block"></div>
   <div id="stats-cur-pit" class="stats-panel" style="display:none"></div>
-  <div id="stats-clps-bat" class="stats-panel" style="display:none"></div>
-  <div id="stats-clps-pit" class="stats-panel" style="display:none"></div>
-  <div id="stats-plps-bat" class="stats-panel" style="display:none"></div>
-  <div id="stats-plps-pit" class="stats-panel" style="display:none"></div>
   <div id="stats-js-bat" class="stats-panel" style="display:none"></div>
   <div id="stats-js-pit" class="stats-panel" style="display:none"></div>
+  <!-- 클라이막스 시리즈: 센트럴/퍼시픽 각각 타자+투수 한 화면 -->
+  <div id="stats-cs-cl" class="stats-panel" style="display:none"></div>
+  <div id="stats-cs-pl" class="stats-panel" style="display:none"></div>
 </section>
 
 <!-- ════ STANDINGS ════ -->
@@ -875,7 +879,7 @@ const PLAYER_KO = {
   '安田 尚憲':'야스다 나오노리', '藤原 恭大':'후지와라 야스히로',
   '中村 奨吾':'나카무라 쇼고', '荻野 貴司':'오기노 타카시',
   '佐藤 都志也':'사토 토시야', '友杉 篤輝':'토모스기 아츠키',
-  '茶谷 健太':'사야 켄타', '高部 瑛斗':'코베 아키토',
+  '茶谷 健太':'사야 켄타', '高部 瑛斗':'코베 아키토', '西川 史礁':'니시카와 미쇼', '小川 龍成':'오가와 류세이',
   '平沢 大河':'히라사와 타이가', '和田 康士朗':'와다 코지로',
   '山本 大斗':'야마모토 히로토', '岡 大海':'오카 히로미',
   // ══════════════════════════════
@@ -929,7 +933,7 @@ const PLAYER_KO = {
   '炭谷 銀仁朗':'스미타니 긴지로', '柘植 世那':'쓰게 세나',
   '古賀 悠斗':'코가 유토', '牧野 翔矢':'마키노 쇼야',
   '山村 崇嘉':'야마무라 타카요시', '奥村 光一':'오쿠무라 코이치',
-  '児玉 亮涼':'코다마 료스케', '西川 愛也':'니시카와 아이야',
+  '児玉 亮涼':'코다마 료스케', '西川 愛也':'니시카와 아이야', '滝澤 夏央':'타키자와 나츠오',
   // ══════════════════════════════
   // 阪神タイガース (한신)
   // ══════════════════════════════
@@ -1085,7 +1089,13 @@ const NPB_TEAM_MAP = {
   '巨人':'G','広島東洋':'C','東京ヤクルト':'Sw','福岡ソフトバンク':'H','北海道日本ハム':'F',
   'オリックス・バファローズ':'Bs','東北楽天':'E','埼玉西武':'L','千葉ロッテ':'M',
 };
+// NPB 개인성적표 선수명 옆 1글자 팀 약자 (예: "佐藤 輝明(神)")
+const NPB_TEAM_ABBR_1CHAR = {
+  '神':'T','デ':'DB','巨':'G','中':'D','広':'C','ヤ':'Sw',
+  'ソ':'H','日':'F','オ':'Bs','楽':'E','西':'L','ロ':'M',
+};
 function teamKey(name) {
+  if (NPB_TEAM_ABBR_1CHAR[name]) return NPB_TEAM_ABBR_1CHAR[name];
   for (const [k,v] of Object.entries(NPB_TEAM_MAP)) {
     if (name.includes(k)) return v;
   }
@@ -1100,8 +1110,26 @@ function renderStatsTable(data, isBatter) {
   const BAT_HEADERS  = ['순위','선수','타율','경기','타석','타수','득점','안타','2루타','3루타','홈런','누타','타점','도루','도루실','희타','희비','볼넷','고의4구','사구','삼진','병살','장타율','출루율'];
   const PIT_HEADERS  = ['순위','투수','방어율','등판','승','패','세이브','홀드','HP','완투','완봉승','무사구','승률','타자','투구이닝','안타','홈런','볼넷','고의4구','사구','삼진','폭투','보크','실점','자책점'];
   const headers = isBatter ? BAT_HEADERS : PIT_HEADERS;
-  const keyCol  = isBatter ? 2 : 2; // 타율 or 방어율 index
+  const keyCol  = 2; // 타율 or 방어율 index
   const rows = data.rows;
+
+  // 핵심 지표(타율/방어율) percentile 계산 — 타자는 높을수록, 투수는 낮을수록 좋음
+  const keyVals = rows.map(r => parseFloat(r[keyCol])).filter(v => !isNaN(v));
+  const keyMin = Math.min(...keyVals);
+  const keyMax = Math.max(...keyVals);
+  const keyRange = keyMax - keyMin || 1;
+
+  function percentileColor(val) {
+    if (isNaN(val)) return '';
+    let pct = (val - keyMin) / keyRange; // 0~1, 1이 가장 좋은 값(타율 기준)
+    if (!isBatter) pct = 1 - pct; // 투수는 방어율 낮을수록 좋음 → 반전
+    // 0(나쁨, 빨강) ~ 1(좋음, 초록) 그라데이션
+    if (pct >= 0.8)      return 'background:rgba(76,222,128,0.22);color:#3fae5e;font-weight:700';
+    if (pct >= 0.6)      return 'background:rgba(76,222,128,0.10);color:var(--text);font-weight:600';
+    if (pct <= 0.2)      return 'background:rgba(232,92,64,0.20);color:#e85c40;font-weight:700';
+    if (pct <= 0.4)      return 'background:rgba(232,92,64,0.08);color:var(--text)';
+    return '';
+  }
 
   const thHTML = headers.map((h,i) => {
     const isKey = i === keyCol;
@@ -1109,11 +1137,18 @@ function renderStatsTable(data, isBatter) {
   }).join('');
 
   const tbHTML = rows.map((r, ri) => {
-    const rankCls = ri===0?'top1':ri<3?'top3':'';
-    const tkey = r[2] ? teamKey(r[2]) : null;
-    const logoHtml = tkey ? `${logoImg(tkey,20)}&nbsp;` : '';
+    const rank = ri + 1;
+    // 1~3위 메달 스타일
+    const medalStyle = rank===1 ? 'background:rgba(255,200,60,0.20);color:#caa000;font-weight:800'
+                      : rank===2 ? 'background:rgba(200,200,210,0.18);color:#888;font-weight:800'
+                      : rank===3 ? 'background:rgba(205,140,80,0.18);color:#b06a30;font-weight:800'
+                      : '';
+
     const cells = r.map((v,ci) => {
-      if (ci === 1) { // 선수명 — 일본어 + 한국어 서브텍스트
+      if (ci === 0) { // 순위 — 메달 배경
+        return `<td style="${medalStyle}border-radius:4px">${v}</td>`;
+      }
+      if (ci === 1) { // 선수명 — 일본어 + 한국어 서브텍스트 + 팀 로고
         // "佐藤 輝明(神)" 또는 "佐藤　輝明（神）" → 이름, 팀약자 분리 (전각/반각 괄호 모두 처리)
         const nameMatch = v.match(/^(.+?)[\(（](.+?)[\)）]$/);
         const jpNameRaw = nameMatch ? nameMatch[1].trim() : v;
@@ -1121,16 +1156,23 @@ function renderStatsTable(data, isBatter) {
         // 한국어 매핑은 일본어 이름의 공백을 정규화(전각 스페이스 → 반각)해서 조회
         const jpNameKey = jpNameRaw.replace(/[\u3000]/g, ' ').trim();
         const koName = PLAYER_KO[jpNameKey] || PLAYER_KO[jpNameRaw] || '';
+        const tkey = teamAbr ? teamKey(teamAbr) : null;
+        const logoHtml = tkey ? logoImg(tkey,16) : '';
         return `<td>
-          <div style="font-size:13px;font-weight:500;white-space:nowrap">${jpNameRaw}${teamAbr?`(${teamAbr})`:''}</div>
-          ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
+          <div style="display:flex;align-items:center;gap:5px">
+            ${logoHtml}
+            <div>
+              <div style="font-size:13px;font-weight:500;white-space:nowrap">${jpNameRaw}${teamAbr?`(${teamAbr})`:''}</div>
+              ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
+            </div>
+          </div>
         </td>`;
       }
-      if (ci === 2) { // 팀명
-        return `<td><div style="display:flex;align-items:center;gap:4px">${logoHtml}<span style="font-size:11px">${TN_S[tkey]||v}</span></div></td>`;
+      if (ci === keyCol) { // 핵심 지표 — percentile 그라데이션
+        const style = percentileColor(parseFloat(v));
+        return `<td style="${style}">${v}</td>`;
       }
-      const cls = ci === keyCol ? rankCls : '';
-      return `<td class="${cls}">${v}</td>`;
+      return `<td>${v}</td>`;
     }).join('');
     return `<tr>${cells}</tr>`;
   }).join('');
@@ -1195,16 +1237,16 @@ async function loadAllStats() {
     document.getElementById('stats-cur-bat').innerHTML = renderStatsTable({headers: clBat.headers, rows: curBatRows, updatedAt: clBat.updatedAt}, true);
     document.getElementById('stats-cur-pit').innerHTML = renderStatsTable({headers: clPit.headers, rows: curPitRows, updatedAt: clPit.updatedAt}, false);
 
-    // 포스트시즌 / 일본시리즈 — 시즌 진행 중이므로 안내 표시
-    const notReady = (title) => `<div class="card"><div class="card-t">${title}</div>
+    // 클라이막스 시리즈 / 일본시리즈 — 시즌 진행 중이므로 안내 표시 (타자+투수 한 화면)
+    const notReady = (title) => `<div class="card mgb"><div class="card-t">${title}</div>
       <div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">
         시즌 종료 후 표시됩니다.
       </div></div>`;
 
-    document.getElementById('stats-clps-bat').innerHTML = notReady('센트럴 포스트시즌 · 타자');
-    document.getElementById('stats-clps-pit').innerHTML = notReady('센트럴 포스트시즌 · 투수');
-    document.getElementById('stats-plps-bat').innerHTML = notReady('퍼시픽 포스트시즌 · 타자');
-    document.getElementById('stats-plps-pit').innerHTML = notReady('퍼시픽 포스트시즌 · 투수');
+    document.getElementById('stats-cs-cl').innerHTML =
+      notReady('센트럴 클라이막스 시리즈 · 타자') + notReady('센트럴 클라이막스 시리즈 · 투수');
+    document.getElementById('stats-cs-pl').innerHTML =
+      notReady('퍼시픽 클라이막스 시리즈 · 타자') + notReady('퍼시픽 클라이막스 시리즈 · 투수');
     document.getElementById('stats-js-bat').innerHTML = notReady('일본시리즈 · 타자');
     document.getElementById('stats-js-pit').innerHTML = notReady('일본시리즈 · 투수');
 
@@ -1238,24 +1280,43 @@ function scheduleAutoRefresh() {
 
 let activeStatGroup = 'cur';
 let activeStatType  = 'bat';
+let activeCSLeague  = 'cl';
 
 function switchStatGroup(group, btn) {
   document.querySelectorAll('#stats .sub-tabs .sub-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   activeStatGroup = group;
+
+  // 클라이막스 시리즈는 타자/투수 토글 숨기고 센트럴/퍼시픽 토글 표시
+  const isCS = group === 'cs';
+  document.getElementById('bp-toggle').style.display = isCS ? 'none' : 'flex';
+  document.getElementById('cs-toggle').style.display = isCS ? 'flex' : 'none';
+
   showActiveStatPanel();
 }
 
 function switchStatType(type, btn) {
-  document.querySelectorAll('.bp-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#bp-toggle .bp-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   activeStatType = type;
   showActiveStatPanel();
 }
 
+function switchCSLeague(league, btn) {
+  document.querySelectorAll('#cs-toggle .bp-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCSLeague = league;
+  showActiveStatPanel();
+}
+
 function showActiveStatPanel() {
   document.querySelectorAll('.stats-panel').forEach(p => p.style.display = 'none');
-  const id = activeStatGroup + '-' + activeStatType;
+  let id;
+  if (activeStatGroup === 'cs') {
+    id = 'cs-' + activeCSLeague;
+  } else {
+    id = activeStatGroup + '-' + activeStatType;
+  }
   activeStatsTab = id;
   const el = document.getElementById('stats-' + id);
   if (el) el.style.display = 'block';
