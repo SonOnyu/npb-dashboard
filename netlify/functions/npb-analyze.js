@@ -59,7 +59,7 @@ function callClaude(prompt) {
     console.log('[npb-analyze] API key present:', !!process.env.ANTHROPIC_API_KEY, 'length:', (process.env.ANTHROPIC_API_KEY||'').length);
     const body = JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 8000,
       messages: [{ role:'user', content: prompt }],
     });
     const req = https.request({
@@ -299,7 +299,10 @@ ${JSON.stringify(boxScores||[], null, 2)}
 
       const raw = await callClaude(prompt);
       const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      console.log('[npb-analyze] review cleaned length:', cleaned.length);
+      console.log('[npb-analyze] review cleaned (last 300):', cleaned.slice(-300));
       const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+      console.log('[npb-analyze] review jsonMatch found:', !!jsonMatch);
       if (jsonMatch) {
         try {
           const reviews = JSON.parse(jsonMatch[0]);
@@ -315,6 +318,11 @@ ${JSON.stringify(boxScores||[], null, 2)}
             const targetMmdd = actualResults?.[0]?.mmdd;
             await store.setJSON('review-analysis', { mmdd: targetMmdd, reviews, savedAt: new Date().toISOString() });
           } catch(e2) {
+            const posMatch = e.message.match(/position (\d+)/);
+            if (posMatch) {
+              const pos = parseInt(posMatch[1]);
+              console.error('[npb-analyze] review context around error:', JSON.stringify(jsonMatch[0].slice(Math.max(0,pos-50), pos+50)));
+            }
             result = { raw: cleaned, error: 'parse_failed', parseError: e.message };
           }
         }
