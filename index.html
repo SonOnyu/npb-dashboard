@@ -1908,61 +1908,6 @@ function renderAIAnalyses(analyses, games) {
 scheduleAutoRefresh();
 
 
-function tagHtml(tags){return tags.map(t=>{const[cls,txt]=t.split(':');return `<span class="itag ${cls}">${txt}</span>`;}).join('');}
-
-document.getElementById('match-container').innerHTML=MATCHES.map(m=>{
-  const pa=100-m.prob;
-  return `<div class="mc2${m.featured?' featured':''}">
-    <div class="mh">
-      <span class="mh-venue">⚾ ${m.venue} · ${m.time}</span>
-      <span class="mh-badge${m.featured?' featured':''}">${m.featured?'⭐ 빅매치':'교류전'}</span>
-    </div>
-    <div class="teams-row">
-      <div class="team-side home">${logoLg(m.home)}<div class="team-info"><div class="team-fullname">${TN_S[m.home]}</div><div class="team-rec">${m.homeRec}</div></div></div>
-      <div class="vs-badge">VS</div>
-      <div class="team-side away">${logoLg(m.away)}<div class="team-info right"><div class="team-fullname">${TN_S[m.away]}</div><div class="team-rec">${m.awayRec}</div></div></div>
-    </div>
-    <div class="prob-wrap">
-      <div class="prob-bar"><div class="pb-home" style="width:${m.prob}%"></div><div class="pb-away" style="width:${pa}%"></div></div>
-      <div class="prob-labels"><span class="prob-pct ph">${TN_S[m.home]} ${m.prob}%</span><span class="prob-pct pa">${TN_S[m.away]} ${pa}%</span></div>
-    </div>
-    <div class="mbody">
-      <div class="issue-row">${tagHtml(m.tags)}</div>
-      <div class="analysis-block"><div class="analysis-label">핵심</div><div class="analysis-text">${m.point}</div></div>
-      <div class="analysis-block"><div class="analysis-label">변수</div><div class="analysis-text">${m.variable}</div></div>
-      <div class="analysis-block"><div class="analysis-label">이슈</div><div class="analysis-text">${m.issue}</div></div>
-      <div class="verdict-box"><span class="verdict-icon">${m.featured?'🔥':'🏆'}</span>
-        <div><div class="verdict-fav">판정: ${m.verdict}</div><div class="verdict-txt">${m.verdictTxt}</div></div>
-      </div>
-    </div>
-  </div>`;
-}).join('');
-
-/* ══════════════════════════════════════
-   경기 분석 — 이전결과 / 다음경기분석
-══════════════════════════════════════ */
-const GAMES_API   = '/.netlify/functions/npb-games';
-const ANALYZE_API = '/.netlify/functions/npb-analyze';
-
-// ── 탭 전환 ──
-function switchGameTab(id, btn) {
-  document.querySelectorAll('#today .sub-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('panel-prev').style.display = id==='prev' ? 'block' : 'none';
-  document.getElementById('panel-next').style.display = id==='next' ? 'block' : 'none';
-}
-
-// ── 경기 분석 탭 진입 시 자동 로드 ──
-let gamesDataCache = null;
-
-async function loadGamesData(force=false) {
-  if (gamesDataCache && !force) return gamesDataCache;
-  try {
-    const res = await fetch(`${GAMES_API}?action=today`);
-    gamesDataCache = await res.json();
-    return gamesDataCache;
-  } catch(e) { return null; }
-}
 
 // (switchTab 오버라이드 제거 — 기존 switchTab 내부에서 직접 처리)
 
