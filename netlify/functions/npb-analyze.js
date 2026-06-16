@@ -108,6 +108,13 @@ exports.handler = async (event) => {
 
     const force = params.force === '1' || bodyData.force === true;
 
+    // ── 캐시 삭제 모드 ──
+    if (mode === 'clear') {
+      await store.delete('predict-analysis');
+      await store.delete('review-analysis');
+      return ok({ cleared: true, message: 'predict-analysis, review-analysis 캐시 삭제 완료' });
+    }
+
     // ── 캐시 확인 (predict 모드만 — 매일 한번 분석하면 충분) ──
     if (mode === 'predict' && !force) {
       const cached = await store.get('predict-analysis', { type: 'json' });
