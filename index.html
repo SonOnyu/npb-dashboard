@@ -1804,24 +1804,38 @@ async function renderNextGames(data) {
       📅 ${tmrLabel} · ${games.length}경기
     </div>
     <div class="match-grid" id="next-basic-cards">
-      ${games.map(g => `
+      ${games.map(g => {
+        const sAway = starters[g.away]||g.starterAway||'';
+        const sHome = starters[g.home]||g.starterHome||'';
+        return `
         <div class="mc2">
           <div class="mh">
             <span class="mh-venue">⚾ ${g.venue||'−'} · ${g.time||'18:00'}</span>
             <span class="mh-badge">예정</span>
           </div>
-          <div class="teams-row">
-            <div class="team-side home">${logoLg(g.home)}<div class="team-info"><div class="team-fullname">${TN_S[g.home]||g.home}</div></div></div>
+          <div class="teams-row" style="align-items:center;padding:12px 14px">
+            <!-- 원정 (왼쪽) -->
+            <div style="display:flex;align-items:center;gap:10px">
+              ${logoLg(g.away)}
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px">원정</div>
+                <div style="font-family:var(--fd);font-size:17px;font-weight:800">${TN_S[g.away]||g.away}</div>
+                ${sAway?`<div style="font-size:11px;color:var(--accent2);margin-top:2px">선발: ${sAway}</div>`:''}
+              </div>
+            </div>
             <div class="vs-badge">VS</div>
-            <div class="team-side away">${logoLg(g.away)}<div class="team-info right"><div class="team-fullname">${TN_S[g.away]||g.away}</div></div></div>
+            <!-- 홈 (오른쪽) -->
+            <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
+              ${logoLg(g.home)}
+              <div style="text-align:right">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:2px">홈</div>
+                <div style="font-family:var(--fd);font-size:17px;font-weight:800">${TN_S[g.home]||g.home}</div>
+                ${sHome?`<div style="font-size:11px;color:var(--accent2);margin-top:2px">선발: ${sHome}</div>`:''}
+              </div>
+            </div>
           </div>
-          ${(starters[g.home]||g.starterHome||starters[g.away]||g.starterAway) ? `
-          <div style="padding:6px 14px 10px;font-size:11px;color:var(--muted)">
-            ${(starters[g.away]||g.starterAway)?`원정 선발: <strong>${starters[g.away]||g.starterAway}</strong>`:''}
-            ${(starters[g.away]||g.starterAway)&&(starters[g.home]||g.starterHome)?' · ':''}
-            ${(starters[g.home]||g.starterHome)?`홈 선발: <strong>${starters[g.home]||g.starterHome}</strong>`:''}
-          </div>` : ''}
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>
     <div id="ai-analysis-section" style="margin-top:24px">
       <div style="display:flex;align-items:center;gap:12px;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
@@ -1901,30 +1915,32 @@ function renderAIAnalyses(analyses, games) {
       </div>`).join('');
 
     // 섹션 라벨 스타일 (이전 .analysis-label보다 크게)
+    const bold = (t) => t.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text);font-weight:700">$1</strong>');
     const sLabel = (text) => `<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;margin-top:10px;letter-spacing:0.03em">${text}</div>`;
-    const sText  = (text) => `<div style="font-size:12px;color:var(--muted);line-height:1.6">${text}</div>`;
+    const sText  = (text) => `<div style="font-size:12px;color:var(--muted);line-height:1.6">${bold(text)}</div>`;
 
     return `<div class="card" style="height:100%;box-sizing:border-box;${a.confidence==='high'?'border-color:rgba(77,222,128,0.3)':''}">
-      <!-- 경기 헤더 -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">
-        <div style="display:flex;align-items:center;gap:8px">
+      <!-- 경기 헤더 — 원정 왼쪽, 홈 오른쪽 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+        <!-- 원정 (왼쪽) -->
+        <div style="display:flex;align-items:center;gap:10px">
           ${logoLg(a.awayTeam)}
           <div>
             <div style="font-size:10px;color:var(--muted)">원정</div>
-            <div style="font-family:var(--fd);font-size:15px;font-weight:700">${TN_S[a.awayTeam]||a.awayTeam}</div>
-            ${a.starterAway?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starterAway}</div>`:''}
+            <div style="font-family:var(--fd);font-size:17px;font-weight:800">${TN_S[a.awayTeam]||a.awayTeam}</div>
+            ${a.starterAway?`<div style="font-size:11px;color:var(--accent2);margin-top:2px">선발: ${a.starterAway}</div>`:''}
           </div>
-          <span style="font-family:var(--fd);font-size:16px;color:var(--muted2);padding:0 4px">VS</span>
-          <div>
-            <div style="font-size:10px;color:var(--muted)">홈</div>
-            <div style="font-family:var(--fd);font-size:15px;font-weight:700">${TN_S[a.homeTeam]||a.homeTeam}</div>
-            ${a.starterHome?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starterHome}</div>`:''}
-          </div>
-          ${logoLg(a.homeTeam)}
         </div>
-        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.08);color:${confColor}">
-          신뢰도 ${a.confidence==='high'?'높음':a.confidence==='low'?'낮음':'중간'}
-        </span>
+        <span style="font-family:var(--fd);font-size:18px;color:var(--muted2);font-weight:700">VS</span>
+        <!-- 홈 (오른쪽) -->
+        <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
+          ${logoLg(a.homeTeam)}
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--muted)">홈</div>
+            <div style="font-family:var(--fd);font-size:17px;font-weight:800">${TN_S[a.homeTeam]||a.homeTeam}</div>
+            ${a.starterHome?`<div style="font-size:11px;color:var(--accent2);margin-top:2px">선발: ${a.starterHome}</div>`:''}
+          </div>
+        </div>
       </div>
 
       <!-- 승률 바 -->
