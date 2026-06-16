@@ -512,7 +512,9 @@ async function fetchGameScore(away, home, mmdd) {
     const path = `/scores/2026/${mmdd}/${awayCode}-${homeCode}-0${n}/`;
     try {
       const html = await fetchUrl(`https://npb.jp${path}`);
-      if (!html.includes('試合終了')) continue;
+      const finished = html.includes('試合終了');
+      console.log(`[fetchGameScore] ${path}: len=${html.length} finished=${finished}`);
+      if (!finished) continue;
       const scoreM = html.match(/(\d+)-(\d+)[（(]/);
       if (scoreM) {
         const awayScore = parseInt(scoreM[1]);
@@ -520,7 +522,9 @@ async function fetchGameScore(away, home, mmdd) {
         console.log(`[fetchGameScore] ${path}: away=${awayScore} home=${homeScore}`);
         return { awayScore, homeScore, finished: true, path };
       }
-    } catch(e) { /* 해당 번호 없음 */ }
+    } catch(e) {
+      console.log(`[fetchGameScore] ${path}: error=${e.message}`);
+    }
   }
   return null;
 }
