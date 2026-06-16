@@ -1551,10 +1551,13 @@ async function initGamesPanels() {
     showError('panel-next', 'NPB 데이터 로드 실패');
     return;
   }
-  // 업데이트 시각
-  const now = new Date();
-  document.getElementById('games-updated').textContent =
-    `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 기준`;
+  // 업데이트 시각 — 캐시 갱신 시각 표시 (현재 시각이 아님)
+  if (data.updatedAt) {
+    const d = new Date(data.updatedAt);
+    const dateStr = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 갱신`;
+    document.getElementById('games-updated').textContent = dateStr;
+    document.getElementById('header-updated').textContent = `🔄 ${dateStr} (매일 05:00 자동갱신)`;
+  }
 
   // 이전 경기 결과 렌더
   renderPrevResults(data);
