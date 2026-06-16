@@ -1526,16 +1526,17 @@ async function renderPrevResults(data) {
     // 스케줄 로드로 경기 있는 날 마킹
     await loadCalMonth(calYear, calMonth);
   }
-  // 오늘 결과 자동 표시
-  if (data.todayGames && data.todayGames.length > 0) {
+  // 오늘 결과 자동 표시 — 종료된 경기만
+  const todayFinished = (data.todayGames || []).filter(g => g.status === 'finished' || g.status === 'cancelled');
+  if (todayFinished.length > 0) {
     const mmdd = data.mmdd;
     const dateStr = `2026-${mmdd.slice(0,2)}-${mmdd.slice(2,4)}`;
     calSelected = dateStr;
     renderCalendar(calYear, calMonth);
-    await showDayResults(data.todayGames, dateStr, data.mmdd);
+    await showDayResults(todayFinished, dateStr, data.mmdd);
   } else {
     document.getElementById('results-container').innerHTML =
-      `<div style="text-align:center;padding:40px;color:var(--muted)">오늘 경기 정보가 없습니다</div>`;
+      `<div style="text-align:center;padding:40px;color:var(--muted)">오늘 종료된 경기가 없습니다.<br><span style="font-size:12px">날짜를 선택하면 이전 경기 결과를 볼 수 있습니다.</span></div>`;
   }
 }
 
@@ -1775,20 +1776,26 @@ async function renderNextGames(data) {
   const analysis  = document.getElementById('match-analysis');
   if (!container) return;
 
-  const games = data.tomorrowGames || [];
+  // ── 핵심 로직: 오늘 경기 중 아직 시작 안 된 경기가 있으면 그것을 "다음 경기"로 표시
+  // 오늘 경기가 모두 끝났거나 없으면 내일 경기를 표시
+  const todayScheduled = (data.todayGames || []).filter(g => g.status === 'scheduled' || g.status === 'live');
+  const useToday = todayScheduled.length > 0;
+
+  const games    = useToday ? todayScheduled : (data.tomorrowGames || []);
   const starters = data.starters || {};
-  const tmrMmdd = data.tmrMmdd || '';
+  const targetMmdd = useToday ? data.mmdd : (data.tmrMmdd || '');
 
   if (games.length === 0) {
     container.style.display = 'block';
-    container.innerHTML = `<div style="text-align:center;padding:50px;color:var(--muted)">내일 예정 경기가 없습니다</div>`;
+    container.innerHTML = `<div style="text-align:center;padding:50px;color:var(--muted)">예정 경기가 없습니다</div>`;
     if (analysis) analysis.style.display = 'none';
     return;
   }
 
-  const tmrM = tmrMmdd ? parseInt(tmrMmdd.slice(0,2)) : '';
-  const tmrD = tmrMmdd ? parseInt(tmrMmdd.slice(2,4)) : '';
-  const tmrLabel = tmrMmdd ? `${tmrM}월 ${tmrD}일 예정 경기` : '다음 경기';
+  const targetM = targetMmdd ? parseInt(targetMmdd.slice(0,2)) : '';
+  const targetD = targetMmdd ? parseInt(targetMmdd.slice(2,4)) : '';
+  const tmrLabel = targetMmdd ? `${targetM}월 ${targetD}일 예정 경기` : '다음 경기';
+  const tmrMmdd = targetMmdd;
 
   // 1차: 기본 카드 표시
   container.style.display = 'block';
@@ -1835,7 +1842,7 @@ async function renderNextGames(data) {
     });
     const aiData = await res.json();
     if (aiData.analyses) {
-      savePredictions(tmrMmdd, aiData.analyses);
+      savePredictions(targetMmdd, aiData.analyses);
       renderAIAnalyses(aiData.analyses, games);
     } else {
       document.getElementById('ai-analysis-section').innerHTML =
