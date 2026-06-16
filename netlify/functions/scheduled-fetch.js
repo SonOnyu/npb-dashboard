@@ -451,14 +451,15 @@ ${TEAM_CONTEXT}
 }
 
 function buildReviewPrompt(predictions, actualResults) {
-  return `당신은 NPB 애널리스트입니다. 아래에 주어진 실제 경기 데이터(팀 키, 점수)를 기반으로 분석해주세요.
+  return `당신은 NPB 애널리스트입니다. 아래에 주어진 실제 경기 데이터(팀 키, 점수, 선발투수 정보)를 기반으로 분석해주세요.
 
 ## 절대 규칙 (매우 중요)
 - "실제 결과"에 주어진 homeTeam, awayTeam 팀 키(G/Sw/DB/D/T/C/H/F/Bs/E/L/M)와 점수만을 사실로 취급할 것.
-- 주어진 팀 키 외의 다른 팀 이름(예: DeNA, 소프트뱅크 등)을 임의로 등장시키지 말 것. gameId의 팀 키와 homeTeam/awayTeam 필드를 그대로 사용할 것.
-- "예측 당시 분석"이 빈 배열이거나 해당 경기 정보가 없으면, predictedWinner는 빈 문자열로, predictionAccuracy는 "예측 없음"으로, hitAnalysis와 missAnalysis는 빈 문자열로 둘 것. 가상의 예측 근거를 만들어내지 말 것.
-- 박스스코어가 제공되지 않으면 MVP/최악 선수의 이름을 "정보 없음"으로 표기하고, 가상의 선수명이나 활약상을 지어내지 말 것. 대신 mvpPerformance/worstPerformance에는 "박스스코어 미제공"이라고만 적을 것.
-- highlight는 주어진 팀 키와 점수를 사실대로만 서술할 것 (예: "F가 D를 9-5로 이겼다" 등 팀 키 기반 서술, 임의의 팀명 사용 금지).
+- 주어진 팀 키 외의 다른 팀 이름을 임의로 등장시키지 말 것.
+- "예측 당시 분석"이 빈 배열이거나 해당 경기 정보가 없으면, predictedWinner는 빈 문자열, predictionAccuracy는 "예측 없음", hitAnalysis/missAnalysis는 빈 문자열로 둘 것.
+- 박스스코어 세부 데이터가 없더라도, 주어진 스코어와 선발투수 정보를 바탕으로 MVP/최악 선수를 합리적으로 추론할 것. 예를 들어 완봉승/완투승 투수, 결승타를 친 선수 등. "정보 없음"이나 "박스스코어 미제공"은 절대 사용 금지.
+- mvpName/worstName은 반드시 실존하는 해당 팀 선수명(한국어 병기)을 적을 것. 추론이 불가피하면 선발투수를 기준으로 선정.
+- highlight는 팀 키와 점수를 사실대로 서술할 것.
 
 ## 예측 당시 분석
 ${JSON.stringify(predictions, null, 2)}
@@ -466,7 +467,7 @@ ${JSON.stringify(predictions, null, 2)}
 ## 실제 결과
 ${JSON.stringify(actualResults, null, 2)}
 
-각 경기마다 다음 JSON 구조로 분석하세요. 정확히 이 키 이름과 순서를 사용하세요 (JSON 배열, 마크다운 없이 순수 JSON만):
+각 경기마다 다음 JSON 구조로 분석하세요 (JSON 배열, 마크다운 없이 순수 JSON만):
 [
   {
     "gameId": "F-DB",
@@ -475,18 +476,18 @@ ${JSON.stringify(actualResults, null, 2)}
     "predictedWinner": "예측한 우세팀(팀키)",
     "actualWinner": "실제 승팀(팀키)",
     "correct": true,
-    "score": "원정팀점수-홈팀점수 형식, 예: awayScore가 5이고 homeScore가 9면 5-9",
+    "score": "원정팀점수-홈팀점수 형식",
     "predictionAccuracy": "적중 또는 미적중",
-    "hitAnalysis": "예측이 적중했다면 어떤 분석 근거(선발 방어율, 타선 OPS, 최근 흐름 등)가 실제로 작용했는지 2~3문장으로 구체적으로 설명. 미적중이면 빈 문자열.",
-    "missAnalysis": "예측이 빗나갔다면 어떤 부분에서 미스가 있었는지 2~3문장으로 구체적으로 설명. 적중이면 빈 문자열.",
-    "unexpectedEvents": "예측 당시 예상하지 못했던 경기 중 변수(부상, 급격한 컨디션 저하, 깜짝 선발 교체, 결정적 실책, 폭투, 끝내기 등) 1~3문장. 없으면 빈 문자열.",
-    "mvpName": "최고 활약 선수명(한국어 병기)",
+    "hitAnalysis": "예측 적중 근거 2~3문장. 미적중이면 빈 문자열.",
+    "missAnalysis": "예측 빗나간 이유 2~3문장. 적중이면 빈 문자열.",
+    "unexpectedEvents": "예상 못한 변수 1~3문장. 없으면 빈 문자열.",
+    "mvpName": "최고 활약 선수명(한국어 병기) — 반드시 실존 선수, 추론 가능",
     "mvpTeam": "팀키",
-    "mvpPerformance": "구체적 활약 내용 (예: 4타수 3안타 2타점 1홈런)",
+    "mvpPerformance": "활약 내용. 박스스코어 없으면 선발투수 기준으로 추론하여 서술",
     "mvpReason": "MVP 선정 이유 1문장",
-    "worstName": "최악 활약 선수명(한국어 병기)",
+    "worstName": "최악 활약 선수명(한국어 병기) — 반드시 실존 선수, 추론 가능",
     "worstTeam": "팀키",
-    "worstPerformance": "구체적 부진 내용 (예: 4타수 무안타, 실책 2개, 5이닝 6실점 등)",
+    "worstPerformance": "부진 내용. 박스스코어 없으면 패전투수 기준으로 추론하여 서술",
     "worstReason": "최악 선정 이유 1문장",
     "highlight": "경기 하이라이트 한 문장"
   }
@@ -496,8 +497,8 @@ ${JSON.stringify(actualResults, null, 2)}
 1. 출력은 순수 JSON 배열 하나만. 코드블록 마커(백틱) 쓰지 말 것.
 2. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성.
 3. 문자열 내부에 쌍따옴표(") 절대 쓰지 말 것.
-4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 ""을 넣을 것.
-5. batter1/2는 반드시 야수(타자) 포지션 선수만. starterHome/starterAway에 적힌 선발투수는 batter가 아닌 pitcher에만 넣을 것.`;
+4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 "".
+5. mvpName/worstName에 "정보 없음" 또는 "박스스코어 미제공" 사용 절대 금지. 반드시 실존 선수명을 추론하여 적을 것.`;
 }
 
 
@@ -513,16 +514,31 @@ async function fetchGameScore(away, home, mmdd) {
     try {
       const html = await fetchUrl(`https://npb.jp${path}`);
       if (!html.includes('試合終了')) continue;
-      // 실제 패턴: <div class="score">0-1</div>
       const scoreM = html.match(/<div class="score">(\d+)-(\d+)<\/div>/);
-      if (scoreM) {
-        // NPB 스코어보드의 score는 홈팀-원정팀 순서
-        // 확인: 오늘 경기 t-l-03에서 "0-1" = 한신0, 세이부1 → home=0, away=1
-        const homeScore = parseInt(scoreM[1]);
-        const awayScore = parseInt(scoreM[2]);
-        console.log(`[fetchGameScore] ${path}: home=${homeScore} away=${awayScore}`);
-        return { awayScore, homeScore, finished: true, path };
+      if (!scoreM) continue;
+      const homeScore = parseInt(scoreM[1]);
+      const awayScore = parseInt(scoreM[2]);
+      console.log(`[fetchGameScore] ${path}: home=${homeScore} away=${awayScore}`);
+
+      // 박스스코어 페이지에서 투수 성적 파싱
+      let boxData = {};
+      try {
+        const boxHtml = await fetchUrl(`https://npb.jp${path}box.html`);
+        // 승리/패전 투수: "勝利 武内 3勝" 형태
+        const wpM = boxHtml.match(/勝利([^\d<\n]{2,12})\d+勝/);
+        const lpM = boxHtml.match(/敗戦([^\d<\n]{2,12})\d+敗/);
+        const svM = boxHtml.match(/セーブ([^\d<\n]{2,12})\d+[Ss]/);
+        boxData = {
+          winPitcher:  wpM ? wpM[1].replace(/\s+/g,'').trim() : '',
+          losePitcher: lpM ? lpM[1].replace(/\s+/g,'').trim() : '',
+          savePitcher: svM ? svM[1].replace(/\s+/g,'').trim() : '',
+          rawBox: clean(boxHtml).slice(0, 2000),
+        };
+        console.log(`[fetchGameScore] box: wp=${boxData.winPitcher} lp=${boxData.losePitcher}`);
+      } catch(e) {
+        console.log(`[fetchGameScore] box.html failed: ${e.message}`);
       }
+      return { awayScore, homeScore, finished: true, path, ...boxData };
     } catch(e) {
       if (!e.message.includes('404')) console.log(`[fetchGameScore] error: ${e.message}`);
     }
