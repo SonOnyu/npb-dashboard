@@ -303,7 +303,7 @@ function callClaude(prompt) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 8000,
+      max_tokens: 3000,
       messages: [{ role:'user', content: prompt }],
     });
     const req = https.request({
@@ -420,11 +420,11 @@ ${TEAM_CONTEXT}
     "winProbHome": 55,
     "winProbAway": 45,
     "confidence": "high 또는 medium 또는 low",
-    "lineupAnalysis": "당일 선발 라인업 분석 4~6문장. 양팀 선발투수의 최근 방어율/구위, 핵심 타자들의 최근 타율과 OPS, 중계진과 마무리 투수의 최근 방어율을 구체적 수치와 함께 비교하고 어느 쪽이 우세한지 근거를 제시할 것.",
-    "newsAnalysis": "최근 뉴스 및 선수 동향 분석 3~5문장. 최근 부상자, 이적/콜업, 연승연패 흐름, 감독 인터뷰, 컨디션 이슈 등을 바탕으로 어느 팀에 유리한 흐름인지 분석할 것.",
-    "coreReason": "핵심 근거 2~3문장. winProbHome/Away 수치를 결정한 가장 핵심적인 이유 요약.",
-    "variable": "변수 1~2문장",
-    "issue": "최근 이슈 1~2문장 (요약, newsAnalysis와 중복되지 않는 추가 정보 위주)",
+    "lineupAnalysis": "선발 라인업 분석 2~3문장. 양팀 선발투수 방어율, 핵심 타자 타율/OPS 비교.",
+    "newsAnalysis": "최근 동향 1~2문장. 부상·컨디션 이슈 등.",
+    "coreReason": "핵심 근거 1~2문장.",
+    "variable": "변수 1문장",
+    "issue": "최근 이슈 1문장",
     "verdict": "최종 판정 한 문장"
   }
 ]
@@ -434,7 +434,7 @@ ${TEAM_CONTEXT}
 2. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성.
 3. 문자열 내부에 쌍따옴표(") 절대 쓰지 말 것. 필요하면 따옴표 없이 표현.
 4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 ""을 넣을 것.
-5. lineupAnalysis와 newsAnalysis는 반드시 구체적인 선수명과 수치(타율·OPS·방어율·최근 경기 성적 등)를 포함해 상세하게 작성할 것.`;
+5. 각 문자열 값은 간결하게 한 줄로 작성할 것. 총 응답이 2000토큰을 넘지 않도록 할 것.`;
 }
 
 function buildReviewPrompt(predictions, actualResults) {
