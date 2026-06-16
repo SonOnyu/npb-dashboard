@@ -93,7 +93,9 @@ function parseSchedule(html) {
     const rowText = cells.join(' ');
     if (rowText.trim().length < 3) continue;
 
-    // 예고선발 추출 — "予告先発：投手名" 패턴
+    // 예고선발 추출 — 마지막 컬럼에서 한자 이름 2개 추출
+    // 형식: "才木　武内" (전각 스페이스 구분, 원정-홈 순서)
+    // 또는 "勝：才木　敗：渡邉" (종료 경기)
     const starterCell = cells[cells.length - 1] || '';
     if (starterCell.includes('予告先発')) {
       if (!startersByDate[curMmdd]) startersByDate[curMmdd] = {};
@@ -128,13 +130,19 @@ function parseSchedule(html) {
       const wpM = rowText.match(/勝[：:]\s*(\S{2,8})/);
       const lpM = rowText.match(/敗[：:]\s*(\S{2,8})/);
 
-      // 예고선발 — 마지막 컬럼에서 추출
-      let starterHome = '', starterAway = '';
+      // 예고선발 — 마지막 컬럼에서 한자 이름 추출
+      // 예정 경기: "才木　武内" 형태 (away선발　home선발)
+      // 종료 경기: "勝：才木　敗：渡邉" 형태
+      let starterAway = '', starterHome = '';
       if (starterCell && !scoreM) {
-        // 미래 경기: 予告先発 추출
-        const spM = starterCell.match(/予告先発[：:]\s*([^\s　]+)/);
-        // 홈/원정 각각 매핑은 별도 처리 필요하므로 일단 전체 텍스트 저장
-        if (spM) starterHome = spM[1];
+        // 한자 이름 패턴: 한자 1~3자 + 공백 + 한자/가나 1~4자
+        const names = starterCell.match(/[\u4E00-\u9FFF]{1,3}[\s\u3000][\u4E00-\u9FFF\u30A0-\u30FF]{1,5}/g);
+        if (names && names.length >= 2) {
+          starterAway = names[0].trim(); // 원정팀 선발
+          starterHome = names[1].trim(); // 홈팀 선발
+        } else if (names && names.length === 1) {
+          starterHome = names[0].trim();
+        }
       }
 
       games.push({
@@ -512,15 +520,16 @@ const task = async () => {
       }
     }));
     const allGames = monthResults.flatMap(r => r.games);
-    // 날짜별 예고선발 병합
-    const allStartersByDate = {};
-    for (const r of monthResults) {
-      for (const [date, starters] of Object.entries(r.startersByDate)) {
-        allStartersByDate[date] = { ...(allStartersByDate[date]||{}), ...starters };
-      }
+
+    // 오늘/내일 경기의 예고선발을 game 객체에서 직접 추출
+    const todayGames = allGames.filter(g => g.mmdd === mmdd);
+    const tmrGames   = allGames.filter(g => g.mmdd === tmrMmdd);
+    const starters = {};
+    for (const g of [...todayGames, ...tmrGames]) {
+      if (g.starterHome) starters[g.home] = g.starterHome;
+      if (g.starterAway) starters[g.away] = g.starterAway;
     }
-    // 오늘/내일 예고선발 추출
-    const starters = { ...(allStartersByDate[mmdd]||{}), ...(allStartersByDate[tmrMmdd]||{}) };
+    console.log('[scheduled-fetch] Starters:', JSON.stringify(starters));
 
     const gamesData = {
       mmdd, tmrMmdd,
