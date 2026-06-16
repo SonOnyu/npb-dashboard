@@ -112,10 +112,14 @@ exports.handler = async (event) => {
       const gamesCache = await store.get('games', { type: 'json' });
 
       // 캐시가 오늘 내일 경기 기준으로 유효한지 확인
-      if (cached && gamesCache && cached.tmrMmdd === gamesCache.tmrMmdd) {
-        return ok({ analyses: cached.analyses, cached: true });
+      if (cached && gamesCache) {
+        // 오늘 경기가 아직 예정 중이면 오늘(mmdd) 기준, 아니면 내일(tmrMmdd) 기준
+        const todayScheduled = (gamesCache.todayGames||[]).some(g => g.status === 'scheduled' || g.status === 'live');
+        const cacheKey = todayScheduled ? gamesCache.mmdd : gamesCache.tmrMmdd;
+        if (cached.tmrMmdd === cacheKey) {
+          return ok({ analyses: cached.analyses, cached: true });
+        }
       }
-    }
 
     const force = params.force === '1' || bodyData.force === true;
 
