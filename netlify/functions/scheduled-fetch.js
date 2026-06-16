@@ -574,19 +574,29 @@ const task = async () => {
     const allGames = monthResults.flatMap(r => r.games);
 
 
-    // 오늘/내일 경기의 예고선발을 game 객체에서 직접 추출
-    const todayGames = allGames.filter(g => g.mmdd === mmdd);
-    const tmrGames   = allGames.filter(g => g.mmdd === tmrMmdd);
-    const starters = {};
-    for (const g of [...todayGames, ...tmrGames]) {
-      if (g.starterHome) starters[g.home] = g.starterHome;
-      if (g.starterAway) starters[g.away] = g.starterAway;
-    }
-    console.log('[scheduled-fetch] Starters:', JSON.stringify(starters));
+    // 오늘/내일 경기의 예고선발을 날짜별로 분리하여 추출
+    const todayGamesRaw = allGames.filter(g => g.mmdd === mmdd);
+    const tmrGames      = allGames.filter(g => g.mmdd === tmrMmdd);
 
-    // 오늘 경기 중 status=scheduled이지만 스코어보드 링크가 있는 경우 실제 결과 확인
-    const rawTodayGames = allGames.filter(g => g.mmdd === mmdd);
-    for (const g of rawTodayGames) {
+    // 오늘 선발 (표시용은 아니고 AI 리뷰용)
+    const startersToday = {};
+    for (const g of todayGamesRaw) {
+      if (g.starterHome) startersToday[g.home] = g.starterHome;
+      if (g.starterAway) startersToday[g.away] = g.starterAway;
+    }
+    // 내일 선발 (다음 경기 분석 표시용)
+    const startersTmr = {};
+    for (const g of tmrGames) {
+      if (g.starterHome) startersTmr[g.home] = g.starterHome;
+      if (g.starterAway) startersTmr[g.away] = g.starterAway;
+    }
+    // starters = 내일 선발만 저장 (프론트에서 다음 경기 분석에 사용)
+    const starters = startersTmr;
+    console.log('[scheduled-fetch] Starters today:', JSON.stringify(startersToday));
+    console.log('[scheduled-fetch] Starters tmr:', JSON.stringify(startersTmr));
+
+    // 오늘 경기 중 status=scheduled인 경우 스코어보드에서 실제 결과 확인
+    for (const g of todayGamesRaw) {
       if (g.status === 'scheduled') {
         const result = await fetchGameScore(g.away, g.home, mmdd);
         if (result) {
@@ -603,10 +613,10 @@ const task = async () => {
 
     const gamesData = {
       mmdd, tmrMmdd,
-      todayGames: rawTodayGames,
-      tomorrowGames: allGames.filter(g => g.mmdd === tmrMmdd),
+      todayGames: todayGamesRaw,
+      tomorrowGames: tmrGames,
       starters,
-      allGames, // 캘린더용 전체 데이터
+      allGames,
       updatedAt: new Date().toISOString(),
     };
 
