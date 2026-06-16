@@ -93,9 +93,6 @@ function parseSchedule(html) {
     const rowText = cells.join(' ');
     if (rowText.trim().length < 3) continue;
 
-    // 디버그: 6/16 행 내용 출력
-    if (curMmdd === '0616') console.log('[parseSchedule] 0616 row cells:', JSON.stringify(cells));
-
     // 예고선발 추출 — 마지막 컬럼에서 한자 이름 2개 추출
     // 형식: "才木　武内" (전각 스페이스 구분, 원정-홈 순서)
     // 또는 "勝：才木　敗：渡邉" (종료 경기)
@@ -134,17 +131,15 @@ function parseSchedule(html) {
       const lpM = rowText.match(/敗[：:]\s*(\S{2,8})/);
 
       // 예고선발 — 마지막 컬럼에서 한자 이름 추출
-      // 예정 경기: "才木　武内" 형태 (away선발　home선발)
-      // 종료 경기: "勝：才木　敗：渡邉" 형태
+      // 실제 형식: "先発：才木 先発：武内" (원정선발 홈선발 순서)
       let starterAway = '', starterHome = '';
       if (starterCell && !scoreM) {
-        // 한자 이름 패턴: 한자 1~3자 + 공백 + 한자/가나 1~4자
-        const names = starterCell.match(/[\u4E00-\u9FFF]{1,3}[\s\u3000][\u4E00-\u9FFF\u30A0-\u30FF]{1,5}/g);
-        if (names && names.length >= 2) {
-          starterAway = names[0].trim(); // 원정팀 선발
-          starterHome = names[1].trim(); // 홈팀 선발
-        } else if (names && names.length === 1) {
-          starterHome = names[0].trim();
+        const starterNames = [...starterCell.matchAll(/先発[：:]\s*([^\s　先]+)/g)].map(m => m[1].trim());
+        if (starterNames.length >= 2) {
+          starterAway = starterNames[0]; // 원정팀 선발 (표시 순서: 원정 - 홈)
+          starterHome = starterNames[1]; // 홈팀 선발
+        } else if (starterNames.length === 1) {
+          starterHome = starterNames[0];
         }
       }
 
@@ -524,9 +519,6 @@ const task = async () => {
     }));
     const allGames = monthResults.flatMap(r => r.games);
 
-    // 6/16 경기의 starterCell 디버그 출력
-    const debugGames = allGames.filter(g => g.mmdd === mmdd);
-    console.log('[scheduled-fetch] Debug today games:', debugGames.map(g => JSON.stringify({home:g.home,away:g.away,sH:g.starterHome,sA:g.starterAway})));
 
     // 오늘/내일 경기의 예고선발을 game 객체에서 직접 추출
     const todayGames = allGames.filter(g => g.mmdd === mmdd);
