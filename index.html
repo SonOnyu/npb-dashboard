@@ -1371,6 +1371,11 @@ function showActiveStatPanel() {
 document.addEventListener('DOMContentLoaded', () => {
   const firstSubTab = document.querySelector('.sub-tab');
   if (firstSubTab) firstSubTab.classList.add('active');
+  // 기본 탭(경기 분석 - 이전 경기 결과) 초기화
+  gamesDataCache = null;
+  initGamesPanels();
+  // 헤더 갱신시각 표시를 위해 standings도 로드
+  loadStandings();
 });
 
 // (리그성적 탭 로드는 switchTab 내부에서 직접 처리)
@@ -1844,7 +1849,8 @@ async function renderNextGames(data) {
         </div>`;
       }).join('')}
     </div>
-    <div id="ai-analysis-section" style="display:none"></div>`;
+    <div id="ai-analysis-section" style="display:none"></div>
+    <div id="analysis-grid" style="margin-top:0"></div>`;
 
   // 기존 match-analysis 숨기기
   if (analysis) analysis.style.display = 'none';
@@ -1878,42 +1884,74 @@ async function renderNextGames(data) {
 }
 
 function renderAIAnalyses(analyses, games) {
-  const bold = (t) => t.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text);font-weight:700">$1</strong>');
-  // 문장 끝(다/요/죠/음/니다/습니다/입니다 등) 뒤에 자동 줄바꿈
-  const autoBreak = (t) => t.replace(/(니다\.|습니다\.|입니다\.|있습니다\.|됩니다\.|합니다\.|십니다\.|겠습니다\.|습니다!|입니다!)\s+/g, '$1<br>');
-  const sLabel = (t) => `<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;margin-top:10px">${t}</div>`;
-  const sText  = (t) => `<div style="font-size:12px;color:var(--muted);line-height:1.8">${autoBreak(bold(t))}</div>`;
+  const bold = (t) => t ? t.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text);font-weight:700">$1</strong>') : '';
+  const autoBreak = (t) => t ? t.replace(/(니다\.|습니다\.|입니다\.|있습니다\.|됩니다\.|합니다\.|십니다\.|겠습니다\.)\s+/g, '$1<br>') : '';
+  const fmt = (t) => autoBreak(bold(t));
 
+  // 1. 각 카드의 주목 타자/투수 슬롯 채우기
   analyses.forEach((a, i) => {
     const slot = document.getElementById('ai-slot-'+i);
     if (!slot) return;
     const hp = a.winProbHome ?? 50, ap = a.winProbAway ?? 50;
     const bats = [{name:a.batter1Name,team:a.batter1Team,stat:a.batter1Stat,note:a.batter1Note},{name:a.batter2Name,team:a.batter2Team,stat:a.batter2Stat,note:a.batter2Note}].filter(b=>b.name);
     const pits = [{name:a.pitcher1Name,team:a.pitcher1Team,role:a.pitcher1Role,era:a.pitcher1Era,note:a.pitcher1Note},{name:a.pitcher2Name,team:a.pitcher2Team,role:a.pitcher2Role,era:a.pitcher2Era,note:a.pitcher2Note}].filter(p=>p.name);
-    const bH = bats.map(b=>`<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid var(--border);min-height:56px">${logoImg(b.team,16)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${b.name} <span style="font-size:11px;color:var(--muted)">${b.stat||''}</span></div><div style="font-size:11px;color:var(--muted)">${bold(b.note||'')}</div></div></div>`).join('');
-    const pH = pits.map(p=>`<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid var(--border);min-height:56px">${logoImg(p.team,16)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${p.name}${p.role?`<span style="font-size:10px;padding:1px 4px;border-radius:2px;margin-left:3px;background:var(--surface2);color:var(--muted)">${p.role}</span>`:''}${p.era?`<span style="font-size:11px;color:var(--muted);margin-left:3px">ERA ${p.era}</span>`:''}</div><div style="font-size:11px;color:var(--muted)">${bold(p.note||'')}</div></div></div>`).join('');
+
+    const playerRow = (bat, pit) => `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:1px solid var(--border)">
+        ${bat?`<div style="display:flex;align-items:flex-start;gap:7px;padding:6px 0">${logoImg(bat.team,16)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${bat.name} <span style="font-size:11px;color:var(--muted)">${bat.stat||''}</span></div><div style="font-size:11px;color:var(--muted)">${fmt(bat.note||'')}</div></div></div>`:'<div style="padding:6px 0"></div>'}
+        ${pit?`<div style="display:flex;align-items:flex-start;gap:7px;padding:6px 0">${logoImg(pit.team,16)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${pit.name}${pit.role?`<span style="font-size:10px;padding:1px 4px;border-radius:2px;margin-left:3px;background:var(--surface2);color:var(--muted)">${pit.role}</span>`:''}${pit.era?`<span style="font-size:11px;color:var(--muted);margin-left:3px">ERA ${pit.era}</span>`:''}</div><div style="font-size:11px;color:var(--muted)">${fmt(pit.note||'')}</div></div></div>`:'<div style="padding:6px 0"></div>'}
+      </div>`;
+
     slot.innerHTML =
-      `<div style="margin-bottom:12px"><div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:4px"><div style="width:${ap}%;background:var(--accent3)"></div><div style="width:${hp}%;background:var(--accent2)"></div></div><div style="display:flex;justify-content:space-between"><span style="font-family:var(--fd);font-size:12px;font-weight:700;color:var(--accent3)">${TN_S[a.awayTeam]||a.awayTeam} ${ap}%</span><span style="font-family:var(--fd);font-size:12px;font-weight:700;color:var(--accent2)">${TN_S[a.homeTeam]||a.homeTeam} ${hp}%</span></div></div>`+
-      ((bats.length||pits.length)?`
-      <div style="margin-bottom:8px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">
-          ${bats.length?`<div style="font-size:12px;font-weight:700;color:var(--text)">🏏 주목 타자</div>`:'<div></div>'}
-          ${pits.length?`<div style="font-size:12px;font-weight:700;color:var(--text)">⚾ 주목 투수</div>`:'<div></div>'}
-        </div>
-        ${Array.from({length:Math.max(bats.length,pits.length)}).map((_,i)=>`
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:1px solid var(--border)">
-          ${bats[i]?`<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 0">${logoImg(bats[i].team,16)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${bats[i].name} <span style="font-size:11px;color:var(--muted)">${bats[i].stat||''}</span></div><div style="font-size:11px;color:var(--muted)">${bold(bats[i].note||'')}</div></div></div>`:'<div></div>'}
-          ${pits[i]?`<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 0">${logoImg(pits[i].team,16)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${pits[i].name}${pits[i].role?`<span style="font-size:10px;padding:1px 4px;border-radius:2px;margin-left:3px;background:var(--surface2);color:var(--muted)">${pits[i].role}</span>`:''}${pits[i].era?`<span style="font-size:11px;color:var(--muted);margin-left:3px">ERA ${pits[i].era}</span>`:''}</div><div style="font-size:11px;color:var(--muted)">${bold(pits[i].note||'')}</div></div></div>`:'<div></div>'}
-        </div>`).join('')}
-      </div>`:'')+
-      (a.lineupAnalysis?sLabel('📋 선발 라인업 분석')+sText(a.lineupAnalysis):'')+
-      (a.newsAnalysis?sLabel('📰 최근 동향')+sText(a.newsAnalysis):'')+
-      (a.coreReason?sLabel('🔑 핵심')+sText(a.coreReason):'')+
-      (a.variable?sLabel('⚡ 변수')+sText(a.variable):'')+
-      (a.issue?sLabel('📌 이슈')+sText(a.issue):'')+
-      (a.verdict?`<div class="verdict-box" style="margin-top:10px"><span class="verdict-icon">🏆</span><div><div class="verdict-fav">판정: ${a.verdict}</div></div></div>`:'');
+      // 승률 바
+      `<div style="margin-bottom:12px"><div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:4px"><div style="width:${ap}%;background:var(--accent3)"></div><div style="width:${hp}%;background:var(--accent2)"></div></div><div style="display:flex;justify-content:space-between"><span style="font-family:var(--fd);font-size:12px;font-weight:700;color:var(--accent3)">${TN_S[a.awayTeam]||a.awayTeam} ${ap}%</span><span style="font-family:var(--fd);font-size:12px;font-weight:700;color:var(--accent2)">${TN_S[a.homeTeam]||a.homeTeam} ${hp}%</span></div></div>` +
+      // 주목 타자/투수 헤더
+      ((bats.length||pits.length)?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px"><div style="font-size:12px;font-weight:700;color:var(--text)">${bats.length?'🏏 주목 타자':''}</div><div style="font-size:12px;font-weight:700;color:var(--text)">${pits.length?'⚾ 주목 투수':''}</div></div>`:'') +
+      Array.from({length:Math.max(bats.length,pits.length)}).map((_,j)=>playerRow(bats[j],pits[j])).join('');
   });
-  games.forEach((g,i)=>{ if(i>=analyses.length){const s=document.getElementById('ai-slot-'+i);if(s)s.innerHTML='<div style="padding:8px 0;font-size:12px;color:var(--muted)">AI 분석 데이터 없음</div>';}});
+
+  // 2. 분석 항목(라인업~판정)은 카드 밖 공통 그리드 행으로 렌더
+  const sections = [
+    {key:'lineupAnalysis', label:'📋 선발 라인업 분석'},
+    {key:'newsAnalysis',   label:'📰 최근 동향'},
+    {key:'coreReason',    label:'🔑 핵심'},
+    {key:'variable',      label:'⚡ 변수'},
+    {key:'issue',         label:'📌 이슈'},
+    {key:'verdict',       label:'🏆 판정'},
+  ];
+
+  const analysisGrid = document.getElementById('analysis-grid');
+  if (!analysisGrid) return;
+
+  analysisGrid.innerHTML = sections.map(sec => {
+    const cells = analyses.map((a, i) => {
+      const val = a[sec.key];
+      if (!val) return `<div></div>`;
+      if (sec.key === 'verdict') {
+        return `<div class="verdict-box" style="margin:0"><span class="verdict-icon">🏆</span><div><div class="verdict-fav">${fmt(val)}</div></div></div>`;
+      }
+      return `<div style="font-size:12px;color:var(--muted);line-height:1.8">${fmt(val)}</div>`;
+    });
+    const hasAny = analyses.some(a => a[sec.key]);
+    if (!hasAny) return '';
+    // 패딩 칸 채우기 (경기 수가 1개일 경우 등)
+    while (cells.length < 2) cells.push('<div></div>');
+    return `
+      <div style="display:grid;grid-template-columns:repeat(${analyses.length},1fr);gap:16px;padding:10px 0;border-top:1px solid var(--border)">
+        ${analyses.map((a,i) => `<div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">${sec.label}</div>
+          ${!a[sec.key]?'':sec.key==='verdict'?`<div class="verdict-box" style="margin:0"><span class="verdict-icon">🏆</span><div><div class="verdict-fav">${fmt(a[sec.key])}</div></div></div>`:`<div style="font-size:12px;color:var(--muted);line-height:1.8">${fmt(a[sec.key])}</div>`}
+        </div>`).join('')}
+      </div>`;
+  }).join('');
+
+  // 매핑 안 된 슬롯 처리
+  games.forEach((g,i) => {
+    if (i >= analyses.length) {
+      const slot = document.getElementById('ai-slot-'+i);
+      if (slot) slot.innerHTML = '<div style="padding:8px 0;font-size:12px;color:var(--muted)">AI 분석 데이터 없음</div>';
+    }
+  });
 }
 
 
