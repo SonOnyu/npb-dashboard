@@ -516,24 +516,30 @@ async function fetchGameScore(away, home, mmdd) {
       if (!html.includes('試合終了')) continue;
 
       // 내비게이션에 여러 경기 스코어가 있으므로
-      // 현재 경기 링크와 스코어를 함께 추출해서 path에 맞는 것 사용
-      // 패턴: href="/scores/2026/0616/c-f-03/"...>...<div class="score">0-2</div>
-      const scoreBlocks = [...html.matchAll(/href="(\/scores\/2026\/\d{4}\/[a-z-]+\/)"[\s\S]*?<div class="score">(\d+)-(\d+)<\/div>/g)];
+      // 현재 경기 href와 매칭되는 score div만 추출
+      // 패턴: href="/scores/2026/0616/t-l-03/"...score div
+      const scoreBlocks = [...html.matchAll(/href="(\/scores\/2026\/\d{4}\/[a-z-]+\/\d*\/?)"[^>]*>[\s\S]*?<div class="score">(\d+)-(\d+)<\/div>/g)];
       let homeScore = null, awayScore = null;
       for (const m of scoreBlocks) {
-        if (m[1] === path || m[1] === path.replace(/\/$/, '')) {
+        const href = m[1].endsWith('/') ? m[1] : m[1] + '/';
+        const myPath = path;
+        if (href === myPath) {
           homeScore = parseInt(m[2]);
           awayScore = parseInt(m[3]);
           break;
         }
       }
-      // 매칭 실패 시 마지막 score div 사용 (현재 경기가 보통 마지막)
+      // href 매칭 실패 시 — 현재 페이지가 단일 경기인 경우 첫번째 score 사용
       if (homeScore === null) {
-        const allScores = [...html.matchAll(/<div class="score">(\d+)-(\d+)<\/div>/g)];
-        if (allScores.length > 0) {
-          const last = allScores[allScores.length - 1];
-          homeScore = parseInt(last[1]);
-          awayScore = parseInt(last[2]);
+        // 현재 경기가 페이지의 "active" 경기임을 확인 (canonical URL로 판단)
+        const canonicalM = html.match(/canonical.*?href="([^"]+)"/);
+        const canonical = canonicalM ? canonicalM[1] : '';
+        if (canonical.includes(path.replace(/\/$/, ''))) {
+          const firstScore = html.match(/<div class="score">(\d+)-(\d+)<\/div>/);
+          if (firstScore) {
+            homeScore = parseInt(firstScore[1]);
+            awayScore = parseInt(firstScore[2]);
+          }
         }
       }
       if (homeScore === null) continue;
