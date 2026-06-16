@@ -106,6 +106,8 @@ exports.handler = async (event) => {
   try {
     const store = npbStore();
 
+    const force = params.force === '1' || bodyData.force === true;
+
     // ── 캐시 확인 (predict 모드만 — 매일 한번 분석하면 충분) ──
     if (mode === 'predict' && !force) {
       const cached = await store.get('predict-analysis', { type: 'json' });
@@ -122,8 +124,6 @@ exports.handler = async (event) => {
       // 캐시 없음 → 즉시 반환 (실시간 호출 시 26초 타임아웃 위험)
       return ok({ analyses: [], error: 'no_cache', message: 'AI 분석 준비 중입니다. KST 05:00 자동 갱신 시 생성됩니다.' });
     }
-
-    const force = params.force === '1' || bodyData.force === true;
 
     if (mode === 'review' && !force) {
       const cached = await store.get('review-analysis', { type: 'json' });
