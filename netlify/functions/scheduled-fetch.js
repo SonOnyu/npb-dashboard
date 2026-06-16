@@ -515,32 +515,26 @@ async function fetchGameScore(away, home, mmdd) {
       const html = await fetchUrl(`https://npb.jp${path}`);
       if (!html.includes('試合終了')) continue;
 
-      // 내비게이션에 여러 경기 스코어가 있으므로
-      // 현재 경기 href와 매칭되는 score div만 추출
-      const scoreBlocks = [...html.matchAll(/href="(\/scores\/2026\/\d{4}\/[a-z-]+\/\d*\/?)"[^>]*>[\s\S]*?<div class="score">(\d+)-(\d+)<\/div>/g)];
-      console.log(`[fetchGameScore] ${path} scoreBlocks:`, scoreBlocks.map(m=>`${m[1]}=${m[2]}-${m[3]}`).join(', '));
+      // 페이지 내 모든 score div 추출
+      const allScores = [...html.matchAll(/<div class="score">(\d+)-(\d+)<\/div>/g)];
+      // 페이지 내 모든 경기 링크 추출 (내비게이션 순서)
+      const allLinks = [...html.matchAll(/href="(\/scores\/2026\/\d{4}\/[a-z]+-[a-z]+-\d+\/)"/g)]
+        .map(m => m[1]);
+      // 중복 제거 (같은 링크가 여러 번 나올 수 있음)
+      const uniqueLinks = [...new Set(allLinks)];
+      // 현재 path의 인덱스 찾기
+      const myIdx = uniqueLinks.findIndex(l => l === path);
+      console.log(`[fetchGameScore] ${path} links:`, uniqueLinks, 'idx:', myIdx, 'scores:', allScores.map(m=>m[0]));
+
       let homeScore = null, awayScore = null;
-      for (const m of scoreBlocks) {
-        const href = m[1].endsWith('/') ? m[1] : m[1] + '/';
-        if (href === path) {
-          homeScore = parseInt(m[2]);
-          awayScore = parseInt(m[3]);
-          break;
-        }
+      if (myIdx >= 0 && allScores[myIdx]) {
+        homeScore = parseInt(allScores[myIdx][1]);
+        awayScore = parseInt(allScores[myIdx][2]);
+      } else if (allScores.length > 0) {
+        // 폴백: 첫 번째 score
+        homeScore = parseInt(allScores[0][1]);
+        awayScore = parseInt(allScores[0][2]);
       }
-      // href 매칭 실패 시 — 현재 페이지가 단일 경기인 경우 첫번째 score 사용
-      if (homeScore === null) {
-        const canonicalM = html.match(/canonical.*?href="([^"]+)"/);
-        const canonical = canonicalM ? canonicalM[1] : '';
-        if (canonical.includes(path.replace(/\/$/, ''))) {
-          const firstScore = html.match(/<div class="score">(\d+)-(\d+)<\/div>/);
-          if (firstScore) {
-            homeScore = parseInt(firstScore[1]);
-            awayScore = parseInt(firstScore[2]);
-          }
-        }
-      }
-      console.log(`[fetchGameScore] ${path} final: home=${homeScore} away=${awayScore}`);
       if (homeScore === null) continue;
 
       console.log(`[fetchGameScore] ${path}: home=${homeScore} away=${awayScore}`);
