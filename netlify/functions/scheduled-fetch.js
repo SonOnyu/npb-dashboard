@@ -409,20 +409,20 @@ ${TEAM_CONTEXT}
     "awayTeam": "팀키",
     "starterHome": "홈 예고선발 선수명 또는 미정",
     "starterAway": "원정 예고선발 선수명 또는 미정",
-    "batter1Name": "주목 타자1 이름(한국어) — 반드시 野手(타자/야수)만. 투수 절대 불가.",
+    "batter1Name": "주목 타자1 이름(한국어) — 반드시 타자 포지션 선수만. 선발투수(starterHome/starterAway)는 절대 타자로 넣지 말 것",
     "batter1Team": "팀키",
-    "batter1Stat": "타율/OPS 등 타격 수치",
+    "batter1Stat": "타율/OPS 등 수치",
     "batter1Note": "한줄 설명",
-    "batter2Name": "주목 타자2 이름(한국어) — 반드시 野手(타자/야수)만. 투수 절대 불가.",
+    "batter2Name": "주목 타자2 이름(한국어) — 반드시 타자 포지션 선수만. 선발투수는 절대 타자로 넣지 말 것",
     "batter2Team": "팀키",
-    "batter2Stat": "타율/OPS 등 타격 수치",
+    "batter2Stat": "수치",
     "batter2Note": "한줄 설명",
-    "pitcher1Name": "주목 투수1 이름(한국어) — 반드시 投手(투수)만. 타자 절대 불가.",
+    "pitcher1Name": "주목 투수1 이름(한국어)",
     "pitcher1Team": "팀키",
     "pitcher1Role": "선발 또는 중계 또는 마무리",
     "pitcher1Era": "방어율",
     "pitcher1Note": "한줄 설명",
-    "pitcher2Name": "주목 투수2 이름(한국어) — 반드시 投手(투수)만. 타자 절대 불가.",
+    "pitcher2Name": "주목 투수2 이름(한국어)",
     "pitcher2Team": "팀키",
     "pitcher2Role": "선발 또는 중계 또는 마무리",
     "pitcher2Era": "방어율",
@@ -444,9 +444,8 @@ ${TEAM_CONTEXT}
 2. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성.
 3. 문자열 내부에 쌍따옴표(") 절대 쓰지 말 것. 필요하면 따옴표 없이 표현.
 4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 ""을 넣을 것.
-5. 각 문자열 값은 간결하게 한 줄로 작성할 것. 총 응답이 2000토큰을 넘지 않도록 할 것.
-6. batter1Name/batter2Name에는 반드시 타자(野手)만 입력할 것. 투수를 타자 슬롯에 넣는 것은 절대 금지.
-7. pitcher1Name/pitcher2Name에는 반드시 투수(投手)만 입력할 것. 타자를 투수 슬롯에 넣는 것은 절대 금지.`;
+5. batter1/2는 반드시 야수(타자) 포지션 선수만. starterHome/starterAway에 적힌 선발투수는 batter가 아닌 pitcher에만 넣을 것.
+5. 각 문자열 값은 간결하게 한 줄로 작성할 것. 총 응답이 2000토큰을 넘지 않도록 할 것.`;
 }
 
 function buildReviewPrompt(predictions, actualResults) {
@@ -495,7 +494,8 @@ ${JSON.stringify(actualResults, null, 2)}
 1. 출력은 순수 JSON 배열 하나만. 코드블록 마커(백틱) 쓰지 말 것.
 2. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성.
 3. 문자열 내부에 쌍따옴표(") 절대 쓰지 말 것.
-4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 ""을 넣을 것.`;
+4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 ""을 넣을 것.
+5. batter1/2는 반드시 야수(타자) 포지션 선수만. starterHome/starterAway에 적힌 선발투수는 batter가 아닌 pitcher에만 넣을 것.`;
 }
 
 const task = async () => {
