@@ -837,9 +837,10 @@ async function loadStandings() {
     // 갱신 시각 표시
     if (data.updatedAt) {
       const d = new Date(data.updatedAt);
-      const dateStr = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} 기준`;
+      const dateStr = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 갱신`;
+      const label = `🔄 ${dateStr} (매일 05:00 자동갱신)`;
       document.getElementById('standings-updated').textContent = dateStr;
-      document.getElementById('header-updated').textContent = dateStr;
+      document.getElementById('header-updated').textContent = label;
     }
   } catch(e) {
     console.error('Standings load failed:', e.message);
