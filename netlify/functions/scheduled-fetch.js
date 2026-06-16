@@ -678,6 +678,7 @@ const task = async () => {
 
   // ── 3. 다음 경기 AI 예측 분석 ──
   // 오늘 경기가 아직 예정 중이면 오늘 경기를, 아니면 내일 경기를 분석
+  let predictRanThisRun = false;
   try {
     const gamesData = await store.get('games', { type: 'json' });
     if (gamesData) {
@@ -698,6 +699,7 @@ const task = async () => {
               tmrMmdd: targetMmdd, analyses, savedAt: new Date().toISOString(),
             });
             console.log(`[scheduled-fetch] Predict analysis saved: ${analyses.length} games`);
+            predictRanThisRun = true; // predict 새로 실행됨 → review 건너뜀
           } else {
             console.error('[scheduled-fetch] Predict analysis JSON parse failed');
           }
@@ -711,37 +713,40 @@ const task = async () => {
   }
 
   // ── 4. 오늘(어제 기준) 경기 결과 리뷰 분석 ──
-  try {
-    const gamesData = await store.get('games', { type: 'json' });
-    if (gamesData && gamesData.todayGames && gamesData.todayGames.length > 0) {
-      const finishedGames = gamesData.todayGames.filter(g => g.status === 'finished');
-      if (finishedGames.length > 0) {
-        const existingReview = await store.get('review-analysis', { type: 'json' });
-        if (!existingReview || existingReview.mmdd !== gamesData.mmdd) {
-          // 전날 저장된 예측 가져오기 (predict-analysis는 그날 경기를 "tomorrowGames"로 분석했던 캐시)
-          const predictCache = await store.get('predict-analysis', { type: 'json' });
-          const predictions = (predictCache && predictCache.tmrMmdd === gamesData.mmdd)
-            ? predictCache.analyses : [];
-
-          console.log(`[scheduled-fetch] Running review analysis for ${finishedGames.length} games...`);
-          const prompt = buildReviewPrompt(predictions, finishedGames);
-          const raw = await callClaude(prompt);
-          const reviews = parseAIJson(raw);
-          if (reviews) {
-            await store.setJSON('review-analysis', {
-              mmdd: gamesData.mmdd, reviews, savedAt: new Date().toISOString(),
-            });
-            console.log(`[scheduled-fetch] Review analysis saved: ${reviews.length} games`);
+  // predict가 이번 실행에서 새로 생성됐으면 타임아웃 방지를 위해 review는 건너뜀
+  if (predictRanThisRun) {
+    console.log('[scheduled-fetch] Predict was just generated, skipping review this run.');
+  } else {
+    try {
+      const gamesData = await store.get('games', { type: 'json' });
+      if (gamesData && gamesData.todayGames && gamesData.todayGames.length > 0) {
+        const finishedGames = gamesData.todayGames.filter(g => g.status === 'finished');
+        if (finishedGames.length > 0) {
+          const existingReview = await store.get('review-analysis', { type: 'json' });
+          if (!existingReview || existingReview.mmdd !== gamesData.mmdd) {
+            const predictCache = await store.get('predict-analysis', { type: 'json' });
+            const predictions = (predictCache && predictCache.tmrMmdd === gamesData.mmdd)
+              ? predictCache.analyses : [];
+            console.log(`[scheduled-fetch] Running review analysis for ${finishedGames.length} games...`);
+            const prompt = buildReviewPrompt(predictions, finishedGames);
+            const raw = await callClaude(prompt);
+            const reviews = parseAIJson(raw);
+            if (reviews) {
+              await store.setJSON('review-analysis', {
+                mmdd: gamesData.mmdd, reviews, savedAt: new Date().toISOString(),
+              });
+              console.log(`[scheduled-fetch] Review analysis saved: ${reviews.length} games`);
+            } else {
+              console.error('[scheduled-fetch] Review analysis JSON parse failed');
+            }
           } else {
-            console.error('[scheduled-fetch] Review analysis JSON parse failed');
+            console.log('[scheduled-fetch] Review analysis already up to date');
           }
-        } else {
-          console.log('[scheduled-fetch] Review analysis already up to date');
         }
       }
+    } catch(e) {
+      console.error('[scheduled-fetch] Review analysis failed:', e.message);
     }
-  } catch(e) {
-    console.error('[scheduled-fetch] Review analysis failed:', e.message);
   }
 
   console.log('[scheduled-fetch] Done.');
