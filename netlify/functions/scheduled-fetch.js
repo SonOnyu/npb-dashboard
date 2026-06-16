@@ -517,21 +517,16 @@ async function fetchGameScore(away, home, mmdd) {
 
       // 페이지 내 모든 score div 추출
       const allScores = [...html.matchAll(/<div class="score">(\d+)-(\d+)<\/div>/g)];
-      // 페이지 내 모든 경기 링크 추출 (내비게이션 순서)
-      const allLinks = [...html.matchAll(/href="(\/scores\/2026\/\d{4}\/[a-z]+-[a-z]+-\d+\/)"/g)]
-        .map(m => m[1]);
-      // 중복 제거 (같은 링크가 여러 번 나올 수 있음)
-      const uniqueLinks = [...new Set(allLinks)];
-      // 현재 path의 인덱스 찾기
+      // 페이지 내 모든 경기 링크 추출 (내비게이션 순서, 중복 제거)
+      const uniqueLinks = [...new Set([...html.matchAll(/href="(\/scores\/2026\/\d{4}\/[a-z]+-[a-z]+-\d+\/)"/g)].map(m => m[1]))];
+      // 현재 path의 인덱스로 해당 경기 스코어 선택
       const myIdx = uniqueLinks.findIndex(l => l === path);
-      console.log(`[fetchGameScore] ${path} links:`, uniqueLinks, 'idx:', myIdx, 'scores:', allScores.map(m=>m[0]));
 
       let homeScore = null, awayScore = null;
       if (myIdx >= 0 && allScores[myIdx]) {
         homeScore = parseInt(allScores[myIdx][1]);
         awayScore = parseInt(allScores[myIdx][2]);
       } else if (allScores.length > 0) {
-        // 폴백: 첫 번째 score
         homeScore = parseInt(allScores[0][1]);
         awayScore = parseInt(allScores[0][2]);
       }
