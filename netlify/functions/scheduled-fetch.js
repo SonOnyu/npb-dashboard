@@ -532,26 +532,34 @@ const task = async () => {
     console.error('[scheduled-fetch] Standings fetch failed:', e.message);
   }
 
-  // ── 3. 내일 경기 AI 예측 분석 ──
+  // ── 3. 다음 경기 AI 예측 분석 ──
+  // 오늘 경기가 아직 예정 중이면 오늘 경기를, 아니면 내일 경기를 분석
   try {
     const gamesData = await store.get('games', { type: 'json' });
-    if (gamesData && gamesData.tomorrowGames && gamesData.tomorrowGames.length > 0) {
-      const existingPredict = await store.get('predict-analysis', { type: 'json' });
-      if (!existingPredict || existingPredict.tmrMmdd !== gamesData.tmrMmdd) {
-        console.log(`[scheduled-fetch] Running predict analysis for ${gamesData.tomorrowGames.length} games...`);
-        const prompt = buildPredictPrompt(gamesData.tomorrowGames, gamesData.starters || {});
-        const raw = await callClaude(prompt);
-        const analyses = parseAIJson(raw);
-        if (analyses) {
-          await store.setJSON('predict-analysis', {
-            tmrMmdd: gamesData.tmrMmdd, analyses, savedAt: new Date().toISOString(),
-          });
-          console.log(`[scheduled-fetch] Predict analysis saved: ${analyses.length} games`);
+    if (gamesData) {
+      const todayScheduled = (gamesData.todayGames||[]).filter(g => g.status === 'scheduled');
+      const useToday = todayScheduled.length > 0;
+      const targetGames = useToday ? todayScheduled : (gamesData.tomorrowGames || []);
+      const targetMmdd  = useToday ? gamesData.mmdd : gamesData.tmrMmdd;
+
+      if (targetGames.length > 0) {
+        const existingPredict = await store.get('predict-analysis', { type: 'json' });
+        if (!existingPredict || existingPredict.tmrMmdd !== targetMmdd) {
+          console.log(`[scheduled-fetch] Running predict analysis for ${targetGames.length} games (${targetMmdd})...`);
+          const prompt = buildPredictPrompt(targetGames, gamesData.starters || {});
+          const raw = await callClaude(prompt);
+          const analyses = parseAIJson(raw);
+          if (analyses) {
+            await store.setJSON('predict-analysis', {
+              tmrMmdd: targetMmdd, analyses, savedAt: new Date().toISOString(),
+            });
+            console.log(`[scheduled-fetch] Predict analysis saved: ${analyses.length} games`);
+          } else {
+            console.error('[scheduled-fetch] Predict analysis JSON parse failed');
+          }
         } else {
-          console.error('[scheduled-fetch] Predict analysis JSON parse failed');
+          console.log('[scheduled-fetch] Predict analysis already up to date');
         }
-      } else {
-        console.log('[scheduled-fetch] Predict analysis already up to date');
       }
     }
   } catch(e) {
