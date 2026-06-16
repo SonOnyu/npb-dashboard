@@ -508,8 +508,9 @@ const TEAM_URL = {G:'g',Sw:'s',DB:'db',D:'d',T:'t',C:'c',H:'h',F:'f',Bs:'b',E:'e
 async function fetchGameScore(away, home, mmdd) {
   const awayCode = TEAM_URL[away] || away.toLowerCase();
   const homeCode = TEAM_URL[home] || home.toLowerCase();
+  // NPB 스코어보드 URL은 홈팀-원정팀 순서: /scores/2026/0616/t-l-03/
   for (let n = 1; n <= 6; n++) {
-    const path = `/scores/2026/${mmdd}/${awayCode}-${homeCode}-0${n}/`;
+    const path = `/scores/2026/${mmdd}/${homeCode}-${awayCode}-0${n}/`;
     try {
       const html = await fetchUrl(`https://npb.jp${path}`);
       const finished = html.includes('試合終了');
