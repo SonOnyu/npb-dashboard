@@ -111,15 +111,17 @@ exports.handler = async (event) => {
       const cached = await store.get('predict-analysis', { type: 'json' });
       const gamesCache = await store.get('games', { type: 'json' });
 
-      // 캐시가 오늘 내일 경기 기준으로 유효한지 확인
+      // 캐시가 오늘/내일 경기 기준으로 유효한지 확인
       if (cached && gamesCache) {
-        // 오늘 경기가 아직 예정 중이면 오늘(mmdd) 기준, 아니면 내일(tmrMmdd) 기준
         const todayScheduled = (gamesCache.todayGames||[]).some(g => g.status === 'scheduled' || g.status === 'live');
         const cacheKey = todayScheduled ? gamesCache.mmdd : gamesCache.tmrMmdd;
         if (cached.tmrMmdd === cacheKey) {
           return ok({ analyses: cached.analyses, cached: true });
         }
       }
+      // 캐시 없음 → 즉시 반환 (실시간 호출 시 26초 타임아웃 위험)
+      return ok({ analyses: [], error: 'no_cache', message: 'AI 분석 준비 중입니다. KST 05:00 자동 갱신 시 생성됩니다.' });
+    }
 
     const force = params.force === '1' || bodyData.force === true;
 
