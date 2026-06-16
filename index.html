@@ -1486,10 +1486,23 @@ async function initGamesPanels() {
     showError('panel-next', 'NPB 데이터 로드 실패');
     return;
   }
-  // 업데이트 시각
-  const now = new Date();
-  document.getElementById('games-updated').textContent =
-    `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 기준`;
+  // 업데이트 시각 — 데이터 저장 시각(KST) 표시
+  const tsEl = document.getElementById('games-updated');
+  if (data.updatedAt) {
+    const utc = new Date(data.updatedAt);
+    const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
+    const mo  = kst.getMonth() + 1;
+    const dd  = kst.getDate();
+    const hh  = String(kst.getHours()).padStart(2, '0');
+    const mm  = String(kst.getMinutes()).padStart(2, '0');
+    tsEl.textContent = `${mo}/${dd} ${hh}:${mm} KST 기준`;
+  } else if (data.mmdd) {
+    const mo = parseInt(data.mmdd.slice(0, 2));
+    const dd = parseInt(data.mmdd.slice(2, 4));
+    tsEl.textContent = `${mo}/${dd} 기준`;
+  } else {
+    tsEl.textContent = '데이터 로드 완료';
+  }
 
   // 이전 경기 결과 렌더
   renderPrevResults(data);
