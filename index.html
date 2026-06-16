@@ -1815,11 +1815,11 @@ async function renderNextGames(data) {
             <div class="vs-badge">VS</div>
             <div class="team-side away">${logoLg(g.away)}<div class="team-info right"><div class="team-fullname">${TN_S[g.away]||g.away}</div></div></div>
           </div>
-          ${starters[g.home]||starters[g.away] ? `
+          ${(starters[g.home]||g.starterHome||starters[g.away]||g.starterAway) ? `
           <div style="padding:6px 14px 10px;font-size:11px;color:var(--muted)">
-            ${starters[g.home]?`홈 선발: <strong>${starters[g.home]}</strong>`:''}
-            ${starters[g.home]&&starters[g.away]?' · ':''}
-            ${starters[g.away]?`원정 선발: <strong>${starters[g.away]}</strong>`:''}
+            ${(starters[g.away]||g.starterAway)?`원정 선발: <strong>${starters[g.away]||g.starterAway}</strong>`:''}
+            ${(starters[g.away]||g.starterAway)&&(starters[g.home]||g.starterHome)?' · ':''}
+            ${(starters[g.home]||g.starterHome)?`홈 선발: <strong>${starters[g.home]||g.starterHome}</strong>`:''}
           </div>` : ''}
         </div>`).join('')}
     </div>
