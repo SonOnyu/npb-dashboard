@@ -128,8 +128,8 @@ function parseSchedule(html) {
       if (starterCell && !scoreCheck) {
         const starterNames = [...starterCell.matchAll(/先発[：:]\s*([^\s　先発]+)/g)].map(m => m[1].trim()).filter(n => n.length > 0);
         if (starterNames.length >= 2) {
-          starterAway = starterNames[0];
-          starterHome = starterNames[1];
+          starterHome = starterNames[0];  // 첫번째 = 홈팀 선발
+          starterAway = starterNames[1];  // 두번째 = 원정팀 선발
         } else if (starterNames.length === 1) {
           starterHome = starterNames[0];
         }
