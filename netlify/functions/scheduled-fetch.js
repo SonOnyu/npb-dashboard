@@ -524,18 +524,6 @@ async function fetchGameScore(away, home, mmdd) {
   }
   return null;
 }
-    
-    if (scoreM) {
-      console.log(`[fetchGameScore] ${path}: ${scoreM[1]}-${scoreM[2]} (from pattern)`);
-      return { awayScore: parseInt(scoreM[1]), homeScore: parseInt(scoreM[2]), finished: true };
-    }
-    
-    return null;
-  } catch(e) {
-    console.error(`[fetchGameScore] ${path} failed:`, e.message);
-    return null;
-  }
-}
 
 const task = async () => {
   console.log('[scheduled-fetch] Starting NPB data collection...');
