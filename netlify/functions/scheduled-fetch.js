@@ -119,6 +119,23 @@ function parseSchedule(html) {
     }
 
     const linkM = row.match(/href="(\/scores\/2026\/(\d{4})\/([a-z]+)-([a-z]+)-\d+\/)"/);
+
+    // 예고선발 — linkM 여부와 관계없이 마지막 컬럼에서 추출
+    // 실제 형식: "先発：才木 先発：武内" (원정선발 홈선발 순서)
+    let starterAway = '', starterHome = '';
+    {
+      const scoreCheck = rowText.match(/(\d+)\s*[-−–]\s*(\d+)/);
+      if (starterCell && !scoreCheck) {
+        const starterNames = [...starterCell.matchAll(/先発[：:]\s*([^\s　先発]+)/g)].map(m => m[1].trim()).filter(n => n.length > 0);
+        if (starterNames.length >= 2) {
+          starterAway = starterNames[0];
+          starterHome = starterNames[1];
+        } else if (starterNames.length === 1) {
+          starterHome = starterNames[0];
+        }
+      }
+    }
+
     if (linkM) {
       const [, path, , awayC, homeC] = linkM;
       if (seen.has(path)) continue;
@@ -129,19 +146,6 @@ function parseSchedule(html) {
       const cancelled = rowText.includes('中止');
       const wpM = rowText.match(/勝[：:]\s*(\S{2,8})/);
       const lpM = rowText.match(/敗[：:]\s*(\S{2,8})/);
-
-      // 예고선발 — 마지막 컬럼에서 한자 이름 추출
-      // 실제 형식: "先発：才木 先発：武内" (원정선발 홈선발 순서)
-      let starterAway = '', starterHome = '';
-      if (starterCell && !scoreM) {
-        const starterNames = [...starterCell.matchAll(/先発[：:]\s*([^\s　先]+)/g)].map(m => m[1].trim());
-        if (starterNames.length >= 2) {
-          starterAway = starterNames[0]; // 원정팀 선발 (표시 순서: 원정 - 홈)
-          starterHome = starterNames[1]; // 홈팀 선발
-        } else if (starterNames.length === 1) {
-          starterHome = starterNames[0];
-        }
-      }
 
       games.push({
         mmdd: curMmdd, date: `2026-${curMmdd.slice(0,2)}-${curMmdd.slice(2,4)}`,
@@ -177,7 +181,7 @@ function parseSchedule(html) {
       away: teams[1], home: teams[0], awayScore: null, homeScore: null,
       venue: venueM2?venueM2[1]:null, time: timeM2?timeM2[1]:'18:00',
       status: 'scheduled', cancelled: false, winPitcher: '', losePitcher: '',
-      link: null, path: null, starterHome: '', starterAway: '',
+      link: null, path: null, starterHome, starterAway,
     });
   }
   return { games, startersByDate };
