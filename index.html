@@ -1486,23 +1486,10 @@ async function initGamesPanels() {
     showError('panel-next', 'NPB 데이터 로드 실패');
     return;
   }
-  // 업데이트 시각 — 데이터 저장 시각(KST) 표시
-  const tsEl = document.getElementById('games-updated');
-  if (data.updatedAt) {
-    const utc = new Date(data.updatedAt);
-    const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
-    const mo  = kst.getMonth() + 1;
-    const dd  = kst.getDate();
-    const hh  = String(kst.getHours()).padStart(2, '0');
-    const mm  = String(kst.getMinutes()).padStart(2, '0');
-    tsEl.textContent = `${mo}/${dd} ${hh}:${mm} KST 기준`;
-  } else if (data.mmdd) {
-    const mo = parseInt(data.mmdd.slice(0, 2));
-    const dd = parseInt(data.mmdd.slice(2, 4));
-    tsEl.textContent = `${mo}/${dd} 기준`;
-  } else {
-    tsEl.textContent = '데이터 로드 완료';
-  }
+  // 업데이트 시각
+  const now = new Date();
+  document.getElementById('games-updated').textContent =
+    `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 기준`;
 
   // 이전 경기 결과 렌더
   renderPrevResults(data);
@@ -1877,7 +1864,7 @@ function renderAIAnalyses(analyses, games) {
   const sec = document.getElementById('ai-analysis-section');
   if (!sec) return;
 
-  const html = analyses.map(a => {
+  const cards = analyses.map(a => {
     const homeProb = a.winProbHome ?? 50;
     const awayProb = a.winProbAway ?? 50;
     const confColor = a.confidence==='high'?'#4cde80':a.confidence==='low'?'#e85c40':'#e8c840';
@@ -1893,90 +1880,97 @@ function renderAIAnalyses(analyses, games) {
     ].filter(p => p.name);
 
     const battersHtml = batters.map(b => `
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
-        ${logoImg(b.team,18)}
-        <div style="flex:1">
-          <span style="font-size:13px;font-weight:500">${b.name}</span>
-          <span style="font-size:11px;color:var(--muted);margin-left:6px">${b.stat||''}</span>
+      <div style="display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)">
+        ${logoImg(b.team,16)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${b.name} <span style="font-size:11px;color:var(--muted);font-weight:400">${b.stat||''}</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${b.note||''}</div>
         </div>
-        <span style="font-size:11px;color:var(--muted)">${b.note||''}</span>
       </div>`).join('');
 
     const pitchersHtml = pitchers.map(p => `
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
-        ${logoImg(p.team,18)}
-        <div style="flex:1">
-          <span style="font-size:13px;font-weight:500">${p.name}</span>
-          ${p.role?`<span style="font-size:10px;padding:1px 5px;border-radius:2px;margin-left:4px;background:var(--surface2);color:var(--muted)">${p.role}</span>`:''}
-          ${p.era?`<span style="font-size:11px;color:var(--muted);margin-left:4px">ERA ${p.era}</span>`:''}
+      <div style="display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)">
+        ${logoImg(p.team,16)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${p.name}
+            ${p.role?`<span style="font-size:10px;padding:1px 4px;border-radius:2px;margin-left:3px;background:var(--surface2);color:var(--muted)">${p.role}</span>`:''}
+            ${p.era?`<span style="font-size:11px;color:var(--muted);margin-left:3px">ERA ${p.era}</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${p.note||''}</div>
         </div>
-        <span style="font-size:11px;color:var(--muted)">${p.note||''}</span>
       </div>`).join('');
 
-    return `<div class="card mgb" style="${a.confidence==='high'?'border-color:rgba(77,222,128,0.3)':''}">
-      <!-- 헤더 -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;align-items:center;gap:10px">
+    // 섹션 라벨 스타일 (이전 .analysis-label보다 크게)
+    const sLabel = (text) => `<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;margin-top:10px;letter-spacing:0.03em">${text}</div>`;
+    const sText  = (text) => `<div style="font-size:12px;color:var(--muted);line-height:1.6">${text}</div>`;
+
+    return `<div class="card" style="height:100%;box-sizing:border-box;${a.confidence==='high'?'border-color:rgba(77,222,128,0.3)':''}">
+      <!-- 경기 헤더 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;align-items:center;gap:8px">
           ${logoLg(a.awayTeam)}
           <div>
-            <div style="font-size:11px;color:var(--muted)">원정</div>
-            <div style="font-family:var(--fd);font-size:16px;font-weight:700">${TN_S[a.awayTeam]||a.awayTeam}</div>
+            <div style="font-size:10px;color:var(--muted)">원정</div>
+            <div style="font-family:var(--fd);font-size:15px;font-weight:700">${TN_S[a.awayTeam]||a.awayTeam}</div>
             ${a.starterAway?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starterAway}</div>`:''}
           </div>
-          <span style="font-family:var(--fd);font-size:20px;color:var(--muted2);padding:0 8px">VS</span>
+          <span style="font-family:var(--fd);font-size:16px;color:var(--muted2);padding:0 4px">VS</span>
           <div>
-            <div style="font-size:11px;color:var(--muted)">홈</div>
-            <div style="font-family:var(--fd);font-size:16px;font-weight:700">${TN_S[a.homeTeam]||a.homeTeam}</div>
+            <div style="font-size:10px;color:var(--muted)">홈</div>
+            <div style="font-family:var(--fd);font-size:15px;font-weight:700">${TN_S[a.homeTeam]||a.homeTeam}</div>
             ${a.starterHome?`<div style="font-size:11px;color:var(--accent2)">선발: ${a.starterHome}</div>`:''}
           </div>
           ${logoLg(a.homeTeam)}
         </div>
-        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px;background:rgba(255,255,255,0.08);color:${confColor}">
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.08);color:${confColor}">
           신뢰도 ${a.confidence==='high'?'높음':a.confidence==='low'?'낮음':'중간'}
         </span>
       </div>
 
       <!-- 승률 바 -->
-      <div style="margin-bottom:14px">
-        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:5px">
+      <div style="margin-bottom:12px">
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:4px">
           <div style="width:${awayProb}%;background:var(--accent3)"></div>
           <div style="width:${homeProb}%;background:var(--accent2)"></div>
         </div>
         <div style="display:flex;justify-content:space-between">
-          <span style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--accent3)">${TN_S[a.awayTeam]||a.awayTeam} ${awayProb}%</span>
-          <span style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--accent2)">${TN_S[a.homeTeam]||a.homeTeam} ${homeProb}%</span>
+          <span style="font-family:var(--fd);font-size:12px;font-weight:700;color:var(--accent3)">${TN_S[a.awayTeam]||a.awayTeam} ${awayProb}%</span>
+          <span style="font-family:var(--fd);font-size:12px;font-weight:700;color:var(--accent2)">${TN_S[a.homeTeam]||a.homeTeam} ${homeProb}%</span>
         </div>
       </div>
 
-      <!-- 핵심 타자/투수 -->
+      <!-- 주목 타자/투수 -->
       ${(batters.length||pitchers.length) ? `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
         ${batters.length ? `<div>
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px">주목 타자</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">🏏 주목 타자</div>
           ${battersHtml}
         </div>` : ''}
         ${pitchers.length ? `<div>
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px">주목 투수</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">⚾ 주목 투수</div>
           ${pitchersHtml}
         </div>` : ''}
       </div>` : ''}
 
       <!-- 분석 섹션 -->
-      <div style="display:grid;gap:8px">
-        ${a.lineupAnalysis?`<div><div class="analysis-label">선발 라인업 분석</div><div class="analysis-text">${a.lineupAnalysis}</div></div>`:''}
-        ${a.newsAnalysis?`<div><div class="analysis-label">최근 동향 분석</div><div class="analysis-text">${a.newsAnalysis}</div></div>`:''}
-        ${a.coreReason?`<div><div class="analysis-label">핵심</div><div class="analysis-text">${a.coreReason}</div></div>`:''}
-        ${a.variable?`<div><div class="analysis-label">변수</div><div class="analysis-text">${a.variable}</div></div>`:''}
-        ${a.issue?`<div><div class="analysis-label">이슈</div><div class="analysis-text">${a.issue}</div></div>`:''}
-        ${a.verdict?`<div class="verdict-box">
-          <span class="verdict-icon">🏆</span>
-          <div><div class="verdict-fav">판정: ${a.verdict}</div></div>
-        </div>`:''}
-      </div>
+      ${a.lineupAnalysis?`${sLabel('📋 선발 라인업 분석')}${sText(a.lineupAnalysis)}`:''}
+      ${a.newsAnalysis?`${sLabel('📰 최근 동향')}${sText(a.newsAnalysis)}`:''}
+      ${a.coreReason?`${sLabel('🔑 핵심')}${sText(a.coreReason)}`:''}
+      ${a.variable?`${sLabel('⚡ 변수')}${sText(a.variable)}`:''}
+      ${a.issue?`${sLabel('📌 이슈')}${sText(a.issue)}`:''}
+      ${a.verdict?`<div class="verdict-box" style="margin-top:10px">
+        <span class="verdict-icon">🏆</span>
+        <div><div class="verdict-fav">판정: ${a.verdict}</div></div>
+      </div>`:''}
     </div>`;
-  }).join('');
+  });
 
-  sec.innerHTML = `<div style="font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:16px">🤖 AI 경기 분석</div>` + html;
+  // 2열 그리드로 렌더링
+  const gridHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:16px;align-items:start">
+    ${cards.join('')}
+  </div>`;
+
+  sec.innerHTML = `<div style="font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:16px">🤖 AI 경기 분석</div>` + gridHtml;
 }
 
 // 페이지 로드 시: 기본 탭(경기 분석) 초기화 + 헤더 갱신시각 로드
