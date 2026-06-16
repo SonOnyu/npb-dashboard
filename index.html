@@ -259,9 +259,58 @@ body:not(.light) .rdp{color:#4cde80}
 @media(max-width:960px){ .result-grid{grid-template-columns:1fr 1fr} }
 @media(max-width:580px){ .result-grid{grid-template-columns:1fr} }
 
+
+/* AI분석 버튼 */
+@keyframes aiGlow {
+  0%,100% { opacity:0.7; box-shadow:0 0 6px rgba(232,200,64,0.3); }
+  50% { opacity:1; box-shadow:0 0 14px rgba(232,200,64,0.8); }
+}
+.ai-btn {
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:0.05em;
+  padding:4px 10px;border-radius:20px;border:1px solid #e8c840;
+  background:rgba(232,200,64,0.12);color:#e8c840;cursor:pointer;
+  animation:aiGlow 2s ease-in-out infinite;transition:all 0.2s;
+}
+.ai-btn:hover { background:rgba(232,200,64,0.25); }
+.ai-btn-icon { font-size:13px; }
+
+/* AI분석 팝업 모달 */
+.ai-modal-overlay {
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:16px;
+}
+.ai-modal-overlay.open { display:flex; }
+.ai-modal {
+  background:var(--surface);border:1px solid var(--border2);border-radius:12px;
+  width:100%;max-width:600px;max-height:85vh;overflow-y:auto;
+  padding:20px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.ai-modal-close {
+  position:sticky;top:0;float:right;margin:-4px -4px 8px 0;
+  width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);
+  background:var(--surface2);color:var(--text);font-size:16px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  z-index:10;flex-shrink:0;
+}
+.ai-modal-close:hover { background:var(--accent3);color:#fff; }
+.ai-modal-title {
+  font-family:var(--fd);font-size:15px;font-weight:800;color:var(--accent);
+  margin-bottom:14px;display:flex;align-items:center;gap:6px;
+}
 </style>
 </head>
 <body>
+
+<!-- AI분석 팝업 모달 -->
+<div class="ai-modal-overlay" id="ai-modal-overlay" onclick="if(event.target===this)closeAIModal()">
+  <div class="ai-modal" id="ai-modal-content">
+    <button class="ai-modal-close" onclick="closeAIModal()">✕</button>
+    <div class="ai-modal-title">🤖 AI 경기 분석</div>
+    <div id="ai-modal-body"></div>
+  </div>
+</div>
 
 <header onclick="location.reload()" style="cursor:pointer" title="새로고침">
   <div>
@@ -1829,7 +1878,12 @@ async function renderNextGames(data) {
                 ${sAway?`<div style="font-size:11px;color:var(--accent2);margin-top:2px">선발: ${sAway}</div>`:''}
               </div>
             </div>
-            <span style="font-family:var(--fd);font-size:18px;color:var(--muted2);font-weight:700">VS</span>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+              <span style="font-family:var(--fd);font-size:18px;color:var(--muted2);font-weight:700">VS</span>
+              <button class="ai-btn" id="ai-btn-${i}" onclick="openAIModal(${i})">
+                <span class="ai-btn-icon">✨</span>AI 분석
+              </button>
+            </div>
             <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
               ${logoLg(g.home)}
               <div style="text-align:right">
@@ -1883,7 +1937,50 @@ async function renderNextGames(data) {
   }
 }
 
+// AI 분석 모달 데이터 저장소
+let aiAnalysesCache = [];
+
+function openAIModal(idx) {
+  const a = aiAnalysesCache[idx];
+  if (!a) {
+    document.getElementById('ai-modal-body').innerHTML =
+      '<div style="text-align:center;padding:30px;color:var(--muted)">AI 분석 데이터가 없습니다.<br><small>잠시 후 다시 시도해주세요.</small></div>';
+    document.getElementById('ai-modal-overlay').classList.add('open');
+    return;
+  }
+  const bold = (t) => t ? t.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text);font-weight:700">$1</strong>') : '';
+  const autoBreak = (t) => t ? t.replace(/(니다\.|습니다\.|입니다\.|있습니다\.|됩니다\.|합니다\.|십니다\.|겠습니다\.)\s+/g, '$1<br>') : '';
+  const fmt = (t) => autoBreak(bold(t));
+  const sLabel = (t) => `<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;margin-top:14px;letter-spacing:0.03em">${t}</div>`;
+  const sText  = (t) => `<div style="font-size:13px;color:var(--text);line-height:1.9">${fmt(t)}</div>`;
+
+  // 모달 타이틀 업데이트
+  document.querySelector('.ai-modal-title').innerHTML =
+    `🤖 AI 경기 분석 — ${TN_S[a.awayTeam]||a.awayTeam} vs ${TN_S[a.homeTeam]||a.homeTeam}`;
+
+  document.getElementById('ai-modal-body').innerHTML =
+    (a.lineupAnalysis ? sLabel('📋 선발 라인업 분석') + sText(a.lineupAnalysis) : '') +
+    (a.newsAnalysis   ? sLabel('📰 최근 동향')         + sText(a.newsAnalysis)   : '') +
+    (a.coreReason     ? sLabel('🔑 핵심')              + sText(a.coreReason)     : '') +
+    (a.variable       ? sLabel('⚡ 변수')              + sText(a.variable)       : '') +
+    (a.issue          ? sLabel('📌 이슈')              + sText(a.issue)          : '') +
+    (a.verdict        ? `<div class="verdict-box" style="margin-top:14px"><span class="verdict-icon">🏆</span><div><div class="verdict-fav" style="font-size:14px">판정: ${fmt(a.verdict)}</div></div></div>` : '');
+
+  document.getElementById('ai-modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAIModal() {
+  document.getElementById('ai-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ESC 키로도 닫기
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeAIModal(); });
+
 function renderAIAnalyses(analyses, games) {
+  aiAnalysesCache = analyses; // 모달에서 사용
+
   const bold = (t) => t ? t.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text);font-weight:700">$1</strong>') : '';
   const autoBreak = (t) => t ? t.replace(/(니다\.|습니다\.|입니다\.|있습니다\.|됩니다\.|합니다\.|십니다\.|겠습니다\.)\s+/g, '$1<br>') : '';
   const fmt = (t) => autoBreak(bold(t));
@@ -1909,41 +2006,6 @@ function renderAIAnalyses(analyses, games) {
       ((bats.length||pits.length)?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px"><div style="font-size:12px;font-weight:700;color:var(--text)">${bats.length?'🏏 주목 타자':''}</div><div style="font-size:12px;font-weight:700;color:var(--text)">${pits.length?'⚾ 주목 투수':''}</div></div>`:'') +
       Array.from({length:Math.max(bats.length,pits.length)}).map((_,j)=>playerRow(bats[j],pits[j])).join('');
   });
-
-  // 2. 분석 항목(라인업~판정)은 카드 밖 공통 그리드 행으로 렌더
-  const sections = [
-    {key:'lineupAnalysis', label:'📋 선발 라인업 분석'},
-    {key:'newsAnalysis',   label:'📰 최근 동향'},
-    {key:'coreReason',    label:'🔑 핵심'},
-    {key:'variable',      label:'⚡ 변수'},
-    {key:'issue',         label:'📌 이슈'},
-    {key:'verdict',       label:'🏆 판정'},
-  ];
-
-  const analysisGrid = document.getElementById('analysis-grid');
-  if (!analysisGrid) return;
-
-  analysisGrid.innerHTML = sections.map(sec => {
-    const cells = analyses.map((a, i) => {
-      const val = a[sec.key];
-      if (!val) return `<div></div>`;
-      if (sec.key === 'verdict') {
-        return `<div class="verdict-box" style="margin:0"><span class="verdict-icon">🏆</span><div><div class="verdict-fav">${fmt(val)}</div></div></div>`;
-      }
-      return `<div style="font-size:12px;color:var(--muted);line-height:1.8">${fmt(val)}</div>`;
-    });
-    const hasAny = analyses.some(a => a[sec.key]);
-    if (!hasAny) return '';
-    // 패딩 칸 채우기 (경기 수가 1개일 경우 등)
-    while (cells.length < 2) cells.push('<div></div>');
-    return `
-      <div style="display:grid;grid-template-columns:repeat(${analyses.length},1fr);gap:16px;padding:10px 0;border-top:1px solid var(--border)">
-        ${analyses.map((a,i) => `<div>
-          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">${sec.label}</div>
-          ${!a[sec.key]?'':sec.key==='verdict'?`<div class="verdict-box" style="margin:0"><span class="verdict-icon">🏆</span><div><div class="verdict-fav">${fmt(a[sec.key])}</div></div></div>`:`<div style="font-size:12px;color:var(--muted);line-height:1.8">${fmt(a[sec.key])}</div>`}
-        </div>`).join('')}
-      </div>`;
-  }).join('');
 
   // 매핑 안 된 슬롯 처리
   games.forEach((g,i) => {
