@@ -500,6 +500,43 @@ ${JSON.stringify(actualResults, null, 2)}
 5. batter1/2는 반드시 야수(타자) 포지션 선수만. starterHome/starterAway에 적힌 선발투수는 batter가 아닌 pitcher에만 넣을 것.`;
 }
 
+
+// ── 스코어보드 페이지에서 최종 점수 파싱 ──
+// 팀키 → URL코드 역방향 맵
+const TEAM_URL = {G:'g',Sw:'s',DB:'db',D:'d',T:'t',C:'c',H:'h',F:'f',Bs:'b',E:'e',L:'l',M:'m'};
+
+async function fetchGameScore(away, home, mmdd) {
+  const awayCode = TEAM_URL[away] || away.toLowerCase();
+  const homeCode = TEAM_URL[home] || home.toLowerCase();
+  for (let n = 1; n <= 6; n++) {
+    const path = `/scores/2026/${mmdd}/${awayCode}-${homeCode}-0${n}/`;
+    try {
+      const html = await fetchUrl(`https://npb.jp${path}`);
+      if (!html.includes('試合終了')) continue;
+      const scoreM = html.match(/(\d+)-(\d+)[（(]/);
+      if (scoreM) {
+        const awayScore = parseInt(scoreM[1]);
+        const homeScore = parseInt(scoreM[2]);
+        console.log(`[fetchGameScore] ${path}: away=${awayScore} home=${homeScore}`);
+        return { awayScore, homeScore, finished: true, path };
+      }
+    } catch(e) { /* 해당 번호 없음 */ }
+  }
+  return null;
+}
+    
+    if (scoreM) {
+      console.log(`[fetchGameScore] ${path}: ${scoreM[1]}-${scoreM[2]} (from pattern)`);
+      return { awayScore: parseInt(scoreM[1]), homeScore: parseInt(scoreM[2]), finished: true };
+    }
+    
+    return null;
+  } catch(e) {
+    console.error(`[fetchGameScore] ${path} failed:`, e.message);
+    return null;
+  }
+}
+
 const task = async () => {
   console.log('[scheduled-fetch] Starting NPB data collection...');
   const store = npbStore();
@@ -538,9 +575,26 @@ const task = async () => {
     }
     console.log('[scheduled-fetch] Starters:', JSON.stringify(starters));
 
+    // 오늘 경기 중 status=scheduled이지만 스코어보드 링크가 있는 경우 실제 결과 확인
+    const rawTodayGames = allGames.filter(g => g.mmdd === mmdd);
+    for (const g of rawTodayGames) {
+      if (g.status === 'scheduled') {
+        const result = await fetchGameScore(g.away, g.home, mmdd);
+        if (result) {
+          g.status = 'finished';
+          g.awayScore = result.awayScore;
+          g.homeScore = result.homeScore;
+          if (result.winPitcher) g.winPitcher = result.winPitcher;
+          if (result.losePitcher) g.losePitcher = result.losePitcher;
+          if (result.path) g.path = result.path;
+          console.log(`[scheduled-fetch] Score updated: ${g.away} ${g.awayScore}-${g.homeScore} ${g.home} (${result.path})`);
+        }
+      }
+    }
+
     const gamesData = {
       mmdd, tmrMmdd,
-      todayGames: allGames.filter(g => g.mmdd === mmdd),
+      todayGames: rawTodayGames,
       tomorrowGames: allGames.filter(g => g.mmdd === tmrMmdd),
       starters,
       allGames, // 캘린더용 전체 데이터
