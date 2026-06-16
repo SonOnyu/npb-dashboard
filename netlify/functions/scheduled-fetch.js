@@ -93,6 +93,9 @@ function parseSchedule(html) {
     const rowText = cells.join(' ');
     if (rowText.trim().length < 3) continue;
 
+    // 디버그: 6/16 행 내용 출력
+    if (curMmdd === '0616') console.log('[parseSchedule] 0616 row cells:', JSON.stringify(cells));
+
     // 예고선발 추출 — 마지막 컬럼에서 한자 이름 2개 추출
     // 형식: "才木　武内" (전각 스페이스 구분, 원정-홈 순서)
     // 또는 "勝：才木　敗：渡邉" (종료 경기)
@@ -520,6 +523,10 @@ const task = async () => {
       }
     }));
     const allGames = monthResults.flatMap(r => r.games);
+
+    // 6/16 경기의 starterCell 디버그 출력
+    const debugGames = allGames.filter(g => g.mmdd === mmdd);
+    console.log('[scheduled-fetch] Debug today games:', debugGames.map(g => JSON.stringify({home:g.home,away:g.away,sH:g.starterHome,sA:g.starterAway})));
 
     // 오늘/내일 경기의 예고선발을 game 객체에서 직접 추출
     const todayGames = allGames.filter(g => g.mmdd === mmdd);
