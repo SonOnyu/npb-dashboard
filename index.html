@@ -1873,8 +1873,8 @@ async function renderNextGames(data) {
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:16px;align-items:start" id="next-basic-cards">
       ${games.map((g,i) => {
-        const sAway = starters[g.away]||g.starterAway||'';
-        const sHome = starters[g.home]||g.starterHome||'';
+        const sAway = starters[g.away] || '';
+        const sHome = starters[g.home] || '';
         return `
         <div class="card" id="game-card-${i}" style="box-sizing:border-box">
           <!-- 구장/시간/예정 -->
