@@ -68,14 +68,16 @@ function addDay(mmdd) {
   return String(dt.getMonth()+1).padStart(2,'0') + String(dt.getDate()).padStart(2,'0');
 }
 
-// ── 스케줄 페이지 파싱 ──
+// ── 스케줄 페이지 파싱 — 예고선발도 함께 추출 ──
 function parseSchedule(html) {
   const games = [];
   const seen  = new Set();
+  // 날짜별 예고선발 맵: {mmdd: {teamKey: pitcherName}}
+  const startersByDate = {};
   let curMmdd = '';
 
   const tableM = html.match(/<table[^>]*>([\s\S]*?)<\/table>/i);
-  if (!tableM) return games;
+  if (!tableM) return { games, startersByDate };
   const tableHtml = tableM[1];
 
   const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
@@ -91,6 +93,29 @@ function parseSchedule(html) {
     const rowText = cells.join(' ');
     if (rowText.trim().length < 3) continue;
 
+    // 예고선발 추출 — "予告先発：投手名" 패턴
+    const starterCell = cells[cells.length - 1] || '';
+    if (starterCell.includes('予告先発')) {
+      if (!startersByDate[curMmdd]) startersByDate[curMmdd] = {};
+      // "予告先発：隅田" 또는 "勝：X　敗：Y" 형태
+      const starterM = starterCell.match(/予告先発[：:]\s*(\S+)/g);
+      if (starterM) {
+        // 이 행의 팀 파악
+        for (const s of starterM) {
+          const pitcherName = s.replace(/予告先発[：:]\s*/, '').trim();
+          // 같은 행에서 팀 찾기
+          for (const [name, key] of Object.entries(NAME_TEAM)) {
+            if (rowText.includes(name)) {
+              if (!startersByDate[curMmdd][key]) {
+                startersByDate[curMmdd][key] = pitcherName;
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+
     const linkM = row.match(/href="(\/scores\/2026\/(\d{4})\/([a-z]+)-([a-z]+)-\d+\/)"/);
     if (linkM) {
       const [, path, , awayC, homeC] = linkM;
@@ -102,15 +127,26 @@ function parseSchedule(html) {
       const cancelled = rowText.includes('中止');
       const wpM = rowText.match(/勝[：:]\s*(\S{2,8})/);
       const lpM = rowText.match(/敗[：:]\s*(\S{2,8})/);
+
+      // 예고선발 — 마지막 컬럼에서 추출
+      let starterHome = '', starterAway = '';
+      if (starterCell && !scoreM) {
+        // 미래 경기: 予告先発 추출
+        const spM = starterCell.match(/予告先発[：:]\s*([^\s　]+)/);
+        // 홈/원정 각각 매핑은 별도 처리 필요하므로 일단 전체 텍스트 저장
+        if (spM) starterHome = spM[1];
+      }
+
       games.push({
         mmdd: curMmdd, date: `2026-${curMmdd.slice(0,2)}-${curMmdd.slice(2,4)}`,
         away: URL_TEAM[awayC]||awayC.toUpperCase(), home: URL_TEAM[homeC]||homeC.toUpperCase(),
         awayScore: scoreM&&!cancelled?parseInt(scoreM[1]):null,
         homeScore: scoreM&&!cancelled?parseInt(scoreM[2]):null,
         venue: venueM?venueM[1]:null, time: timeM?timeM[1]:'18:00',
-        status: cancelled?'cancelled':scoreM?'finished':'live', cancelled,
+        status: cancelled?'cancelled':scoreM?'finished':'scheduled', cancelled,
         winPitcher: wpM?wpM[1]:'', losePitcher: lpM?lpM[1]:'',
         link: `https://npb.jp${path}`, path,
+        starterHome, starterAway,
       });
       continue;
     }
@@ -134,10 +170,11 @@ function parseSchedule(html) {
       mmdd: curMmdd, date: `2026-${curMmdd.slice(0,2)}-${curMmdd.slice(2,4)}`,
       away: teams[1], home: teams[0], awayScore: null, homeScore: null,
       venue: venueM2?venueM2[1]:null, time: timeM2?timeM2[1]:'18:00',
-      status: 'scheduled', cancelled: false, winPitcher: '', losePitcher: '', link: null, path: null,
+      status: 'scheduled', cancelled: false, winPitcher: '', losePitcher: '',
+      link: null, path: null, starterHome: '', starterAway: '',
     });
   }
-  return games;
+  return { games, startersByDate };
 }
 
 // 예고선발 파싱
@@ -471,13 +508,19 @@ const task = async () => {
         return parseSchedule(html);
       } catch(e) {
         console.error(`[scheduled-fetch] Month ${mo} fetch failed:`, e.message);
-        return [];
+        return { games: [], startersByDate: {} };
       }
     }));
-    const allGames = monthResults.flat();
-
-    const starterHtml = await fetchUrl('https://npb.jp/announcement/starter/').catch(()=>'');
-    const starters = parseStarters(starterHtml);
+    const allGames = monthResults.flatMap(r => r.games);
+    // 날짜별 예고선발 병합
+    const allStartersByDate = {};
+    for (const r of monthResults) {
+      for (const [date, starters] of Object.entries(r.startersByDate)) {
+        allStartersByDate[date] = { ...(allStartersByDate[date]||{}), ...starters };
+      }
+    }
+    // 오늘/내일 예고선발 추출
+    const starters = { ...(allStartersByDate[mmdd]||{}), ...(allStartersByDate[tmrMmdd]||{}) };
 
     const gamesData = {
       mmdd, tmrMmdd,
