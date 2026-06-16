@@ -514,17 +514,36 @@ async function fetchGameScore(away, home, mmdd) {
     try {
       const html = await fetchUrl(`https://npb.jp${path}`);
       if (!html.includes('試合終了')) continue;
-      const scoreM = html.match(/<div class="score">(\d+)-(\d+)<\/div>/);
-      if (!scoreM) continue;
-      const homeScore = parseInt(scoreM[1]);
-      const awayScore = parseInt(scoreM[2]);
+
+      // 내비게이션에 여러 경기 스코어가 있으므로
+      // 현재 경기 링크와 스코어를 함께 추출해서 path에 맞는 것 사용
+      // 패턴: href="/scores/2026/0616/c-f-03/"...>...<div class="score">0-2</div>
+      const scoreBlocks = [...html.matchAll(/href="(\/scores\/2026\/\d{4}\/[a-z-]+\/)"[\s\S]*?<div class="score">(\d+)-(\d+)<\/div>/g)];
+      let homeScore = null, awayScore = null;
+      for (const m of scoreBlocks) {
+        if (m[1] === path || m[1] === path.replace(/\/$/, '')) {
+          homeScore = parseInt(m[2]);
+          awayScore = parseInt(m[3]);
+          break;
+        }
+      }
+      // 매칭 실패 시 마지막 score div 사용 (현재 경기가 보통 마지막)
+      if (homeScore === null) {
+        const allScores = [...html.matchAll(/<div class="score">(\d+)-(\d+)<\/div>/g)];
+        if (allScores.length > 0) {
+          const last = allScores[allScores.length - 1];
+          homeScore = parseInt(last[1]);
+          awayScore = parseInt(last[2]);
+        }
+      }
+      if (homeScore === null) continue;
+
       console.log(`[fetchGameScore] ${path}: home=${homeScore} away=${awayScore}`);
 
-      // 박스스코어 페이지에서 투수 성적 파싱
+      // 박스스코어에서 승투/패전 투수 파싱
       let boxData = {};
       try {
         const boxHtml = await fetchUrl(`https://npb.jp${path}box.html`);
-        // 승리/패전 투수: "勝利 武内 3勝" 형태
         const wpM = boxHtml.match(/勝利([^\d<\n]{2,12})\d+勝/);
         const lpM = boxHtml.match(/敗戦([^\d<\n]{2,12})\d+敗/);
         const svM = boxHtml.match(/セーブ([^\d<\n]{2,12})\d+[Ss]/);
@@ -532,12 +551,11 @@ async function fetchGameScore(away, home, mmdd) {
           winPitcher:  wpM ? wpM[1].replace(/\s+/g,'').trim() : '',
           losePitcher: lpM ? lpM[1].replace(/\s+/g,'').trim() : '',
           savePitcher: svM ? svM[1].replace(/\s+/g,'').trim() : '',
-          rawBox: clean(boxHtml).slice(0, 2000),
         };
-        console.log(`[fetchGameScore] box: wp=${boxData.winPitcher} lp=${boxData.losePitcher}`);
-      } catch(e) {
-        console.log(`[fetchGameScore] box.html failed: ${e.message}`);
-      }
+        if (boxData.winPitcher || boxData.losePitcher)
+          console.log(`[fetchGameScore] box: wp=${boxData.winPitcher} lp=${boxData.losePitcher}`);
+      } catch(e) { /* box.html 파싱 실패 무시 */ }
+
       return { awayScore, homeScore, finished: true, path, ...boxData };
     } catch(e) {
       if (!e.message.includes('404')) console.log(`[fetchGameScore] error: ${e.message}`);
