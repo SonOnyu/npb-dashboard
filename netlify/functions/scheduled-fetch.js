@@ -508,41 +508,23 @@ const TEAM_URL = {G:'g',Sw:'s',DB:'db',D:'d',T:'t',C:'c',H:'h',F:'f',Bs:'b',E:'e
 async function fetchGameScore(away, home, mmdd) {
   const awayCode = TEAM_URL[away] || away.toLowerCase();
   const homeCode = TEAM_URL[home] || home.toLowerCase();
-  // NPB 스코어보드 URL은 홈팀-원정팀 순서: /scores/2026/0616/t-l-03/
   for (let n = 1; n <= 6; n++) {
     const path = `/scores/2026/${mmdd}/${homeCode}-${awayCode}-0${n}/`;
     try {
       const html = await fetchUrl(`https://npb.jp${path}`);
-      const finished = html.includes('試合終了');
-      if (!finished) continue;
-      console.log(`[fetchGameScore] ${path}: finished=true`);
-      // 패턴: "チーム名 チーム名X-Y（球場）" or "チーム名X-Y（" in raw HTML
-      // 여러 패턴 시도
-      const patterns = [
-        /ライオンズ(\d+)-(\d+)[（(]/,      // 서버비 경기
-        /ファイターズ(\d+)-(\d+)[（(]/,     // 닛폰햄 경기
-        /タイガース(\d+)-(\d+)[（(]/,       // 한신 경기
-        /カープ(\d+)-(\d+)[（(]/,           // 히로시마 경기
-        />(\d+)-(\d+)<\/td>/,              // 이닝별 테이블 합계
-        /合計.*?>(\d+)<.*?>(\d+)</,
-        // 가장 범용적인 패턴: 숫자-숫자（
-        /(\d+)-(\d+)\uff08/,               // 전각괄호 앞
-        /(\d+)-(\d+)\(/,                   // 반각괄호 앞
-      ];
-      for (const pat of patterns) {
-        const m = html.match(pat);
-        if (m) {
-          const awayScore = parseInt(m[1]);
-          const homeScore = parseInt(m[2]);
-          console.log(`[fetchGameScore] ${path}: away=${awayScore} home=${homeScore} pat=${pat}`);
-          return { awayScore, homeScore, finished: true, path };
-        }
+      if (!html.includes('試合終了')) continue;
+      // 실제 패턴: <div class="score">0-1</div>
+      const scoreM = html.match(/<div class="score">(\d+)-(\d+)<\/div>/);
+      if (scoreM) {
+        // NPB 스코어보드의 score는 홈팀-원정팀 순서
+        // 확인: 오늘 경기 t-l-03에서 "0-1" = 한신0, 세이부1 → home=0, away=1
+        const homeScore = parseInt(scoreM[1]);
+        const awayScore = parseInt(scoreM[2]);
+        console.log(`[fetchGameScore] ${path}: home=${homeScore} away=${awayScore}`);
+        return { awayScore, homeScore, finished: true, path };
       }
-      // 패턴 미매칭 시 HTML 일부 출력으로 디버그
-      const idx = html.indexOf('試合終了');
-      console.log(`[fetchGameScore] ${path}: no score match. context: ${html.slice(Math.max(0,idx-100),idx+100)}`);
     } catch(e) {
-      if (!e.message.includes('404')) console.log(`[fetchGameScore] ${path}: error=${e.message}`);
+      if (!e.message.includes('404')) console.log(`[fetchGameScore] error: ${e.message}`);
     }
   }
   return null;
