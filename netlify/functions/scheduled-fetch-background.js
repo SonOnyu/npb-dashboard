@@ -585,7 +585,9 @@ async function fetchBoxScore(away, home, mmdd) {
     const path = `/scores/2026/${mmdd}/${homeCode}-${awayCode}-0${n}/box.html`;
     try {
       const boxHtml = await fetchUrl(`https://npb.jp${path}`);
-      if (!boxHtml.includes('試合終了')) continue;
+      const hasEnd = boxHtml.includes('試合終了');
+      console.log(`[fetchBoxScore] ${path}: len=${boxHtml.length} hasEnd=${hasEnd}`);
+      if (!hasEnd) continue;
 
       // 승투/패전 투수
       const wpM = boxHtml.match(/勝利\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+勝/);
