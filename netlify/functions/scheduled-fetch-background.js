@@ -285,7 +285,7 @@ function parseStandingsTable(html) {
   return { rows, updatedAt };
 }
 
-function parseNPBStatsTable(html) {
+function parseNPBStatsTable(html, isTeam = false) {
   const dateMatch = html.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*現在/);
   const updatedAt = dateMatch ? `${dateMatch[1]}.${String(dateMatch[2]).padStart(2,'0')}.${String(dateMatch[3]).padStart(2,'0')}` : null;
 
@@ -295,8 +295,15 @@ function parseNPBStatsTable(html) {
   while ((tm = tblRe.exec(html)) !== null) tables.push(tm[0]);
 
   let target = null;
-  for (const t of tables) {
-    if (/<td[^>]*>\s*1\s*<\/td>/i.test(t)) { target = t; break; }
+  if (isTeam) {
+    // 팀별 성적: '選手' 헤더가 있는 테이블
+    for (const t of tables) {
+      if (t.includes('選手') && t.includes('試合')) { target = t; break; }
+    }
+  } else {
+    for (const t of tables) {
+      if (/<td[^>]*>\s*1\s*<\/td>/i.test(t)) { target = t; break; }
+    }
   }
   if (!target) return { headers:[], rows:[], updatedAt };
 
@@ -314,7 +321,12 @@ function parseNPBStatsTable(html) {
     const tds = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
     if (tds.length < 5) continue;
     const cells = tds.map(t => clean(t[1]));
-    if (/^\d+$/.test(cells[0])) rows.push(cells);
+    if (isTeam) {
+      // 팀별: 첫 셀이 선수명(한자/가나 포함)이고 두 번째 셀이 숫자인 행
+      if (cells[0] && cells[0].length > 0 && /\d/.test(cells[1])) rows.push(cells);
+    } else {
+      if (/^\d+$/.test(cells[0])) rows.push(cells);
+    }
   }
   return { headers, rows, updatedAt };
 }
@@ -729,7 +741,8 @@ const task = async () => {
     for (const [type, url] of Object.entries(STAT_URLS)) {
       try {
         const html = await fetchUrl(url);
-        statsData[type] = parseNPBStatsTable(html);
+        const isTeam = type.startsWith('team_');
+        statsData[type] = parseNPBStatsTable(html, isTeam);
       } catch(e) {
         console.error(`[scheduled-fetch] Stats ${type} failed:`, e.message);
         statsData[type] = { headers:[], rows:[], updatedAt:null };
