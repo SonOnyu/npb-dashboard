@@ -76,6 +76,7 @@ main{padding:28px 40px 60px}
 /* STATS SUB-TABS */
 .sub-tabs{display:flex;gap:2px;margin-bottom:18px;flex-wrap:wrap}
 .sub-tab{font-family:var(--fd);font-size:12px;font-weight:600;letter-spacing:0.05em;padding:6px 14px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;transition:all 0.15s}
+.sub-tab.sub2{font-size:11px;padding:4px 10px} /* 2단계 탭: 약간 작게 */
 .sub-tab:hover{color:var(--text);border-color:var(--muted)}
 .sub-tab.active{background:var(--accent);color:#000;border-color:var(--accent)}
 .sub-tab.cl-tab.active{background:#0f8f2e;color:#fff;border-color:#0f8f2e}
@@ -88,6 +89,7 @@ main{padding:28px 40px 60px}
 .bp-btn{font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:0.05em;padding:8px 22px;
         border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;
         border-radius:4px;transition:all 0.15s}
+.bp-btn.bp-sm{font-size:11px;padding:4px 14px;font-weight:600} /* 3단계: 더 작게 */
 .bp-btn:hover{color:var(--text);border-color:var(--muted)}
 .bp-btn.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 
@@ -482,52 +484,99 @@ body:not(.light) .rdp{color:#4cde80}
 <!-- ════ STATS ════ -->
 <section id="stats" class="section">
   <div class="sec-hdr">
-    <h2 class="sec-title">리그 개인 성적</h2>
+    <h2 class="sec-title">리그 성적</h2>
     <span class="sec-desc" id="stats-updated">로딩 중...</span>
     <span class="src">출처: <a href="https://npb.jp/bis/2026/stats/" target="_blank">NPB 공식</a></span>
   </div>
 
-  <div class="sub-tabs">
-    <button class="sub-tab active cur-tab" onclick="switchStatGroup('cur',this)">전체 순위</button>
-    <button class="sub-tab pl-tab" onclick="switchStatGroup('pl',this)">퍼시픽</button>
-    <button class="sub-tab cl-tab" onclick="switchStatGroup('cl',this)">센트럴</button>
-    <button class="sub-tab" onclick="switchStatGroup('ko',this)">교류전</button>
-    <button class="sub-tab js-tab" onclick="switchStatGroup('cs',this)">클라이막스 시리즈</button>
-    <button class="sub-tab js-tab" onclick="switchStatGroup('js',this)">일본시리즈</button>
-    <button class="sub-tab" onclick="switchStatGroup('op',this)">오픈전</button>
+  <!-- 1단계: 리그 개인 성적 / 팀 개인 성적 -->
+  <div class="sub-tabs" style="margin-bottom:8px">
+    <button class="sub-tab active" id="main-stat-league" onclick="switchMainStat('league',this)">리그 개인 성적</button>
+    <button class="sub-tab" id="main-stat-team" onclick="switchMainStat('team',this)">팀 개인 성적</button>
   </div>
 
-  <!-- 타자/투수 토글 (클라이막스 시리즈 제외) -->
-  <div class="bp-toggle" id="bp-toggle">
-    <button class="bp-btn active" onclick="switchStatType('bat',this)">타자</button>
-    <button class="bp-btn" onclick="switchStatType('pit',this)">투수</button>
+  <!-- ── 리그 개인 성적 패널 ── -->
+  <div id="league-stat-panel">
+    <!-- 2단계: 리그 그룹 -->
+    <div class="sub-tabs" style="margin-bottom:6px">
+      <button class="sub-tab sub2 active cur-tab" onclick="switchStatGroup('cur',this)">전체 순위</button>
+      <button class="sub-tab sub2 pl-tab" onclick="switchStatGroup('pl',this)">퍼시픽</button>
+      <button class="sub-tab sub2 cl-tab" onclick="switchStatGroup('cl',this)">센트럴</button>
+      <button class="sub-tab sub2" onclick="switchStatGroup('ko',this)">교류전</button>
+      <button class="sub-tab sub2 js-tab" onclick="switchStatGroup('cs',this)">클라이막스 시리즈</button>
+      <button class="sub-tab sub2 js-tab" onclick="switchStatGroup('js',this)">일본시리즈</button>
+      <button class="sub-tab sub2" onclick="switchStatGroup('op',this)">오픈전</button>
+    </div>
+
+    <!-- 3단계: 타자/투수 토글 -->
+    <div id="bp-toggle" style="margin-bottom:10px">
+      <button class="bp-btn bp-sm active" onclick="switchStatType('bat',this)">타자</button>
+      <button class="bp-btn bp-sm" onclick="switchStatType('pit',this)">투수</button>
+    </div>
+
+    <!-- CS 리그 토글 -->
+    <div id="cs-toggle" style="display:none;margin-bottom:10px">
+      <button class="bp-btn bp-sm cl-tab active" onclick="switchCSLeague('cl',this)">센트럴</button>
+      <button class="bp-btn bp-sm pl-tab" onclick="switchCSLeague('pl',this)">퍼시픽</button>
+    </div>
+
+    <!-- 로딩 스피너 -->
+    <div id="stats-loading" style="display:flex;align-items:center;justify-content:center;padding:60px;gap:12px;color:var(--muted)">
+      <div style="width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+      <span style="font-size:13px">NPB 공식 데이터 불러오는 중...</span>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+    <div id="stats-cl-bat"  class="stats-panel" style="display:none"></div>
+    <div id="stats-cl-pit"  class="stats-panel" style="display:none"></div>
+    <div id="stats-pl-bat"  class="stats-panel" style="display:none"></div>
+    <div id="stats-pl-pit"  class="stats-panel" style="display:none"></div>
+    <div id="stats-ko-bat"  class="stats-panel" style="display:none"></div>
+    <div id="stats-ko-pit"  class="stats-panel" style="display:none"></div>
+    <div id="stats-op-bat"  class="stats-panel" style="display:none"></div>
+    <div id="stats-op-pit"  class="stats-panel" style="display:none"></div>
+    <div id="stats-cur-bat" class="stats-panel" style="display:block"></div>
+    <div id="stats-cur-pit" class="stats-panel" style="display:none"></div>
+    <div id="stats-js-bat"  class="stats-panel" style="display:none"></div>
+    <div id="stats-js-pit"  class="stats-panel" style="display:none"></div>
+    <div id="stats-cs-cl-bat" class="stats-panel" style="display:none"></div>
+    <div id="stats-cs-cl-pit" class="stats-panel" style="display:none"></div>
+    <div id="stats-cs-pl-bat" class="stats-panel" style="display:none"></div>
+    <div id="stats-cs-pl-pit" class="stats-panel" style="display:none"></div>
   </div>
 
-  <!-- 클라이막스 시리즈 전용: 센트럴/퍼시픽 토글 -->
-  <div class="bp-toggle" id="cs-toggle" style="display:none">
-    <button class="bp-btn cl-tab active" onclick="switchCSLeague('cl',this)">센트럴</button>
-    <button class="bp-btn pl-tab" onclick="switchCSLeague('pl',this)">퍼시픽</button>
-  </div>
+  <!-- ── 팀 개인 성적 패널 ── -->
+  <div id="team-stat-panel" style="display:none">
+    <!-- 2단계: 12구단 탭 -->
+    <div class="sub-tabs" style="margin-bottom:6px;flex-wrap:wrap">
+      <button class="sub-tab sub2 active" onclick="switchTeamStat('T',this)">阪神</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('DB',this)">DeNA</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('G',this)">読売</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('D',this)">中日</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('C',this)">広島</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('Sw',this)">ヤクルト</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('H',this)">ソフトバンク</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('F',this)">日本ハム</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('Bs',this)">オリックス</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('E',this)">楽天</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('L',this)">西武</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('M',this)">ロッテ</button>
+    </div>
 
-  <!-- 로딩 스피너 -->
-  <div id="stats-loading" style="display:flex;align-items:center;justify-content:center;padding:60px;gap:12px;color:var(--muted)">
-    <div style="width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
-    <span style="font-size:13px">NPB 공식 데이터 불러오는 중...</span>
-  </div>
-  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    <!-- 3단계: 타자/투수 -->
+    <div style="margin-bottom:10px">
+      <button class="bp-btn bp-sm active" id="team-bat-btn" onclick="switchTeamType('bat',this)">타자</button>
+      <button class="bp-btn bp-sm" id="team-pit-btn" onclick="switchTeamType('pit',this)">투수</button>
+    </div>
 
-  <div id="stats-cl-bat"  class="stats-panel" style="display:none"></div>
-  <div id="stats-cl-pit"  class="stats-panel" style="display:none"></div>
-  <div id="stats-pl-bat"  class="stats-panel" style="display:none"></div>
-  <div id="stats-pl-pit"  class="stats-panel" style="display:none"></div>
-  <div id="stats-ko-bat"  class="stats-panel" style="display:none"></div>
-  <div id="stats-ko-pit"  class="stats-panel" style="display:none"></div>
-  <div id="stats-op-bat"  class="stats-panel" style="display:none"></div>
-  <div id="stats-op-pit"  class="stats-panel" style="display:none"></div>
-  <div id="stats-cur-bat" class="stats-panel" style="display:block"></div>
-  <div id="stats-cur-pit" class="stats-panel" style="display:none"></div>
-  <div id="stats-js-bat" class="stats-panel" style="display:none"></div>
-  <div id="stats-js-pit" class="stats-panel" style="display:none"></div>
+    <!-- 팀 성적 로딩/표시 -->
+    <div id="team-stats-loading" style="display:none;align-items:center;gap:10px;padding:40px;color:var(--muted)">
+      <div style="width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+      <span style="font-size:13px">팀 성적 불러오는 중...</span>
+    </div>
+    <div id="team-stats-panel"></div>
+  </div>
+</section>
   <!-- 클라이막스 시리즈: 센트럴/퍼시픽 각각 타자+투수 한 화면 -->
   <div id="stats-cs-cl" class="stats-panel" style="display:none"></div>
   <div id="stats-cs-pl" class="stats-panel" style="display:none"></div>
@@ -1387,6 +1436,69 @@ function scheduleAutoRefresh() {
 let activeStatGroup = 'cur';
 let activeStatType  = 'bat';
 let activeCSLeague  = 'cl';
+
+function switchMainStat(mode, btn) {
+  document.querySelectorAll('#stats .sub-tab:not(.sub2)').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('league-stat-panel').style.display = mode === 'league' ? '' : 'none';
+  document.getElementById('team-stat-panel').style.display   = mode === 'team'   ? '' : 'none';
+  if (mode === 'team') {
+    // 처음 진입 시 한신 타자 로드
+    const activeTeam = document.querySelector('#team-stat-panel .sub-tab.sub2.active');
+    if (!activeTeam) return;
+    const tc = activeTeam.getAttribute('onclick').match(/'(\w+)'/)[1];
+    loadTeamStats(tc, currentTeamType);
+  }
+}
+
+let currentTeamCode = 'T';
+let currentTeamType = 'bat';
+
+function switchTeamStat(teamCode, btn) {
+  document.querySelectorAll('#team-stat-panel .sub-tab.sub2').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentTeamCode = teamCode;
+  loadTeamStats(teamCode, currentTeamType);
+}
+
+function switchTeamType(type, btn) {
+  document.querySelectorAll('#team-stat-panel .bp-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentTeamType = type;
+  loadTeamStats(currentTeamCode, type);
+}
+
+const teamStatsCache = {};
+async function loadTeamStats(teamCode, type) {
+  const TEAM_URL_MAP = {T:'t',DB:'db',G:'g',D:'d',C:'c',Sw:'s',H:'h',F:'f',Bs:'b',E:'e',L:'l',M:'m'};
+  const tc = TEAM_URL_MAP[teamCode] || teamCode.toLowerCase();
+  const key = `team_${type}_${tc}`;
+  const panel = document.getElementById('team-stats-panel');
+  const loading = document.getElementById('team-stats-loading');
+
+  if (teamStatsCache[key]) {
+    panel.innerHTML = teamStatsCache[key];
+    return;
+  }
+
+  loading.style.display = 'flex';
+  panel.innerHTML = '';
+  try {
+    const res  = await fetch(`${API}?type=${key}`);
+    const data = await res.json();
+    if (data.headers && data.rows) {
+      const html = renderStatsTable(data.headers, data.rows, type);
+      teamStatsCache[key] = html;
+      panel.innerHTML = html;
+    } else {
+      panel.innerHTML = `<div style="padding:20px;color:var(--muted);font-size:13px">데이터가 아직 없습니다.</div>`;
+    }
+  } catch(e) {
+    panel.innerHTML = `<div style="padding:20px;color:var(--muted);font-size:13px">로드 실패: ${e.message}</div>`;
+  } finally {
+    loading.style.display = 'none';
+  }
+}
 
 function switchStatGroup(group, btn) {
   document.querySelectorAll('#stats .sub-tabs .sub-tab').forEach(t => t.classList.remove('active'));
