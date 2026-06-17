@@ -77,6 +77,7 @@ main{padding:28px 40px 60px}
 .sub-tabs{display:flex;gap:2px;margin-bottom:18px;flex-wrap:wrap}
 .sub-tab{font-family:var(--fd);font-size:12px;font-weight:600;letter-spacing:0.05em;padding:6px 14px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;transition:all 0.15s}
 .sub-tab.sub2{font-size:11px;padding:4px 10px} /* 2단계 탭: 약간 작게 */
+.sub-tab.sub2[style*="--tc"].active{background:var(--tc);color:var(--tct);border-color:var(--tc)}
 .sub-tab:hover{color:var(--text);border-color:var(--muted)}
 .sub-tab.active{background:var(--accent);color:#000;border-color:var(--accent)}
 .sub-tab.cl-tab.active{background:#0f8f2e;color:#fff;border-color:#0f8f2e}
@@ -115,7 +116,7 @@ body:not(.light) .vg{color:#4cde80}
 /* STATS TABLE — wide scroll */
 .stats-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .stats-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
-.stats-tbl thead th{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--text);padding:7px 6px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
+.stats-tbl thead th{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--text);padding:7px 6px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface);z-index:2}
 .stats-tbl thead th:nth-child(1){text-align:center;width:32px;min-width:32px}
 .stats-tbl thead th:nth-child(2){text-align:left;width:160px;min-width:160px}
 .stats-tbl thead th:not(:nth-child(1)):not(:nth-child(2)){min-width:42px;max-width:60px}
@@ -552,18 +553,18 @@ body:not(.light) .rdp{color:#4cde80}
   <div id="team-stat-panel" style="display:none">
     <!-- 2단계: 12구단 탭 -->
     <div class="sub-tabs" style="margin-bottom:6px;flex-wrap:wrap">
-      <button class="sub-tab sub2 active" onclick="switchTeamStat('T',this)">阪神</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('DB',this)">DeNA</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('G',this)">読売</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('D',this)">中日</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('C',this)">広島</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('Sw',this)">ヤクルト</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('H',this)">ソフトバンク</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('F',this)">日本ハム</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('Bs',this)">オリックス</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('E',this)">楽天</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('L',this)">西武</button>
-      <button class="sub-tab sub2" onclick="switchTeamStat('M',this)">ロッテ</button>
+      <button class="sub-tab sub2 active" onclick="switchTeamStat('T',this)" style="--tc:#f5c200;--tct:#000">阪神</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('DB',this)" style="--tc:#003087;--tct:#fff">DeNA</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('G',this)" style="--tc:#f97709;--tct:#fff">読売</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('D',this)" style="--tc:#003595;--tct:#fff">中日</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('C',this)" style="--tc:#cc0000;--tct:#fff">広島</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('Sw',this)" style="--tc:#007b40;--tct:#fff">ヤクルト</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('H',this)" style="--tc:#ffd700;--tct:#000">ソフトバンク</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('F',this)" style="--tc:#00405d;--tct:#fff">日本ハム</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('Bs',this)" style="--tc:#004ea2;--tct:#fff">オリックス</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('E',this)" style="--tc:#cc0000;--tct:#fff">楽天</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('L',this)" style="--tc:#00539f;--tct:#fff">西武</button>
+      <button class="sub-tab sub2" onclick="switchTeamStat('M',this)" style="--tc:#000000;--tct:#fff">ロッテ</button>
     </div>
 
     <!-- 3단계: 타자/투수 -->
@@ -1680,9 +1681,11 @@ function sortStatsTable(tableId, colIdx, isBatter) {
   const newDir = (state.col === colIdx) ? -state.dir : -1;
   SORT_STATE[tableId] = { col: colIdx, dir: newDir };
 
-  // 헤더 클래스 업데이트
-  table.querySelectorAll('thead th').forEach((th, i) => {
+  // 헤더 클래스 + 색상 업데이트
+  const ths = [...table.querySelectorAll('thead th')];
+  ths.forEach((th, i) => {
     th.classList.remove('sort-asc','sort-desc');
+    // 기존 핵심지표 색상 유지 (accent), 정렬 컬럼은 추가 표시
     if (i === colIdx) th.classList.add(newDir === 1 ? 'sort-asc' : 'sort-desc');
   });
 
@@ -1705,6 +1708,29 @@ function sortStatsTable(tableId, colIdx, isBatter) {
       firstTd.textContent = i + 1;
     }
   });
+
+  // 정렬 컬럼 percentile 그라데이션 재적용
+  const vals = rows.map(r => parseFloat(r.querySelectorAll('td')[colIdx]?.textContent || '')).filter(v => !isNaN(v) && v > 0);
+  if (vals.length > 1) {
+    const mn = Math.min(...vals), mx = Math.max(...vals), range = mx - mn || 1;
+    // 타자: 높을수록 좋음 / 투수: 낮을수록 좋음 (방어율 등)
+    // colIdx=0은 순위라 스킵
+    rows.forEach(r => {
+      const td = r.querySelectorAll('td')[colIdx];
+      if (!td) return;
+      const v = parseFloat(td.textContent);
+      if (isNaN(v)) return;
+      let pct = (v - mn) / range;
+      if (!isBatter) pct = 1 - pct;
+      td.style.background = '';
+      td.style.color = '';
+      td.style.fontWeight = '';
+      if (pct >= 0.8) { td.style.background='rgba(76,222,128,0.22)'; td.style.color='#3fae5e'; td.style.fontWeight='700'; }
+      else if (pct >= 0.6) { td.style.background='rgba(76,222,128,0.10)'; td.style.fontWeight='600'; }
+      else if (pct <= 0.2) { td.style.background='rgba(232,92,64,0.20)'; td.style.color='#e85c40'; td.style.fontWeight='700'; }
+      else if (pct <= 0.4) { td.style.background='rgba(232,92,64,0.08)'; }
+    });
+  }
 }
 
 function renderStatsTable(data, isBatter) {
@@ -1960,7 +1986,8 @@ async function loadTeamStats(teamCode, type) {
 }
 
 function switchStatGroup(group, btn) {
-  document.querySelectorAll('#stats .sub-tabs .sub-tab').forEach(t => t.classList.remove('active'));
+  // 2단계 버튼만 active 토글 (1단계 버튼 건드리지 않음)
+  document.querySelectorAll('#league-stat-panel .sub-tabs .sub-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   activeStatGroup = group;
 
