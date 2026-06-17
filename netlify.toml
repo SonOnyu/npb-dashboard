@@ -4,6 +4,9 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."scheduled-fetch"]
+  timeout = 900
+
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
