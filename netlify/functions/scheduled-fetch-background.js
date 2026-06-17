@@ -612,7 +612,7 @@ async function fetchBoxScore(away, home, mmdd) {
       console.log(`[fetchBoxScore] ${path}: wp=${result.winPitcher} lp=${result.losePitcher} topBat=${topBatter?.name}(${topBatter?.h}H${topBatter?.rbi}RBI)`);
       return result;
     } catch(e) {
-      if (!e.message.includes('404')) console.log(`[fetchBoxScore] error: ${e.message}`);
+      console.log(`[fetchBoxScore] ${path}: ${e.message}`);
     }
   }
   return null;
@@ -784,7 +784,8 @@ const task = async () => {
           // 어제 경기 box.html에서 타자/투수 성적 보강 (path 없어도 팀코드로 직접 조회)
           for (const g of finishedGames) {
             if (!g.allBatters) {
-              const boxResult = await fetchBoxScore(g.away, g.home, yestMmdd).catch(() => null);
+              console.log(`[scheduled-fetch] Fetching box: ${g.away}vs${g.home} mmdd=${yestMmdd}`);
+              const boxResult = await fetchBoxScore(g.away, g.home, yestMmdd).catch(e => { console.log('[fetchBoxScore] catch:', e.message); return null; });
               if (boxResult) {
                 g.winPitcher  = boxResult.winPitcher  || g.winPitcher;
                 g.losePitcher = boxResult.losePitcher || g.losePitcher;
