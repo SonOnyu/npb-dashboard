@@ -4,8 +4,8 @@
 [functions]
   node_bundler = "esbuild"
 
-[functions."scheduled-fetch"]
-  timeout = 900
+[functions."scheduled-fetch-bg"]
+  schedule = "0 20 * * *"
 
 [[headers]]
   for = "/.netlify/functions/*"
