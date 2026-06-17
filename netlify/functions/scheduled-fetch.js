@@ -578,6 +578,45 @@ async function fetchGameScore(away, home, mmdd) {
   return null;
 }
 
+// ── 박스스코어 전용 파싱 (스코어는 이미 알고있을 때) ──
+async function fetchBoxScore(away, home, mmdd) {
+  const awayCode = TEAM_URL[away] || away.toLowerCase();
+  const homeCode = TEAM_URL[home] || home.toLowerCase();
+  for (let n = 1; n <= 6; n++) {
+    const path = `/scores/2026/${mmdd}/${homeCode}-${awayCode}-0${n}/box.html`;
+    try {
+      const boxHtml = await fetchUrl(`https://npb.jp${path}`);
+      if (!boxHtml.includes('試合終了')) continue;
+
+      // 승투/패전 투수
+      const wpM = boxHtml.match(/勝利\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+勝/);
+      const lpM = boxHtml.match(/敗戦\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+敗/);
+      const svM = boxHtml.match(/セーブ\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+S/);
+
+      // 타자 성적 — 마크다운 링크 형태: [桑原](url) | 5 | 0 | 1 | 1
+      const batRows = [...boxHtml.matchAll(/\[([^\]]{2,8})\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)/g)];
+      const batters = batRows
+        .map(m => ({name: m[1].trim(), ab: parseInt(m[2]), r: parseInt(m[3]), h: parseInt(m[4]), rbi: parseInt(m[5])}))
+        .filter(b => b.ab > 0);
+
+      const topBatter   = batters.length ? [...batters].sort((a,b) => (b.rbi-a.rbi)||(b.h-a.h))[0] : null;
+      const worstBatter = batters.length ? [...batters].sort((a,b) => (a.h-b.h)||(b.ab-a.ab))[0] : null;
+
+      const result = {
+        winPitcher:  wpM ? wpM[1].trim() : '',
+        losePitcher: lpM ? lpM[1].trim() : '',
+        savePitcher: svM ? svM[1].trim() : '',
+        topBatter, worstBatter, allBatters: batters,
+      };
+      console.log(`[fetchBoxScore] ${path}: wp=${result.winPitcher} lp=${result.losePitcher} topBat=${topBatter?.name}(${topBatter?.h}H${topBatter?.rbi}RBI)`);
+      return result;
+    } catch(e) {
+      if (!e.message.includes('404')) console.log(`[fetchBoxScore] error: ${e.message}`);
+    }
+  }
+  return null;
+}
+
 const task = async () => {
   console.log('[scheduled-fetch] Starting NPB data collection...');
   const store = npbStore();
@@ -744,7 +783,7 @@ const task = async () => {
           // 어제 경기 box.html에서 타자/투수 성적 보강 (path 없어도 팀코드로 직접 조회)
           for (const g of finishedGames) {
             if (!g.allBatters) {
-              const boxResult = await fetchGameScore(g.away, g.home, yestMmdd).catch(() => null);
+              const boxResult = await fetchBoxScore(g.away, g.home, yestMmdd).catch(() => null);
               if (boxResult) {
                 g.winPitcher  = boxResult.winPitcher  || g.winPitcher;
                 g.losePitcher = boxResult.losePitcher || g.losePitcher;
