@@ -141,7 +141,8 @@ function parseSchedule(html) {
     }
 
     if (linkM) {
-      const [, path, , awayC, homeC] = linkM;
+      // NPB URL 형식: /scores/2026/0616/홈팀-원정팀-03/
+      const [, path, , homeC, awayC] = linkM;
       if (seen.has(path)) continue;
       seen.add(path);
       const scoreM = rowText.match(/(\d+)\s*[-−–]\s*(\d+)/);
@@ -317,7 +318,7 @@ function callClaude(prompt) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
+      max_tokens: 6000,
       messages: [{ role:'user', content: prompt }],
     });
     const req = https.request({
@@ -455,51 +456,64 @@ ${TEAM_CONTEXT}
 }
 
 function buildReviewPrompt(predictions, actualResults) {
-  return `당신은 NPB 애널리스트입니다. 아래에 주어진 실제 경기 데이터를 기반으로 분석해주세요.
+  // predictions에서 각 경기별 예측 승팀 추출하여 actualResults에 주입
+  const enriched = actualResults.map(g => {
+    const pred = predictions.find(p =>
+      (p.homeTeam === g.home && p.awayTeam === g.away) ||
+      (p.gameId && p.gameId.includes(g.away) && p.gameId.includes(g.home))
+    );
+    return {
+      ...g,
+      _predictedWinner: pred ? (pred.winProbHome > pred.winProbAway ? g.home : g.away) : '',
+      _predictionDetail: pred ? `홈팀 승률 ${pred.winProbHome}% vs 원정팀 ${pred.winProbAway}%` : '예측 없음',
+    };
+  });
 
-## 절대 규칙
-- homeTeam/awayTeam 팀 키(G/Sw/DB/D/T/C/H/F/Bs/E/L/M)와 점수만을 사실로 취급할 것.
-- 예측 당시 분석이 없으면 predictedWinner 빈 문자열, predictionAccuracy "예측 없음", hitAnalysis/missAnalysis 빈 문자열.
-- 박스스코어(allBatters, topBatter, winPitcher 등)가 제공된 경우 반드시 실제 데이터 기반으로 MVP/최악 선정.
-- 박스스코어가 없으면 스코어와 선발투수 기준으로 합리적 추론.
-- mvpName/worstName에 "정보 없음" 절대 금지. 반드시 실존 선수명 기재.
-- MVP는 타자/투수 모두 고려 (타자 우선: 타점, 결승타, 안타 기준. 투수: 완봉, 완투, 구원 성공).
-- 최악은 패전투수, 무안타 타자, 실책 선수 등 구체적으로.
-- 분석은 친절하고 자연스러운 한국어로. 중요 수치는 **굵게** 표시.
+  return `당신은 NPB 경기를 분석하는 전문 야구 해설가입니다. 박스스코어 데이터를 바탕으로 경기를 상세하고 친절하게 분석해주세요.
 
-## 예측 당시 분석
-${JSON.stringify(predictions, null, 2)}
+## 분석 지침
+- allBatters 배열의 각 선수 성적(타수/득점/안타/타점)을 반드시 활용할 것
+- 타선 분석: 안타는 많았으나 득점이 적었다면 찬스 실패 상황 언급, 실책이 있으면 구체적으로 언급
+- 투수 분석: 선발 이닝 소화, 구원진 활약, 마무리 세이브 상황 등 구체적으로
+- 예측 적중 여부는 _predictedWinner와 actualWinner를 비교하여 판단 (일치하면 적중, 다르면 미스, _predictedWinner가 빈 문자열이면 예측 없음)
+- mvpName/worstName: "정보 없음" 절대 금지. 박스 데이터 기반으로 반드시 실존 선수명 선정
+- hitAnalysis/missAnalysis/unexpectedEvents/gameFlow: 3~5문장으로 충분히 상세하게, 독자가 경기를 보지 않아도 이해할 수 있도록 친절하게 서술
+- 중요 수치나 키워드는 **굵게** 표시
 
-## 실제 결과 (allBatters: 타자성적 배열, topBatter: 최다타점/안타 타자, winPitcher/losePitcher 포함)
-${JSON.stringify(actualResults, null, 2)}
+## 경기 데이터
+${JSON.stringify(enriched, null, 2)}
 
-각 경기마다 JSON 구조로 분석 (JSON 배열, 순수 JSON만, 백틱 금지):
+각 경기마다 아래 JSON 구조로 분석 (JSON 배열, 순수 JSON만, 백틱 금지):
 [
   {
     "gameId": "L-T",
     "homeTeam": "팀키",
     "awayTeam": "팀키",
-    "predictedWinner": "예측 우세팀(팀키) 또는 빈 문자열",
+    "predictedWinner": "_predictedWinner 값 그대로 복사",
     "actualWinner": "실제 승팀(팀키)",
-    "correct": true,
     "score": "원정점수-홈점수",
-    "predictionAccuracy": "적중 또는 미적중 또는 예측 없음",
-    "hitAnalysis": "적중 근거 2~3문장. 미적중이면 빈 문자열.",
-    "missAnalysis": "빗나간 이유 2~3문장. 적중이면 빈 문자열.",
-    "unexpectedEvents": "예상 못한 변수 1~2문장. 없으면 빈 문자열.",
-    "mvpName": "최고 활약 선수명(한국어 병기) — 타자 우선",
+    "predictionAccuracy": "_predictedWinner와 actualWinner 비교: 일치→적중, 불일치→미적중, 빈문자열→예측 없음",
+    "hitAnalysis": "예측 적중 시 3~5문장. 어떤 요소가 예측대로 작용했는지 선수명·수치와 함께. 미적중이면 빈 문자열.",
+    "missAnalysis": "예측 미적중 시 3~5문장. 예측을 빗나가게 한 핵심 요인을 선수명·수치와 함께 친절하게. 적중이면 빈 문자열.",
+    "unexpectedEvents": "경기 중 예상치 못한 변수 2~3문장. 결정적 장면이나 반전 포인트.",
+    "gameFlow": "경기 전체 흐름 3~5문장. 타선 상황(출루율, 득점권 기회), 투수 교체 흐름, 승부처 장면 등을 팬에게 설명하듯 친절하게.",
+    "mvpName": "최고 활약 선수명(한국어 병기) — 박스 데이터 기반, 타자 우선(타점/안타), 투수도 가능",
     "mvpTeam": "팀키",
-    "mvpPerformance": "구체적 활약 (예: 4타수 2안타 1타점, 완봉승 9이닝 1실점)",
-    "mvpReason": "MVP 선정 이유 1문장",
-    "worstName": "최악 활약 선수명(한국어 병기)",
+    "mvpPerformance": "구체적 기록 (예: 5타수 2안타 1타점, 결승 적시타 포함 / 9이닝 완봉 삼진 10개)",
+    "mvpReason": "선정 이유 1~2문장. 왜 이 경기의 MVP인지 친절하게.",
+    "worstName": "최악 활약 선수명(한국어 병기) — 패전투수/무안타 타자/실책 등 기반",
     "worstTeam": "팀키",
-    "worstPerformance": "구체적 부진 내용 (예: 4타수 0안타, 5이닝 4실점)",
-    "worstReason": "최악 선정 이유 1문장",
-    "highlight": "경기 하이라이트 한 문장"
+    "worstPerformance": "구체적 부진 (예: 4타수 0안타 3삼진 / 5이닝 4실점 자책 / 수비 실책 2개)",
+    "worstReason": "선정 이유 1~2문장.",
+    "highlight": "경기 하이라이트 한 문장. 가장 인상적인 장면."
   }
 ]
 
-규칙: 1)순수 JSON만 2)한 줄로 3)쌍따옴표 금지 4)모든 키 포함 5)mvpName/worstName 반드시 실존 선수명`;
+규칙:
+1. 순수 JSON 배열만 출력. 백틱/마크다운 불필요.
+2. 모든 문자열 한 줄로. 쌍따옴표 금지.
+3. 모든 키 포함. 빈 경우 빈 문자열.
+4. predictedWinner는 _predictedWinner 값 그대로 복사 (비어있으면 빈 문자열).`;
 }
 
 
