@@ -741,9 +741,9 @@ const task = async () => {
       if (finishedGames.length > 0) {
         const existingReview = await store.get('review-analysis', { type: 'json' });
         if (!existingReview || existingReview.mmdd !== yestMmdd) {
-          // 어제 경기 box.html에서 타자/투수 성적 보강
+          // 어제 경기 box.html에서 타자/투수 성적 보강 (path 없어도 팀코드로 직접 조회)
           for (const g of finishedGames) {
-            if (g.path && !g.allBatters) {
+            if (!g.allBatters) {
               const boxResult = await fetchGameScore(g.away, g.home, yestMmdd).catch(() => null);
               if (boxResult) {
                 g.winPitcher  = boxResult.winPitcher  || g.winPitcher;
@@ -751,6 +751,7 @@ const task = async () => {
                 g.topBatter   = boxResult.topBatter;
                 g.worstBatter = boxResult.worstBatter;
                 g.allBatters  = boxResult.allBatters;
+                console.log(`[scheduled-fetch] Box loaded: ${g.away}vs${g.home} wp=${g.winPitcher} topBat=${g.topBatter?.name}`);
               }
             }
           }
