@@ -582,6 +582,7 @@ async function fetchBoxScore(away, home, mmdd) {
   const awayCode = TEAM_URL[away] || away.toLowerCase();
   const homeCode = TEAM_URL[home] || home.toLowerCase();
   for (let n = 1; n <= 6; n++) {
+    // NPB URL은 홈-원정 순서: /scores/2026/0616/t-l-03/box.html
     const path = `/scores/2026/${mmdd}/${homeCode}-${awayCode}-0${n}/box.html`;
     try {
       const boxHtml = await fetchUrl(`https://npb.jp${path}`);
@@ -785,7 +786,9 @@ const task = async () => {
           for (const g of finishedGames) {
             if (!g.allBatters) {
               console.log(`[scheduled-fetch] Fetching box: ${g.away}vs${g.home} mmdd=${yestMmdd}`);
-              const boxResult = await fetchBoxScore(g.away, g.home, yestMmdd).catch(e => { console.log('[fetchBoxScore] catch:', e.message); return null; });
+              // allGames의 away/home이 URL 순서와 다를 수 있으므로 양방향 시도
+              const boxResult = await fetchBoxScore(g.away, g.home, yestMmdd).catch(() => null)
+                || await fetchBoxScore(g.home, g.away, yestMmdd).catch(() => null);
               if (boxResult) {
                 g.winPitcher  = boxResult.winPitcher  || g.winPitcher;
                 g.losePitcher = boxResult.losePitcher || g.losePitcher;
