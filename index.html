@@ -1205,7 +1205,21 @@ const PLAYER_KO = {
   '大勢':'타이세이',
   '田中 瑛斗':'타나카 에이토',
   'レイノルズ':'레이놀즈',
-  // ── 2026.06.16 추가 ──
+
+  // ── 2026.06.17 팀 성적 기반 추가 ──
+  '井上 広大':'이노우에 코다이', '愛斗':'아이토', '岡田 雅利':'오카다 마사토시',
+  '五十幡 亮汰':'이소하타 료타', '古川 裕大':'후루카와 히로다이',
+  '田中 広輔':'타나카 히로스케', '會澤 翼':'아이자와 쓰바사',
+  '羽月 隆太郎':'하츠키 류타로', '桒原 樹':'쿠와바라 이츠키',
+  '太田 光':'오타 히카루', '丸山 和郁':'마루야마 카즈후미',
+  '西川 遥輝':'니시카와 하루키', '中山 礼都':'나카야마 레이토',
+  '増田 陸':'마스다 리쿠', '三好 大倫':'미요시 다이린',
+  '山本 泰寛':'야마모토 야스히로', '福元 悠真':'후쿠모토 유마',
+  '高橋 周平':'타카하시 슈헤이', '吉田 正尚':'요시다 마사타카',
+  '松川 虎生':'마츠카와 코키', '楠本 泰史':'쿠스모토 히로후미',
+  '蛯名 達夫':'에비나 타츠오', '大田 泰示':'오타 타이지',
+  '柴田 竜拓':'시바타 류타쿠',
+    // ── 2026.06.16 추가 ──
   '増田 珠':'마스다 타마',
   'オスナ':'오스나',
   '佐藤 直樹':'사토 나오키',
@@ -1313,10 +1327,11 @@ function renderTeamStatsTable(data, isBatter) {
     return '';
   }
 
+  const teamTableId = `stbl-team-${isBatter?'bat':'pit'}-${Date.now()}`;
+
   const thHTML = reorderedHeaders.map((h, i) => {
-    // 재배치 후 핵심지표는 index=2 (순위,선수명,핵심지표 순서)
     const isKey = i === 2;
-    return `<th style="${isKey ? 'color:var(--accent)' : ''}">${h}</th>`;
+    return `<th style="${isKey ? 'color:var(--accent)' : ''}" onclick="sortStatsTable('${teamTableId}',${i},${isBatter})" title="클릭하여 정렬">${h}</th>`;
   }).join('');
 
   const tbHTML = rows.map((r, ri) => {
@@ -1356,12 +1371,51 @@ function renderTeamStatsTable(data, isBatter) {
 
   return `<div class="card">
     <div class="stats-scroll">
-      <table class="stats-tbl">
+      <table class="stats-tbl" id="${teamTableId}">
         <thead><tr>${thHTML}</tr></thead>
         <tbody>${tbHTML}</tbody>
       </table>
     </div>
   </div>`;
+}
+
+// 정렬 상태 저장
+const SORT_STATE = {};
+
+function sortStatsTable(tableId, colIdx, isBatter) {
+  const state = SORT_STATE[tableId] || { col: -1, dir: 1 };
+  // 같은 컬럼 재클릭 시 방향 토글, 다른 컬럼은 기본 내림차순
+  const newDir = (state.col === colIdx) ? -state.dir : -1;
+  SORT_STATE[tableId] = { col: colIdx, dir: newDir };
+
+  const table = document.getElementById(tableId)?.querySelector('table');
+  if (!table) return;
+
+  // 헤더 클래스 업데이트
+  table.querySelectorAll('thead th').forEach((th, i) => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (i === colIdx) th.classList.add(newDir === 1 ? 'sort-asc' : 'sort-desc');
+  });
+
+  // 바디 행 정렬
+  const tbody = table.querySelector('tbody');
+  const rows = [...tbody.querySelectorAll('tr')];
+  rows.sort((a, b) => {
+    const av = a.querySelectorAll('td')[colIdx]?.textContent.trim() || '';
+    const bv = b.querySelectorAll('td')[colIdx]?.textContent.trim() || '';
+    const an = parseFloat(av), bn = parseFloat(bv);
+    if (!isNaN(an) && !isNaN(bn)) return (an - bn) * newDir;
+    return av.localeCompare(bv, 'ja') * newDir;
+  });
+  rows.forEach(r => tbody.appendChild(r));
+
+  // 순위 재번호 (첫 컬럼이 순위인 경우)
+  rows.forEach((r, i) => {
+    const firstTd = r.querySelector('td');
+    if (firstTd && /^\d+$/.test(firstTd.textContent.trim())) {
+      firstTd.textContent = i + 1;
+    }
+  });
 }
 
 function renderStatsTable(data, isBatter) {
@@ -1393,9 +1447,10 @@ function renderStatsTable(data, isBatter) {
     return '';
   }
 
+  const tableId = `stbl-${isBatter?'bat':'pit'}-${Date.now()}`;
   const thHTML = headers.map((h,i) => {
     const isKey = i === keyCol;
-    return `<th style="${isKey?'color:var(--accent)':''}">${h}</th>`;
+    return `<th style="${isKey?'color:var(--accent)':''}" onclick="sortStatsTable('${tableId}',${i},${isBatter})" title="클릭하여 정렬">${h}</th>`;
   }).join('');
 
   const tbHTML = rows.map((r, ri) => {
