@@ -4,7 +4,7 @@
 [functions]
   node_bundler = "esbuild"
 
-[functions."scheduled-fetch-bg"]
+[functions."scheduled-fetch-background"]
   schedule = "0 20 * * *"
 
 [[headers]]
