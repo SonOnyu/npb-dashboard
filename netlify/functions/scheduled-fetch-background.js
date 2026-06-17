@@ -318,15 +318,19 @@ function parseNPBStatsTable(html, isTeam = false) {
 
   const rows = [];
   const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let debugDone = false;
   while ((m = trRe.exec(target)) !== null) {
     const tds = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
     if (tds.length < 5) continue;
     const cells = tds.map((t, ci) => {
       const raw = t[1];
       const val = clean(raw);
-      // 리그 성적: 선수명 컬럼(ci=1)에서 * + 기호 보존
-      // NPB에서 *는 좌타/좌투, +는 양타로 HTML 내 별도 표기됨
       if (!isTeam && ci === 1) {
+        // 디버그: 첫 번째 선수명 raw HTML 출력
+        if (!debugDone) {
+          console.log('[parseNPBStatsTable] raw cell[1]:', raw.slice(0,200));
+          debugDone = true;
+        }
         const hasLeft   = raw.includes('*') || raw.includes('＊') || /class="[^"]*left/i.test(raw);
         const hasSwitch = raw.includes('+') || raw.includes('＋') || /class="[^"]*switch/i.test(raw);
         if (hasLeft)   return '*' + val;
