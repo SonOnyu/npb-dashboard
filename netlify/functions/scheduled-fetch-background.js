@@ -296,10 +296,11 @@ function parseNPBStatsTable(html, isTeam = false) {
 
   let target = null;
   if (isTeam) {
-    // 팀별 성적: '選手' 또는 '投手' 헤더가 있는 테이블
+    // 팀별 성적: '選手'(타자) 또는 '投手'(투수) 헤더가 있는 테이블
     for (const t of tables) {
-      if ((t.includes('選手') || t.includes('投手')) && t.includes('試合')) { target = t; break; }
+      if (t.includes('選手') || t.includes('投手')) { target = t; break; }
     }
+    if (!target) console.log('[parseNPBStatsTable] team: no table found. tables count:', tables.length, 'html snippet:', html.slice(0,200));
   } else {
     for (const t of tables) {
       if (/<td[^>]*>\s*1\s*<\/td>/i.test(t)) { target = t; break; }
@@ -322,8 +323,8 @@ function parseNPBStatsTable(html, isTeam = false) {
     if (tds.length < 5) continue;
     const cells = tds.map(t => clean(t[1]));
     if (isTeam) {
-      // 팀별: 첫 셀이 선수명(한자/가나 포함)이고 두 번째 셀이 숫자인 행
-      if (cells[0] && cells[0].length > 0 && /\d/.test(cells[1])) rows.push(cells);
+      // 팀별: 첫 셀이 선수/투수명이고 두 번째 셀이 숫자인 행
+      if (cells[0] && cells[0].replace(/^[*＊+＋\s]+/,'').trim().length > 0 && /^\d+$/.test(cells[1])) rows.push(cells);
     } else {
       if (/^\d+$/.test(cells[0])) rows.push(cells);
     }
