@@ -217,6 +217,7 @@ function parseStarters(html) {
 }
 
 // ── NPB 리그 성적 파싱 (npb-stats용) ──
+const TEAM_CODES = ['t','db','g','d','c','s','h','f','b','e','l','m'];
 const STAT_URLS = {
   bat_c: 'https://npb.jp/bis/2026/stats/bat_c.html',
   bat_p: 'https://npb.jp/bis/2026/stats/bat_p.html',
@@ -226,6 +227,11 @@ const STAT_URLS = {
   pit_inter: 'https://npb.jp/bis/2026/stats/pit_inter.html',
   bat_op: 'https://npb.jp/bis/2026/stats/bat_op.html',
   pit_op: 'https://npb.jp/bis/2026/stats/pit_op.html',
+  // 팀별 개인 성적
+  ...Object.fromEntries(TEAM_CODES.flatMap(tc => [
+    [`team_bat_${tc}`, `https://npb.jp/bis/2026/stats/idb1_${tc}.html`],
+    [`team_pit_${tc}`, `https://npb.jp/bis/2026/stats/idp1_${tc}.html`],
+  ])),
 };
 
 const STANDINGS_URLS = {
