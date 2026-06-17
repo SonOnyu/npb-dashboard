@@ -318,7 +318,6 @@ function parseNPBStatsTable(html, isTeam = false) {
 
   const rows = [];
   const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  let debugDone = false;
   while ((m = trRe.exec(target)) !== null) {
     const tds = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
     if (tds.length < 5) continue;
@@ -326,11 +325,6 @@ function parseNPBStatsTable(html, isTeam = false) {
       const raw = t[1];
       const val = clean(raw);
       if (!isTeam && ci === 1) {
-        // 디버그: 첫 번째 선수명 raw HTML 출력
-        if (!debugDone) {
-          console.log('[parseNPBStatsTable] raw cell[1]:', raw.slice(0,200));
-          debugDone = true;
-        }
         const hasLeft   = raw.includes('*') || raw.includes('＊') || /class="[^"]*left/i.test(raw);
         const hasSwitch = raw.includes('+') || raw.includes('＋') || /class="[^"]*switch/i.test(raw);
         if (hasLeft)   return '*' + val;
