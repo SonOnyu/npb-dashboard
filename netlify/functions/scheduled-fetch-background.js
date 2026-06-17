@@ -697,6 +697,12 @@ const task = async () => {
       }
     }
 
+    // allGames에도 수정된 점수 반영 (todayGamesRaw는 allGames의 참조가 아닌 filter 사본이므로 직접 업데이트)
+    for (const g of todayGamesRaw) {
+      const idx = allGames.findIndex(ag => ag.mmdd === g.mmdd && ag.home === g.home && ag.away === g.away);
+      if (idx >= 0) allGames[idx] = g;
+    }
+
     const gamesData = {
       mmdd, tmrMmdd,
       todayGames: todayGamesRaw,
