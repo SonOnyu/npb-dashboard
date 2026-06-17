@@ -321,9 +321,20 @@ function parseNPBStatsTable(html, isTeam = false) {
   while ((m = trRe.exec(target)) !== null) {
     const tds = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
     if (tds.length < 5) continue;
-    const cells = tds.map(t => clean(t[1]));
+    const cells = tds.map((t, ci) => {
+      const raw = t[1];
+      const val = clean(raw);
+      // 리그 성적: 선수명 컬럼(ci=1)에서 * + 기호 보존
+      // NPB에서 *는 좌타/좌투, +는 양타로 HTML 내 별도 표기됨
+      if (!isTeam && ci === 1) {
+        const hasLeft   = raw.includes('*') || raw.includes('＊') || /class="[^"]*left/i.test(raw);
+        const hasSwitch = raw.includes('+') || raw.includes('＋') || /class="[^"]*switch/i.test(raw);
+        if (hasLeft)   return '*' + val;
+        if (hasSwitch) return '+' + val;
+      }
+      return val;
+    });
     if (isTeam) {
-      // 팀별: 첫 셀이 선수/투수명이고 두 번째 셀이 숫자인 행
       if (cells[0] && cells[0].replace(/^[*＊+＋\s]+/,'').trim().length > 0 && /^\d+$/.test(cells[1])) rows.push(cells);
     } else {
       if (/^\d+$/.test(cells[0])) rows.push(cells);
