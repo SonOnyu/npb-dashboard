@@ -1272,16 +1272,22 @@ function renderTeamStatsTable(data, isBatter) {
     return `<div class="card"><div style="padding:40px;text-align:center;color:var(--muted)">데이터 없음</div></div>`;
   }
   const rawHeaders = data.headers || [];
-  const headers = ['순위', ...rawHeaders.map(h => translateHeader(h))];
 
-  // 선수명/투수명 컬럼 인덱스
+  // 핵심 지표 원래 인덱스
+  const keyJp = isBatter ? '打率' : '防御率';
   const playerIdx = rawHeaders.findIndex(h => h === '選手' || h === '投手' || h === '選手名');
   const safePlayerIdx = playerIdx >= 0 ? playerIdx : 0;
-
-  // 핵심 지표
-  const keyJp = isBatter ? '打率' : '防御率';
   const keyIdx = rawHeaders.findIndex(h => h === keyJp);
-  const keyCol = keyIdx >= 0 ? keyIdx + 1 : -1; // +1 for rank col
+
+  // 컬럼 순서 재배치: 타자=타율을 경기 앞으로, 투수=방어율을 등판 앞으로
+  // 원본 인덱스 배열을 만들어서 핵심지표를 맨앞(선수명 다음)으로 이동
+  let colOrder = rawHeaders.map((_, i) => i);
+  if (keyIdx > 0) {
+    colOrder = colOrder.filter(i => i !== keyIdx);
+    colOrder.splice(safePlayerIdx + 1, 0, keyIdx);
+  }
+
+  const reorderedHeaders = ['순위', ...colOrder.map(i => translateHeader(rawHeaders[i]))];
 
   // 정렬
   let rows = [...data.rows].filter(r => {
@@ -1312,8 +1318,9 @@ function renderTeamStatsTable(data, isBatter) {
     return '';
   }
 
-  const thHTML = headers.map((h, i) => {
-    const isKey = i === keyCol;
+  const thHTML = reorderedHeaders.map((h, i) => {
+    // 재배치 후 핵심지표는 index=2 (순위,선수명,핵심지표 순서)
+    const isKey = i === 2;
     return `<th style="${isKey ? 'color:var(--accent)' : ''}">${h}</th>`;
   }).join('');
 
@@ -1325,22 +1332,22 @@ function renderTeamStatsTable(data, isBatter) {
 
     const rankCell = `<td style="${medalStyle}border-radius:4px">${rank}</td>`;
 
-    const dataCells = r.map((v, ci) => {
+    const dataCells = colOrder.map((ci) => {
+      const v = r[ci] || '';
       if (ci === safePlayerIdx) {
-        // 선수명: *=좌타/좌투, +=양타
         const rawName = v.replace(/^[*＊+＋\s]+/,'').trim();
+        // 전각 스페이스 → 반각으로 정규화해서 PLAYER_KO 조회
+        const nameKey = rawName.replace(/\u3000/g, ' ').trim();
         const isLeft   = /^[*＊]/.test(v);
         const isSwitch = /^[+＋]/.test(v);
         const badge = isLeft
           ? `<span style="font-size:9px;background:rgba(64,180,255,0.2);color:#40b4ff;padding:1px 3px;border-radius:2px;margin-left:3px">${isBatter?'좌타':'좌투'}</span>`
           : isSwitch
           ? `<span style="font-size:9px;background:rgba(255,180,64,0.2);color:#e8c840;padding:1px 3px;border-radius:2px;margin-left:3px">양타</span>` : '';
-        const koName = PLAYER_KO[rawName] || PLAYER_KO[rawName.replace(/\s/g,'\u3000')] || '';
+        const koName = PLAYER_KO[nameKey] || PLAYER_KO[rawName] || '';
         return `<td>
-          <div>
-            <div style="font-size:13px;font-weight:500;white-space:nowrap">${rawName}${badge}</div>
-            ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
-          </div>
+          <div style="font-size:13px;font-weight:500;white-space:nowrap">${rawName}${badge}</div>
+          ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
         </td>`;
       }
       if (ci === keyIdx) {
@@ -1412,23 +1419,23 @@ function renderStatsTable(data, isBatter) {
         const nameMatch = v.match(/^(.+?)[\(（](.+?)[\)）]$/);
         const jpNameRaw = nameMatch ? nameMatch[1].trim() : v;
         const teamAbr = nameMatch ? nameMatch[2] : '';
-        const jpNameKey = jpNameRaw.replace(/[\u3000]/g, ' ').trim();
-        // *=좌타/좌투, +=양타 배지
-        const cleanName = jpNameKey.replace(/^[*＊+＋\s]+/,'').trim();
+        // *=좌타/좌투, +=양타 (괄호 앞에 붙는 경우)
+        const cleanName = jpNameRaw.replace(/^[*＊+＋\s]+/,'').trim();
+        const nameKey = cleanName.replace(/\u3000/g, ' ').trim();
         const isLeft   = /^[*＊]/.test(jpNameRaw);
         const isSwitch = /^[+＋]/.test(jpNameRaw);
         const handBadge = isLeft
           ? `<span style="font-size:9px;background:rgba(64,180,255,0.2);color:#40b4ff;padding:1px 3px;border-radius:2px;margin-left:3px">${isBatter?'좌타':'좌투'}</span>`
           : isSwitch
           ? `<span style="font-size:9px;background:rgba(255,180,64,0.2);color:#e8c840;padding:1px 3px;border-radius:2px;margin-left:3px">양타</span>` : '';
-        const koName = PLAYER_KO[cleanName] || PLAYER_KO[jpNameKey] || PLAYER_KO[jpNameRaw] || '';
+        const koName = PLAYER_KO[nameKey] || PLAYER_KO[cleanName] || PLAYER_KO[jpNameRaw] || '';
         const tkey = teamAbr ? teamKey(teamAbr) : null;
         const logoHtml = tkey ? logoImg(tkey,16) : '';
         return `<td>
           <div style="display:flex;align-items:center;gap:5px">
             ${logoHtml}
             <div>
-              <div style="font-size:13px;font-weight:500;white-space:nowrap">${cleanName}${teamAbr?`(${teamAbr})`:''}${handBadge}</div>
+              <div style="font-size:13px;font-weight:500;white-space:nowrap">${cleanName}${handBadge}</div>
               ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
             </div>
           </div>
