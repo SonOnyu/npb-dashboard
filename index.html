@@ -1582,6 +1582,7 @@ function showError(panelId, msg) {
    이전 경기 결과
 ══════════════════════════════════════ */
 let calYear, calMonth, calSelected = null, calInitialized = false;
+let calGameDays = {}; // dateStr → 'finished' | 'scheduled'
 let calCache = {}; // date → reviews
 
 async function renderPrevResults(data) {
