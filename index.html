@@ -116,23 +116,17 @@ body:not(.light) .vg{color:#4cde80}
 .stats-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .stats-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
 .stats-tbl thead th{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--text);padding:7px 6px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
-.stats-tbl thead th:nth-child(1){text-align:center;width:32px}
-.stats-tbl thead th:nth-child(2){text-align:left;min-width:140px}
+.stats-tbl thead th:nth-child(1){text-align:center;width:32px;min-width:32px}
+.stats-tbl thead th:nth-child(2){text-align:left;width:160px;min-width:160px}
+.stats-tbl thead th:not(:nth-child(1)):not(:nth-child(2)){min-width:42px;max-width:60px}
 .stats-tbl thead th:hover{color:var(--accent)}
 .stats-tbl thead th.sort-asc::after{content:' ▲';font-size:8px;color:var(--accent)}
 .stats-tbl thead th.sort-desc::after{content:' ▼';font-size:8px;color:var(--accent)}
 .stats-tbl tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s}
 .stats-tbl tbody tr:hover{background:var(--surface2)}
 .stats-tbl tbody td{padding:7px 6px;text-align:center;white-space:nowrap}
-/* 팀별 성적 테이블 — 순위 컬럼 없음, 선수명 첫번째 */
-.team-stats-tbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
-.team-stats-tbl thead th{font-size:11px;font-weight:700;color:var(--text);padding:6px 4px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;overflow:hidden}
-.team-stats-tbl thead th:first-child{text-align:left;width:110px}
-.team-stats-tbl thead th:not(:first-child){width:44px}
-.team-stats-tbl tbody tr{border-bottom:1px solid var(--border)}
-.team-stats-tbl tbody tr:hover{background:var(--surface2)}
-.team-stats-tbl tbody td{padding:5px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.team-stats-tbl tbody td:first-child{text-align:left}
+.stats-tbl tbody td:nth-child(2){text-align:left}
+/* 팀별 성적 — team-stats-tbl 제거, stats-tbl 통일 */
 .stats-tbl tbody td:nth-child(1){text-align:center;font-family:var(--fd);font-size:13px;font-weight:700;color:var(--muted)}
 .stats-tbl tbody td:nth-child(2){text-align:left;font-weight:500}
 .stats-tbl .top1{color:var(--accent);font-weight:700}
@@ -1234,6 +1228,7 @@ const HEADER_MAP = {
   'ＯＰＳ':'OPS','OPS':'OPS','得点圏':'득점권','失策':'실책',
   // 투수
   '投手':'투수','防御率':'방어율','登板':'등판','先発':'선발','完投':'완투','完封':'완봉',
+  '完封勝':'완봉승','無四球':'무사구','打者':'타자',
   'ＱＳ':'QS','QS':'QS','勝利':'승','敗戦':'패','ホールド':'홀드',
   'ＨＰ':'HP','HP':'HP','セーブ':'세이브','勝率':'승률','投球回':'투구이닝',
   '被安打':'피안타','被本塁打':'피홈런','奪三振':'탈삼진','奪三振率':'K/9',
@@ -1416,26 +1411,27 @@ function renderStatsTable(data, isBatter) {
         return `<td style="${medalStyle}border-radius:4px">${v}</td>`;
       }
       if (ci === 1) { // 선수명 — 일본어 + 한국어 서브텍스트 + 팀 로고
-        const nameMatch = v.match(/^(.+?)[\(（](.+?)[\)）]$/);
-        const jpNameRaw = nameMatch ? nameMatch[1].trim() : v;
-        const teamAbr = nameMatch ? nameMatch[2] : '';
-        // *=좌타/좌투, +=양타 (괄호 앞에 붙는 경우)
-        const cleanName = jpNameRaw.replace(/^[*＊+＋\s]+/,'').trim();
-        const nameKey = cleanName.replace(/\u3000/g, ' ').trim();
-        const isLeft   = /^[*＊]/.test(jpNameRaw);
-        const isSwitch = /^[+＋]/.test(jpNameRaw);
+        // v 예시: "*糸原　健斗(神)" 또는 "佐藤 輝明(神)"
+        const isLeft   = /^[*＊]/.test(v);
+        const isSwitch = /^[+＋]/.test(v);
+        // * + 제거 후 이름+팀 분리
+        const vClean = v.replace(/^[*＊+＋\s]+/,'').trim();
+        const nameMatch = vClean.match(/^(.+?)[\(（](.+?)[\)）]$/);
+        const jpNameRaw = nameMatch ? nameMatch[1].trim() : vClean;
+        const teamAbr   = nameMatch ? nameMatch[2] : '';
+        const nameKey   = jpNameRaw.replace(/\u3000/g, ' ').trim();
         const handBadge = isLeft
           ? `<span style="font-size:9px;background:rgba(64,180,255,0.2);color:#40b4ff;padding:1px 3px;border-radius:2px;margin-left:3px">${isBatter?'좌타':'좌투'}</span>`
           : isSwitch
           ? `<span style="font-size:9px;background:rgba(255,180,64,0.2);color:#e8c840;padding:1px 3px;border-radius:2px;margin-left:3px">양타</span>` : '';
-        const koName = PLAYER_KO[nameKey] || PLAYER_KO[cleanName] || PLAYER_KO[jpNameRaw] || '';
+        const koName = PLAYER_KO[nameKey] || PLAYER_KO[jpNameRaw] || '';
         const tkey = teamAbr ? teamKey(teamAbr) : null;
         const logoHtml = tkey ? logoImg(tkey,16) : '';
         return `<td>
           <div style="display:flex;align-items:center;gap:5px">
             ${logoHtml}
             <div>
-              <div style="font-size:13px;font-weight:500;white-space:nowrap">${cleanName}${handBadge}</div>
+              <div style="font-size:13px;font-weight:500;white-space:nowrap">${jpNameRaw}${handBadge}</div>
               ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
             </div>
           </div>
