@@ -1700,7 +1700,9 @@ async function showDayResults(games, dateStr, mmdd) {
   const [y,m,d] = dateStr.split('-');
   const label = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 · ${games.length}경기`;
   const REVIEW_CUTOFF = '2026-06-16';
-  const reviewAvailable = dateStr >= REVIEW_CUTOFF;
+  // 종료된 경기가 있을 때만 리뷰 표시
+  const hasFinished = games.some(g => g.status === 'finished');
+  const reviewAvailable = dateStr >= REVIEW_CUTOFF && hasFinished;
 
   // 카드 그리드 (다음경기 분석과 동일한 2열 구조)
   container.innerHTML = `
