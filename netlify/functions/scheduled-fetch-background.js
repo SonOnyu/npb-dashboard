@@ -682,32 +682,30 @@ const task = async () => {
     console.log('[scheduled-fetch] Starters today:', JSON.stringify(startersToday));
     console.log('[scheduled-fetch] Starters tmr:', JSON.stringify(startersTmr));
 
-    // 오늘 경기 중 status=scheduled인 경우 스코어보드에서 실제 결과 확인
-    for (const g of todayGamesRaw) {
-      if (g.status === 'scheduled') {
-        const result = await fetchGameScore(g.away, g.home, mmdd);
-        if (result) {
-          g.status = 'finished';
-          g.awayScore = result.awayScore;
-          g.homeScore = result.homeScore;
-          if (result.winPitcher) g.winPitcher = result.winPitcher;
-          if (result.losePitcher) g.losePitcher = result.losePitcher;
-          if (result.path) g.path = result.path;
-          console.log(`[scheduled-fetch] Score updated: ${g.away} ${g.awayScore}-${g.homeScore} ${g.home} (${result.path})`);
-        }
+    // 오늘 경기 + allGames의 최근 finished 경기 스코어보드로 정확한 점수 업데이트
+    const yesterday = subDay(mmdd);
+    const gamesToCheck = allGames.filter(g =>
+      (g.mmdd === mmdd && g.status === 'scheduled') ||
+      (g.mmdd === yesterday && g.status === 'finished')
+    );
+    for (const g of gamesToCheck) {
+      const targetMmdd = g.mmdd;
+      const result = await fetchGameScore(g.away, g.home, targetMmdd);
+      if (result) {
+        g.status = 'finished';
+        g.awayScore = result.awayScore;
+        g.homeScore = result.homeScore;
+        if (result.winPitcher) g.winPitcher = result.winPitcher;
+        if (result.losePitcher) g.losePitcher = result.losePitcher;
+        if (result.path) g.path = result.path;
+        console.log(`[scheduled-fetch] Score updated: ${g.away} ${g.awayScore}-${g.homeScore} ${g.home}`);
       }
-    }
-
-    // allGames에도 수정된 점수 반영 (todayGamesRaw는 allGames의 참조가 아닌 filter 사본이므로 직접 업데이트)
-    for (const g of todayGamesRaw) {
-      const idx = allGames.findIndex(ag => ag.mmdd === g.mmdd && ag.home === g.home && ag.away === g.away);
-      if (idx >= 0) allGames[idx] = g;
     }
 
     const gamesData = {
       mmdd, tmrMmdd,
-      todayGames: todayGamesRaw,
-      tomorrowGames: tmrGames,
+      todayGames: allGames.filter(g => g.mmdd === mmdd),
+      tomorrowGames: allGames.filter(g => g.mmdd === tmrMmdd),
       starters,
       allGames,
       updatedAt: new Date().toISOString(),
