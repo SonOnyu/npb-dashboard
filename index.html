@@ -1632,12 +1632,22 @@ function renderCalendar(yyyy, mm) {
     const isSel   = dateStr === calSelected;
     const dow = (firstDow+d-1)%7;
     const col = dow===0?'color:#e85c40;':dow===6?'color:#3d9cf0;':'';
+    const gameStatus = calGameDays[dateStr]; // 'finished' | 'scheduled' | undefined
+    const isScheduledOnly = gameStatus === 'scheduled';
+    const isClickable = gameStatus === 'finished';
+
     let cls = 'cal-day';
-    if (future) cls += ' cal-future';
+    if (future || isScheduledOnly) cls += ' cal-future'; // 딤드
     if (isToday) cls += ' today-marker';
-    if (isSel)   cls += ' selected';
-    const click = !future ? `onclick="calSelectDate('${dateStr}')"` : '';
-    h += `<div class="${cls}" ${click} style="${col}">${d}</div>`;
+    if (isSel && isClickable) cls += ' selected';
+    const click = isClickable ? `onclick="calSelectDate('${dateStr}')"` : '';
+    // 경기 있는 날 마킹
+    const dot = gameStatus === 'finished'
+      ? `<span style="display:block;width:4px;height:4px;background:var(--accent);border-radius:50%;margin:1px auto 0"></span>`
+      : gameStatus === 'scheduled'
+      ? `<span style="display:block;width:4px;height:4px;background:var(--muted);border-radius:50%;margin:1px auto 0;opacity:0.4"></span>`
+      : '';
+    h += `<div class="${cls}" ${click} style="${col}">${d}${dot}</div>`;
   }
   h += `</div></div>`;
   const el = document.getElementById('cal-container');
@@ -1653,7 +1663,11 @@ async function loadCalMonth(yyyy, mm) {
     if (data.byDate) {
       Object.keys(data.byDate).forEach(mmdd => {
         const mo = mmdd.slice(0,2), dd = mmdd.slice(2,4);
-        calGameDays[`${yyyy}-${mo}-${dd}`] = true;
+        const dateKey = `${yyyy}-${mo}-${dd}`;
+        const games = data.byDate[mmdd];
+        // 하나라도 finished면 활성, 전부 scheduled면 딤드
+        const hasFinished = games.some(g => g.status === 'finished');
+        calGameDays[dateKey] = hasFinished ? 'finished' : 'scheduled';
       });
       renderCalendar(yyyy, mm);
     }
