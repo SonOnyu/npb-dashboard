@@ -155,8 +155,9 @@ function parseSchedule(html) {
       games.push({
         mmdd: curMmdd, date: `2026-${curMmdd.slice(0,2)}-${curMmdd.slice(2,4)}`,
         away: URL_TEAM[awayC]||awayC.toUpperCase(), home: URL_TEAM[homeC]||homeC.toUpperCase(),
-        awayScore: scoreM&&!cancelled?parseInt(scoreM[1]):null,
-        homeScore: scoreM&&!cancelled?parseInt(scoreM[2]):null,
+        // 스케줄 HTML의 스코어는 홈-원정 순서 (URL과 동일: 홈팀-원정팀)
+        homeScore: scoreM&&!cancelled?parseInt(scoreM[1]):null,
+        awayScore: scoreM&&!cancelled?parseInt(scoreM[2]):null,
         venue: venueM?venueM[1]:null, time: timeM?timeM[1]:'18:00',
         status: cancelled?'cancelled':scoreM?'finished':'scheduled', cancelled,
         winPitcher: wpM?wpM[1]:'', losePitcher: lpM?lpM[1]:'',
