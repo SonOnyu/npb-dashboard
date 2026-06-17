@@ -124,6 +124,15 @@ body:not(.light) .vg{color:#4cde80}
 .stats-tbl tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s}
 .stats-tbl tbody tr:hover{background:var(--surface2)}
 .stats-tbl tbody td{padding:7px 6px;text-align:center;white-space:nowrap}
+/* 팀별 성적 테이블 — 순위 컬럼 없음, 선수명 첫번째 */
+.team-stats-tbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+.team-stats-tbl thead th{font-size:11px;font-weight:700;color:var(--text);padding:6px 4px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;overflow:hidden}
+.team-stats-tbl thead th:first-child{text-align:left;width:110px}
+.team-stats-tbl thead th:not(:first-child){width:44px}
+.team-stats-tbl tbody tr{border-bottom:1px solid var(--border)}
+.team-stats-tbl tbody tr:hover{background:var(--surface2)}
+.team-stats-tbl tbody td{padding:5px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team-stats-tbl tbody td:first-child{text-align:left}
 .stats-tbl tbody td:nth-child(1){text-align:center;font-family:var(--fd);font-size:13px;font-weight:700;color:var(--muted)}
 .stats-tbl tbody td:nth-child(2){text-align:left;font-weight:500}
 .stats-tbl .top1{color:var(--accent);font-weight:700}
@@ -1262,37 +1271,58 @@ function renderTeamStatsTable(data, isBatter) {
   if (!data || !data.rows || data.rows.length === 0) {
     return `<div class="card"><div style="padding:40px;text-align:center;color:var(--muted)">데이터 없음</div></div>`;
   }
-  const headers = data.headers || [];
-  const rows = data.rows;
+  const rawHeaders = data.headers || [];
+  // 한국어 헤더 매핑
+  const headers = rawHeaders.map(h => HEADER_MAP[h] || h);
 
-  // 핵심 지표 컬럼 인덱스 (타율=2, 방어율=2)
-  const keyIdx = 2;
-  const keyVals = rows.map(r => parseFloat(r[keyIdx])).filter(v => !isNaN(v));
+  // 선수명 컬럼 인덱스
+  const playerIdx = rawHeaders.findIndex(h => h === '選手' || h === '投手') || 0;
+  // 핵심 지표 컬럼: 타자=타율(打率), 투수=방어율(防御率)
+  const keyJp = isBatter ? '打率' : '防御率';
+  const keyIdx = rawHeaders.findIndex(h => h === keyJp);
+
+  // 정렬: 타자=타율 내림차순, 투수=방어율 오름차순
+  let rows = [...data.rows];
+  if (keyIdx >= 0) {
+    rows = rows
+      .filter(r => r[playerIdx] && r[playerIdx].trim())
+      .sort((a, b) => {
+        const av = parseFloat(a[keyIdx]) || 0;
+        const bv = parseFloat(b[keyIdx]) || 0;
+        return isBatter ? bv - av : av - bv;
+      });
+  }
+
+  // 핵심 지표 percentile 계산
+  const keyVals = rows.map(r => parseFloat(r[keyIdx])).filter(v => !isNaN(v) && v > 0);
   const keyMin = Math.min(...keyVals), keyMax = Math.max(...keyVals);
   const keyRange = keyMax - keyMin || 1;
 
-  const playerIdx = headers.findIndex(h => h === '選手') ?? 0;
-
   const rowsHtml = rows.map((r, ri) => {
-    const playerName = r[playerIdx] || r[0] || '';
-    const ko = PLAYER_KO[playerName] || PLAYER_KO[playerName.replace(/\s/g,'\u3000')] || '';
-    const keyVal = parseFloat(r[keyIdx]);
-    let keyStyle = '';
-    if (!isNaN(keyVal) && keyRange > 0) {
-      const pct = isBatter
-        ? (keyVal - keyMin) / keyRange
-        : 1 - (keyVal - keyMin) / keyRange;
-      const r2 = Math.round(255 - pct * 180);
-      const g2 = Math.round(100 + pct * 120);
-      keyStyle = `background:rgba(${r2},${g2},80,0.18);font-weight:700`;
-    }
+    const rawName = (r[playerIdx] || r[0] || '').replace(/^[*＊+＋\s]+/, '').trim();
+    const isLeft   = (r[playerIdx] || '').startsWith('*') || (r[playerIdx] || '').startsWith('＊');
+    const isSwitch = (r[playerIdx] || '').startsWith('+') || (r[playerIdx] || '').startsWith('＋');
+    const badge = isLeft   ? `<span style="font-size:9px;background:rgba(64,180,255,0.2);color:#40b4ff;padding:1px 3px;border-radius:2px;margin-left:3px">좌</span>`
+                : isSwitch ? `<span style="font-size:9px;background:rgba(255,180,64,0.2);color:#e8c840;padding:1px 3px;border-radius:2px;margin-left:3px">양</span>` : '';
+    const ko = PLAYER_KO[rawName] || PLAYER_KO[rawName.replace(/\s/g,'\u3000')] || '';
+
     const cells = r.map((c, ci) => {
       const isPlayer = ci === playerIdx;
       const isKey = ci === keyIdx;
-      if (isPlayer) {
-        return `<td><div style="font-size:12px;font-weight:600">${c}</div>${ko?`<div style="font-size:10px;color:var(--muted)">${ko}</div>`:''}</td>`;
+      let keyStyle = '';
+      if (isKey) {
+        const val = parseFloat(c);
+        if (!isNaN(val) && keyRange > 0) {
+          const pct = isBatter ? (val - keyMin) / keyRange : 1 - (val - keyMin) / keyRange;
+          const r2 = Math.round(255 - pct * 180);
+          const g2 = Math.round(100 + pct * 120);
+          keyStyle = `background:rgba(${r2},${g2},80,0.18);font-weight:700`;
+        }
       }
-      return `<td style="${isKey?keyStyle:''}">${c}</td>`;
+      if (isPlayer) {
+        return `<td><div style="font-size:12px;font-weight:600">${rawName}${badge}</div>${ko?`<div style="font-size:10px;color:var(--muted)">${ko}</div>`:''}</td>`;
+      }
+      return `<td style="${keyStyle}">${c}</td>`;
     }).join('');
     return `<tr style="${ri%2===0?'':'background:rgba(255,255,255,0.02)'}">${cells}</tr>`;
   }).join('');
@@ -1300,7 +1330,7 @@ function renderTeamStatsTable(data, isBatter) {
   const headersHtml = headers.map(h => `<th>${h}</th>`).join('');
 
   return `<div class="card" style="overflow-x:auto;padding:0">
-    <table class="stats-tbl" style="width:100%">
+    <table class="team-stats-tbl">
       <thead><tr>${headersHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
