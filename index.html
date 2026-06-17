@@ -114,7 +114,7 @@ body.light .r2 td:nth-child(1){color:#888!important}
 body:not(.light) .vg{color:#4cde80}
 
 /* STATS TABLE — wide scroll */
-.stats-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.stats-scroll{overflow-x:auto;overflow-y:auto;max-height:70vh;-webkit-overflow-scrolling:touch}
 .stats-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
 .stats-tbl thead th{font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--text);padding:7px 6px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface);z-index:2}
 .stats-tbl thead th:nth-child(1){text-align:center;width:32px;min-width:32px}
@@ -1681,15 +1681,26 @@ function sortStatsTable(tableId, colIdx, isBatter) {
   const newDir = (state.col === colIdx) ? -state.dir : -1;
   SORT_STATE[tableId] = { col: colIdx, dir: newDir };
 
-  // 헤더 클래스 + 색상 업데이트
   const ths = [...table.querySelectorAll('thead th')];
+
+  // 헤더: 모든 th 색상 초기화 후 정렬 표시
   ths.forEach((th, i) => {
     th.classList.remove('sort-asc','sort-desc');
-    // 기존 핵심지표 색상 유지 (accent), 정렬 컬럼은 추가 표시
-    if (i === colIdx) th.classList.add(newDir === 1 ? 'sort-asc' : 'sort-desc');
+    th.style.color = ''; // 이전 accent 색 제거
+  });
+  if (ths[colIdx]) {
+    ths[colIdx].classList.add(newDir === 1 ? 'sort-asc' : 'sort-desc');
+    ths[colIdx].style.color = 'var(--accent)';
+  }
+
+  // 모든 td 그라데이션 초기화
+  table.querySelectorAll('tbody td').forEach(td => {
+    td.style.background = '';
+    td.style.color = '';
+    td.style.fontWeight = '';
   });
 
-  // 바디 행 정렬
+  // 행 정렬
   const tbody = table.querySelector('tbody');
   const rows = [...tbody.querySelectorAll('tr')];
   rows.sort((a, b) => {
@@ -1704,17 +1715,13 @@ function sortStatsTable(tableId, colIdx, isBatter) {
   // 순위 재번호
   rows.forEach((r, i) => {
     const firstTd = r.querySelector('td');
-    if (firstTd && /^\d+$/.test(firstTd.textContent.trim())) {
-      firstTd.textContent = i + 1;
-    }
+    if (firstTd && /^\d+$/.test(firstTd.textContent.trim())) firstTd.textContent = i + 1;
   });
 
-  // 정렬 컬럼 percentile 그라데이션 재적용
+  // 정렬 컬럼 percentile 그라데이션
   const vals = rows.map(r => parseFloat(r.querySelectorAll('td')[colIdx]?.textContent || '')).filter(v => !isNaN(v) && v > 0);
   if (vals.length > 1) {
     const mn = Math.min(...vals), mx = Math.max(...vals), range = mx - mn || 1;
-    // 타자: 높을수록 좋음 / 투수: 낮을수록 좋음 (방어율 등)
-    // colIdx=0은 순위라 스킵
     rows.forEach(r => {
       const td = r.querySelectorAll('td')[colIdx];
       if (!td) return;
@@ -1722,10 +1729,7 @@ function sortStatsTable(tableId, colIdx, isBatter) {
       if (isNaN(v)) return;
       let pct = (v - mn) / range;
       if (!isBatter) pct = 1 - pct;
-      td.style.background = '';
-      td.style.color = '';
-      td.style.fontWeight = '';
-      if (pct >= 0.8) { td.style.background='rgba(76,222,128,0.22)'; td.style.color='#3fae5e'; td.style.fontWeight='700'; }
+      if (pct >= 0.8)      { td.style.background='rgba(76,222,128,0.22)'; td.style.color='#3fae5e'; td.style.fontWeight='700'; }
       else if (pct >= 0.6) { td.style.background='rgba(76,222,128,0.10)'; td.style.fontWeight='600'; }
       else if (pct <= 0.2) { td.style.background='rgba(232,92,64,0.20)'; td.style.color='#e85c40'; td.style.fontWeight='700'; }
       else if (pct <= 0.4) { td.style.background='rgba(232,92,64,0.08)'; }
