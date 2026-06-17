@@ -1,6 +1,5 @@
 // 매일 KST 05:00 (UTC 20:00) 자동 실행
 // NPB 공식에서 데이터 수집 → Netlify Blobs에 저장
-const { schedule } = require('@netlify/functions');
 const { getStore } = require('@netlify/blobs');
 
 function npbStore() {
