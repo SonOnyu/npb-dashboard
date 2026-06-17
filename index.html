@@ -1257,6 +1257,56 @@ function teamKey(name) {
   return null;
 }
 
+// 팀별 개인 성적 테이블 렌더러 (순위 없음, 선수명 첫 컬럼)
+function renderTeamStatsTable(data, isBatter) {
+  if (!data || !data.rows || data.rows.length === 0) {
+    return `<div class="card"><div style="padding:40px;text-align:center;color:var(--muted)">데이터 없음</div></div>`;
+  }
+  const headers = data.headers || [];
+  const rows = data.rows;
+
+  // 핵심 지표 컬럼 인덱스 (타율=2, 방어율=2)
+  const keyIdx = 2;
+  const keyVals = rows.map(r => parseFloat(r[keyIdx])).filter(v => !isNaN(v));
+  const keyMin = Math.min(...keyVals), keyMax = Math.max(...keyVals);
+  const keyRange = keyMax - keyMin || 1;
+
+  const playerIdx = headers.findIndex(h => h === '選手') ?? 0;
+
+  const rowsHtml = rows.map((r, ri) => {
+    const playerName = r[playerIdx] || r[0] || '';
+    const ko = PLAYER_KO[playerName] || PLAYER_KO[playerName.replace(/\s/g,'\u3000')] || '';
+    const keyVal = parseFloat(r[keyIdx]);
+    let keyStyle = '';
+    if (!isNaN(keyVal) && keyRange > 0) {
+      const pct = isBatter
+        ? (keyVal - keyMin) / keyRange
+        : 1 - (keyVal - keyMin) / keyRange;
+      const r2 = Math.round(255 - pct * 180);
+      const g2 = Math.round(100 + pct * 120);
+      keyStyle = `background:rgba(${r2},${g2},80,0.18);font-weight:700`;
+    }
+    const cells = r.map((c, ci) => {
+      const isPlayer = ci === playerIdx;
+      const isKey = ci === keyIdx;
+      if (isPlayer) {
+        return `<td><div style="font-size:12px;font-weight:600">${c}</div>${ko?`<div style="font-size:10px;color:var(--muted)">${ko}</div>`:''}</td>`;
+      }
+      return `<td style="${isKey?keyStyle:''}">${c}</td>`;
+    }).join('');
+    return `<tr style="${ri%2===0?'':'background:rgba(255,255,255,0.02)'}">${cells}</tr>`;
+  }).join('');
+
+  const headersHtml = headers.map(h => `<th>${h}</th>`).join('');
+
+  return `<div class="card" style="overflow-x:auto;padding:0">
+    <table class="stats-tbl" style="width:100%">
+      <thead><tr>${headersHtml}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>`;
+}
+
 function renderStatsTable(data, isBatter) {
   if (!data || !data.rows || data.rows.length === 0) {
     return `<div class="card"><div style="padding:40px;text-align:center;color:var(--muted)">데이터 없음 (규정 미달 선수 없음)</div></div>`;
@@ -1487,7 +1537,8 @@ async function loadTeamStats(teamCode, type) {
     const res  = await fetch(`${API}?type=${key}`);
     const data = await res.json();
     if (data.headers && data.rows) {
-      const html = renderStatsTable(data.headers, data.rows, type);
+      const isBatter = type === 'bat';
+      const html = renderTeamStatsTable(data, isBatter);
       teamStatsCache[key] = html;
       panel.innerHTML = html;
     } else {
