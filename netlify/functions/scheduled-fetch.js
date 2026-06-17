@@ -67,6 +67,11 @@ function addDay(mmdd) {
   const dt = new Date(2026, m-1, d+1);
   return String(dt.getMonth()+1).padStart(2,'0') + String(dt.getDate()).padStart(2,'0');
 }
+function subDay(mmdd) {
+  const m = parseInt(mmdd.slice(0,2)), d = parseInt(mmdd.slice(2,4));
+  const dt = new Date(2026, m-1, d-1);
+  return String(dt.getMonth()+1).padStart(2,'0') + String(dt.getDate()).padStart(2,'0');
+}
 
 // ── 스케줄 페이지 파싱 — 예고선발도 함께 추출 ──
 function parseSchedule(html) {
@@ -692,7 +697,7 @@ const task = async () => {
   }
 
   // ── 3. 다음 경기 AI 예측 분석 ──
-  // 오늘 경기가 아직 예정 중이면 오늘 경기를, 아니면 내일 경기를 분석
+  // ── 3. 다음 경기 AI 예측 분석 ──
   let predictRanThisRun = false;
   try {
     const gamesData = await store.get('games', { type: 'json' });
@@ -714,7 +719,7 @@ const task = async () => {
               tmrMmdd: targetMmdd, analyses, savedAt: new Date().toISOString(),
             });
             console.log(`[scheduled-fetch] Predict analysis saved: ${analyses.length} games`);
-            predictRanThisRun = true; // predict 새로 실행됨 → review 건너뜀
+            predictRanThisRun = true;
           } else {
             console.error('[scheduled-fetch] Predict analysis JSON parse failed');
           }
@@ -727,47 +732,43 @@ const task = async () => {
     console.error('[scheduled-fetch] Predict analysis failed:', e.message);
   }
 
-  // ── 4. 오늘(어제 기준) 경기 결과 리뷰 분석 ──
-  // predict가 이번 실행에서 새로 생성됐으면 타임아웃 방지를 위해 review는 건너뜀
-  if (predictRanThisRun) {
-    console.log('[scheduled-fetch] Predict was just generated, skipping review this run.');
-  } else {
-    try {
-      const gamesData = await store.get('games', { type: 'json' });
-      if (gamesData && gamesData.todayGames && gamesData.todayGames.length > 0) {
-        const finishedGames = gamesData.todayGames.filter(g => g.status === 'finished');
-        if (finishedGames.length > 0) {
-          const existingReview = await store.get('review-analysis', { type: 'json' });
-          if (!existingReview || existingReview.mmdd !== gamesData.mmdd) {
-            const predictCache = await store.get('predict-analysis', { type: 'json' });
-            const predictions = (predictCache && predictCache.tmrMmdd === gamesData.mmdd)
-              ? predictCache.analyses : [];
-            console.log(`[scheduled-fetch] Running review analysis for ${finishedGames.length} games...`);
-            const prompt = buildReviewPrompt(predictions, finishedGames);
-            const raw = await callClaude(prompt);
-            const reviews = parseAIJson(raw);
-            if (reviews) {
-              await store.setJSON('review-analysis', {
-                mmdd: gamesData.mmdd, reviews, savedAt: new Date().toISOString(),
-              });
-              console.log(`[scheduled-fetch] Review analysis saved: ${reviews.length} games`);
-            } else {
-              console.error('[scheduled-fetch] Review analysis JSON parse failed');
-            }
+  // ── 4. 어제 경기 결과 리뷰 분석 ──
+  try {
+    const gamesData = await store.get('games', { type: 'json' });
+    if (gamesData) {
+      const yestMmdd = subDay(gamesData.mmdd);
+      const finishedGames = (gamesData.allGames || []).filter(g => g.mmdd === yestMmdd && g.status === 'finished');
+      if (finishedGames.length > 0) {
+        const existingReview = await store.get('review-analysis', { type: 'json' });
+        if (!existingReview || existingReview.mmdd !== yestMmdd) {
+          const predictCache = await store.get('predict-analysis', { type: 'json' });
+          const predictions = (predictCache && predictCache.tmrMmdd === yestMmdd)
+            ? predictCache.analyses : [];
+          console.log(`[scheduled-fetch] Running review analysis for ${finishedGames.length} games (${yestMmdd})...`);
+          const prompt = buildReviewPrompt(predictions, finishedGames);
+          const raw = await callClaude(prompt);
+          const reviews = parseAIJson(raw);
+          if (reviews) {
+            await store.setJSON('review-analysis', {
+              mmdd: yestMmdd, reviews, savedAt: new Date().toISOString(),
+            });
+            console.log(`[scheduled-fetch] Review analysis saved: ${reviews.length} games`);
           } else {
-            console.log('[scheduled-fetch] Review analysis already up to date');
+            console.error('[scheduled-fetch] Review analysis JSON parse failed');
           }
+        } else {
+          console.log('[scheduled-fetch] Review analysis already up to date');
         }
+      } else {
+        console.log(`[scheduled-fetch] No finished games for review (${yestMmdd})`);
       }
-    } catch(e) {
-      console.error('[scheduled-fetch] Review analysis failed:', e.message);
     }
+  } catch(e) {
+    console.error('[scheduled-fetch] Review analysis failed:', e.message);
   }
 
   console.log('[scheduled-fetch] Done.');
 };
 
 // KST 05:00 = UTC 20:00
-// KST 12:35 = UTC 03:35
-// KST 16:35 = UTC 07:35
-module.exports.handler = schedule('35 3,7,20 * * *', task);
+module.exports.handler = schedule('0 20 * * *', task);
