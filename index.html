@@ -1794,8 +1794,9 @@ function openReviewModal(idx) {
 
   document.getElementById('ai-modal-body').innerHTML =
     (rv.highlight ? `<div style="padding:10px 12px;background:var(--surface2);border-radius:6px;font-size:13px;margin-bottom:12px">${fmt(rv.highlight)}</div>` : '') +
-    (rv.hitAnalysis   ? sLabel('✅ 예측 적중 근거') + sText(rv.hitAnalysis)   : '') +
-    (rv.missAnalysis  ? sLabel('❌ 예측 미스 원인') + sText(rv.missAnalysis)  : '') +
+    (rv.gameFlow      ? sLabel('⚾ 경기 흐름')          + sText(rv.gameFlow)      : '') +
+    (rv.hitAnalysis   ? sLabel('✅ 예측 적중 근거')     + sText(rv.hitAnalysis)   : '') +
+    (rv.missAnalysis  ? sLabel('❌ 예측 미스 원인')     + sText(rv.missAnalysis)  : '') +
     (rv.unexpectedEvents ? sLabel('⚡ 예상치 못한 변수') + sText(rv.unexpectedEvents) : '');
 
   document.getElementById('ai-modal-overlay').classList.add('open');
