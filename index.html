@@ -1704,7 +1704,6 @@ async function renderPrevResults(data) {
     const now = new Date();
     calYear = now.getFullYear(); calMonth = now.getMonth()+1;
     calInitialized = true;
-    // 스케줄 로드로 경기 있는 날 마킹
     await loadCalMonth(calYear, calMonth);
   }
   // 오늘 결과 자동 표시 — 종료된 경기만
@@ -1716,8 +1715,20 @@ async function renderPrevResults(data) {
     renderCalendar(calYear, calMonth);
     await showDayResults(todayFinished, dateStr, data.mmdd);
   } else {
-    document.getElementById('results-container').innerHTML =
-      `<div style="text-align:center;padding:40px;color:var(--muted)">오늘 종료된 경기가 없습니다.<br><span style="font-size:12px">날짜를 선택하면 이전 경기 결과를 볼 수 있습니다.</span></div>`;
+    // 가장 최근 finished 날짜 자동 선택
+    const latestFinished = Object.entries(calGameDays)
+      .filter(([, status]) => status === 'finished')
+      .map(([d]) => d)
+      .sort()
+      .reverse()[0];
+    if (latestFinished) {
+      calSelected = latestFinished;
+      renderCalendar(calYear, calMonth);
+      await calSelectDate(latestFinished);
+    } else {
+      document.getElementById('results-container').innerHTML =
+        `<div style="text-align:center;padding:40px;color:var(--muted)">오늘 종료된 경기가 없습니다.<br><span style="font-size:12px">날짜를 선택하면 이전 경기 결과를 볼 수 있습니다.</span></div>`;
+    }
   }
 }
 
