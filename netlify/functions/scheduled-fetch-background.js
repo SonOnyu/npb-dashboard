@@ -296,9 +296,9 @@ function parseNPBStatsTable(html, isTeam = false) {
 
   let target = null;
   if (isTeam) {
-    // 팀별 성적: '選手' 헤더가 있는 테이블
+    // 팀별 성적: '選手' 또는 '投手' 헤더가 있는 테이블
     for (const t of tables) {
-      if (t.includes('選手') && t.includes('試合')) { target = t; break; }
+      if ((t.includes('選手') || t.includes('投手')) && t.includes('試合')) { target = t; break; }
     }
   } else {
     for (const t of tables) {
@@ -703,12 +703,10 @@ const task = async () => {
     // 오늘 경기 + allGames의 최근 finished 경기 스코어보드로 정확한 점수 업데이트
     const yesterday = subDay(mmdd);
     const gamesToCheck = allGames.filter(g =>
-      (g.mmdd === mmdd && g.status === 'scheduled') ||
-      (g.mmdd === yesterday && g.status === 'finished')
+      g.mmdd === mmdd && g.status === 'scheduled'
     );
     for (const g of gamesToCheck) {
-      const targetMmdd = g.mmdd;
-      const result = await fetchGameScore(g.away, g.home, targetMmdd);
+      const result = await fetchGameScore(g.away, g.home, mmdd);
       if (result) {
         g.status = 'finished';
         g.awayScore = result.awayScore;
