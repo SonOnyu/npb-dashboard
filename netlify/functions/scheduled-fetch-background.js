@@ -589,24 +589,19 @@ async function fetchBoxScore(away, home, mmdd) {
       if (!html.includes('試合終了')) { continue; }
       console.log(`[fetchBoxScore] ${path}: len=${html.length} hasEnd=true`);
 
-      // 승투(○)/패전(●)/세이브(S) 투수 파싱
-      // 패턴: | ○ | [武内](url) | 또는 HTML <td>○</td><td><a href="...">武内</a></td>
-      const wpM = html.match(/[|｜]\s*○\s*[|｜]\s*<a[^>]+>([^<]+)<\/a>/);
-      const lpM = html.match(/[|｜]\s*●\s*[|｜]\s*<a[^>]+>([^<]+)<\/a>/);
-      const svM = html.match(/[|｜]\s*S\s*[|｜]\s*<a[^>]+>([^<]+)<\/a>/);
+      // 승투(○)/패전(●)/세이브(S) 투수 — raw HTML 패턴
+      // <td>○</td> 다음 <td><a href="...">武内</a>...</td>
+      const wpM = html.match(/<td[^>]*>\s*○\s*<\/td>\s*<td[^>]*>\s*<a[^>]+>([^<]+)<\/a>/);
+      const lpM = html.match(/<td[^>]*>\s*●\s*<\/td>\s*<td[^>]*>\s*<a[^>]+>([^<]+)<\/a>/);
+      const svM = html.match(/<td[^>]*>\s*S\s*<\/td>\s*<td[^>]*>\s*<a[^>]+>([^<]+)<\/a>/);
 
-      // 마크다운 변환된 경우: "| ○ | [武内](url) |"
-      const wpM2 = html.match(/\|\s*○\s*\|\s*\[([^\]]+)\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)/);
-      const lpM2 = html.match(/\|\s*●\s*\|\s*\[([^\]]+)\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)/);
-      const svM2 = html.match(/\|\s*S\s*\|\s*\[([^\]]+)\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)/);
+      const winPitcher  = wpM?.[1]?.trim() || '';
+      const losePitcher = lpM?.[1]?.trim() || '';
+      const savePitcher = svM?.[1]?.trim() || '';
 
-      const winPitcher  = (wpM?.[1] || wpM2?.[1] || '').trim();
-      const losePitcher = (lpM?.[1] || lpM2?.[1] || '').trim();
-      const savePitcher = (svM?.[1] || svM2?.[1] || '').trim();
-
-      // 타자 성적 파싱 — "| 1 | (左) | [桑原](url) | 5 | 0 | 1 | 1 |" 형태
-      // 타수(ab), 득점(r), 안타(h), 타점(rbi) 순서
-      const batRows = [...html.matchAll(/\|\s*\d+\s*\|\s*\([^)]+\)\s*\|\s*\[([^\]]{2,10})\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)/g)];
+      // 타자 성적 — raw HTML 패턴
+      // <td>1</td><td>(左)</td><td><a href="...">桑原</a>...</td><td>5</td><td>0</td><td>1</td><td>1</td>
+      const batRows = [...html.matchAll(/<td[^>]*>\s*\d+\s*<\/td>\s*<td[^>]*>\s*\([^)]+\)\s*<\/td>\s*<td[^>]*>\s*<a[^>]+>([^<]+)<\/a>[^<]*<\/td>\s*<td[^>]*>\s*(\d+)\s*<\/td>\s*<td[^>]*>\s*(\d+)\s*<\/td>\s*<td[^>]*>\s*(\d+)\s*<\/td>\s*<td[^>]*>\s*(\d+)\s*<\/td>/g)];
       const batters = batRows
         .map(m => ({ name: m[1].trim(), ab: parseInt(m[2]), r: parseInt(m[3]), h: parseInt(m[4]), rbi: parseInt(m[5]) }))
         .filter(b => b.ab > 0);
