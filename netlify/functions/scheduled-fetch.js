@@ -823,5 +823,8 @@ const task = async () => {
   console.log('[scheduled-fetch] Done.');
 };
 
-// KST 05:00 = UTC 20:00
-module.exports.handler = schedule('0 20 * * *', task);
+// KST 05:00 = UTC 20:00 — Background Function (15분 타임아웃)
+exports.handler = async (event, context) => {
+  await task();
+  return { statusCode: 200 };
+};
