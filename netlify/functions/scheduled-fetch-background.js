@@ -582,36 +582,40 @@ async function fetchBoxScore(away, home, mmdd) {
   const awayCode = TEAM_URL[away] || away.toLowerCase();
   const homeCode = TEAM_URL[home] || home.toLowerCase();
   for (let n = 1; n <= 6; n++) {
-    // NPB URL은 홈-원정 순서: /scores/2026/0616/t-l-03/box.html
+    // NPB URL은 홈-원정 순서, 양방향 시도는 호출부에서 처리
     const path = `/scores/2026/${mmdd}/${homeCode}-${awayCode}-0${n}/box.html`;
     try {
-      const boxHtml = await fetchUrl(`https://npb.jp${path}`);
-      const hasEnd = boxHtml.includes('試合終了');
-      console.log(`[fetchBoxScore] ${path}: len=${boxHtml.length} hasEnd=${hasEnd}`);
-      if (!hasEnd) continue;
+      const html = await fetchUrl(`https://npb.jp${path}`);
+      if (!html.includes('試合終了')) { continue; }
+      console.log(`[fetchBoxScore] ${path}: len=${html.length} hasEnd=true`);
 
-      // 승투/패전 투수
-      const wpM = boxHtml.match(/勝利\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+勝/);
-      const lpM = boxHtml.match(/敗戦\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+敗/);
-      const svM = boxHtml.match(/セーブ\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+S/);
+      // 승투(○)/패전(●)/세이브(S) 투수 파싱
+      // 패턴: | ○ | [武内](url) | 또는 HTML <td>○</td><td><a href="...">武内</a></td>
+      const wpM = html.match(/[|｜]\s*○\s*[|｜]\s*<a[^>]+>([^<]+)<\/a>/);
+      const lpM = html.match(/[|｜]\s*●\s*[|｜]\s*<a[^>]+>([^<]+)<\/a>/);
+      const svM = html.match(/[|｜]\s*S\s*[|｜]\s*<a[^>]+>([^<]+)<\/a>/);
 
-      // 타자 성적 — 마크다운 링크 형태: [桑原](url) | 5 | 0 | 1 | 1
-      const batRows = [...boxHtml.matchAll(/\[([^\]]{2,8})\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)/g)];
+      // 마크다운 변환된 경우: "| ○ | [武内](url) |"
+      const wpM2 = html.match(/\|\s*○\s*\|\s*\[([^\]]+)\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)/);
+      const lpM2 = html.match(/\|\s*●\s*\|\s*\[([^\]]+)\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)/);
+      const svM2 = html.match(/\|\s*S\s*\|\s*\[([^\]]+)\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)/);
+
+      const winPitcher  = (wpM?.[1] || wpM2?.[1] || '').trim();
+      const losePitcher = (lpM?.[1] || lpM2?.[1] || '').trim();
+      const savePitcher = (svM?.[1] || svM2?.[1] || '').trim();
+
+      // 타자 성적 파싱 — "| 1 | (左) | [桑原](url) | 5 | 0 | 1 | 1 |" 형태
+      // 타수(ab), 득점(r), 안타(h), 타점(rbi) 순서
+      const batRows = [...html.matchAll(/\|\s*\d+\s*\|\s*\([^)]+\)\s*\|\s*\[([^\]]{2,10})\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)/g)];
       const batters = batRows
-        .map(m => ({name: m[1].trim(), ab: parseInt(m[2]), r: parseInt(m[3]), h: parseInt(m[4]), rbi: parseInt(m[5])}))
+        .map(m => ({ name: m[1].trim(), ab: parseInt(m[2]), r: parseInt(m[3]), h: parseInt(m[4]), rbi: parseInt(m[5]) }))
         .filter(b => b.ab > 0);
 
       const topBatter   = batters.length ? [...batters].sort((a,b) => (b.rbi-a.rbi)||(b.h-a.h))[0] : null;
-      const worstBatter = batters.length ? [...batters].sort((a,b) => (a.h-b.h)||(b.ab-a.ab))[0] : null;
+      const worstBatter = batters.length ? [...batters].filter(b=>b.ab>=3).sort((a,b) => (a.h-b.h)||(b.ab-a.ab))[0] : null;
 
-      const result = {
-        winPitcher:  wpM ? wpM[1].trim() : '',
-        losePitcher: lpM ? lpM[1].trim() : '',
-        savePitcher: svM ? svM[1].trim() : '',
-        topBatter, worstBatter, allBatters: batters,
-      };
-      console.log(`[fetchBoxScore] ${path}: wp=${result.winPitcher} lp=${result.losePitcher} topBat=${topBatter?.name}(${topBatter?.h}H${topBatter?.rbi}RBI)`);
-      return result;
+      console.log(`[fetchBoxScore] ${path}: wp=${winPitcher} lp=${losePitcher} batters=${batters.length} topBat=${topBatter?.name}(${topBatter?.h}H${topBatter?.rbi}RBI)`);
+      return { winPitcher, losePitcher, savePitcher, topBatter, worstBatter, allBatters: batters };
     } catch(e) {
       console.log(`[fetchBoxScore] ${path}: ${e.message}`);
     }
