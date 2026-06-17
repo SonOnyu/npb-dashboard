@@ -1226,14 +1226,14 @@ const PLAYER_KO = {
 
 // NPB 일본어 헤더 → 한국어 매핑
 const HEADER_MAP = {
-  '順位':'순위','選手名':'선수명','チーム':'팀','打率':'타율','試合':'경기',
+  '順位':'순위','選手名':'선수명','選手':'선수','チーム':'팀','打率':'타율','試合':'경기',
   '打席':'타석','打数':'타수','安打':'안타','二塁打':'2루타','三塁打':'3루타',
   '本塁打':'홈런','塁打':'누타','打点':'타점','得点':'득점','三振':'삼진',
   '四球':'볼넷','死球':'사구','犠打':'희타','犠飛':'희비','盗塁':'도루',
-  '盗塁死':'도루실','併殺打':'병살','出塁率':'출루율','長打率':'장타율',
+  '盗塁死':'도루실','盗塁刺':'도루실','故意四':'고의4구','併殺打':'병살','出塁率':'출루율','長打率':'장타율',
   'ＯＰＳ':'OPS','OPS':'OPS','得点圏':'득점권','失策':'실책',
   // 투수
-  '防御率':'방어율','登板':'등판','先発':'선발','完投':'완투','完封':'완봉',
+  '投手':'투수','防御率':'방어율','登板':'등판','先発':'선발','完投':'완투','完封':'완봉',
   'ＱＳ':'QS','QS':'QS','勝利':'승','敗戦':'패','ホールド':'홀드',
   'ＨＰ':'HP','HP':'HP','セーブ':'세이브','勝率':'승률','投球回':'투구이닝',
   '被安打':'피안타','被本塁打':'피홈런','奪三振':'탈삼진','奪三振率':'K/9',
@@ -1266,74 +1266,99 @@ function teamKey(name) {
   return null;
 }
 
-// 팀별 개인 성적 테이블 렌더러 (순위 없음, 선수명 첫 컬럼)
+// 팀별 개인 성적 테이블 렌더러 — 리그 개인성적과 동일한 UI
 function renderTeamStatsTable(data, isBatter) {
   if (!data || !data.rows || data.rows.length === 0) {
     return `<div class="card"><div style="padding:40px;text-align:center;color:var(--muted)">데이터 없음</div></div>`;
   }
   const rawHeaders = data.headers || [];
-  // 한국어 헤더 매핑
-  const headers = rawHeaders.map(h => HEADER_MAP[h] || h);
+  const headers = ['순위', ...rawHeaders.map(h => translateHeader(h))];
 
-  // 선수명 컬럼 인덱스
-  const playerIdx = rawHeaders.findIndex(h => h === '選手' || h === '投手') || 0;
-  // 핵심 지표 컬럼: 타자=타율(打率), 투수=방어율(防御率)
+  // 선수명/투수명 컬럼 인덱스
+  const playerIdx = rawHeaders.findIndex(h => h === '選手' || h === '投手' || h === '選手名');
+  const safePlayerIdx = playerIdx >= 0 ? playerIdx : 0;
+
+  // 핵심 지표
   const keyJp = isBatter ? '打率' : '防御率';
   const keyIdx = rawHeaders.findIndex(h => h === keyJp);
+  const keyCol = keyIdx >= 0 ? keyIdx + 1 : -1; // +1 for rank col
 
-  // 정렬: 타자=타율 내림차순, 투수=방어율 오름차순
-  let rows = [...data.rows];
+  // 정렬
+  let rows = [...data.rows].filter(r => {
+    const name = (r[safePlayerIdx] || '').replace(/^[*＊+＋\s]+/,'').trim();
+    return name.length > 0;
+  });
   if (keyIdx >= 0) {
-    rows = rows
-      .filter(r => r[playerIdx] && r[playerIdx].trim())
-      .sort((a, b) => {
-        const av = parseFloat(a[keyIdx]) || 0;
-        const bv = parseFloat(b[keyIdx]) || 0;
-        return isBatter ? bv - av : av - bv;
-      });
+    rows = rows.sort((a, b) => {
+      const av = parseFloat(a[keyIdx]) || (isBatter ? -1 : 99);
+      const bv = parseFloat(b[keyIdx]) || (isBatter ? -1 : 99);
+      return isBatter ? bv - av : av - bv;
+    });
   }
 
-  // 핵심 지표 percentile 계산
+  // percentile 계산
   const keyVals = rows.map(r => parseFloat(r[keyIdx])).filter(v => !isNaN(v) && v > 0);
   const keyMin = Math.min(...keyVals), keyMax = Math.max(...keyVals);
   const keyRange = keyMax - keyMin || 1;
 
-  const rowsHtml = rows.map((r, ri) => {
-    const rawName = (r[playerIdx] || r[0] || '').replace(/^[*＊+＋\s]+/, '').trim();
-    const isLeft   = (r[playerIdx] || '').startsWith('*') || (r[playerIdx] || '').startsWith('＊');
-    const isSwitch = (r[playerIdx] || '').startsWith('+') || (r[playerIdx] || '').startsWith('＋');
-    const badge = isLeft   ? `<span style="font-size:9px;background:rgba(64,180,255,0.2);color:#40b4ff;padding:1px 3px;border-radius:2px;margin-left:3px">좌</span>`
-                : isSwitch ? `<span style="font-size:9px;background:rgba(255,180,64,0.2);color:#e8c840;padding:1px 3px;border-radius:2px;margin-left:3px">양</span>` : '';
-    const ko = PLAYER_KO[rawName] || PLAYER_KO[rawName.replace(/\s/g,'\u3000')] || '';
+  function percentileColor(val) {
+    if (isNaN(val)) return '';
+    let pct = (val - keyMin) / keyRange;
+    if (!isBatter) pct = 1 - pct;
+    if (pct >= 0.8) return 'background:rgba(76,222,128,0.22);color:#3fae5e;font-weight:700';
+    if (pct >= 0.6) return 'background:rgba(76,222,128,0.10);color:var(--text);font-weight:600';
+    if (pct <= 0.2) return 'background:rgba(232,92,64,0.20);color:#e85c40;font-weight:700';
+    if (pct <= 0.4) return 'background:rgba(232,92,64,0.08);color:var(--text)';
+    return '';
+  }
 
-    const cells = r.map((c, ci) => {
-      const isPlayer = ci === playerIdx;
-      const isKey = ci === keyIdx;
-      let keyStyle = '';
-      if (isKey) {
-        const val = parseFloat(c);
-        if (!isNaN(val) && keyRange > 0) {
-          const pct = isBatter ? (val - keyMin) / keyRange : 1 - (val - keyMin) / keyRange;
-          const r2 = Math.round(255 - pct * 180);
-          const g2 = Math.round(100 + pct * 120);
-          keyStyle = `background:rgba(${r2},${g2},80,0.18);font-weight:700`;
-        }
-      }
-      if (isPlayer) {
-        return `<td><div style="font-size:12px;font-weight:600">${rawName}${badge}</div>${ko?`<div style="font-size:10px;color:var(--muted)">${ko}</div>`:''}</td>`;
-      }
-      return `<td style="${keyStyle}">${c}</td>`;
-    }).join('');
-    return `<tr style="${ri%2===0?'':'background:rgba(255,255,255,0.02)'}">${cells}</tr>`;
+  const thHTML = headers.map((h, i) => {
+    const isKey = i === keyCol;
+    return `<th style="${isKey ? 'color:var(--accent)' : ''}">${h}</th>`;
   }).join('');
 
-  const headersHtml = headers.map(h => `<th>${h}</th>`).join('');
+  const tbHTML = rows.map((r, ri) => {
+    const rank = ri + 1;
+    const medalStyle = rank===1 ? 'background:rgba(255,200,60,0.20);color:#caa000;font-weight:800'
+                     : rank===2 ? 'background:rgba(200,200,210,0.18);color:#888;font-weight:800'
+                     : rank===3 ? 'background:rgba(205,140,80,0.18);color:#b06a30;font-weight:800' : '';
 
-  return `<div class="card" style="overflow-x:auto;padding:0">
-    <table class="team-stats-tbl">
-      <thead><tr>${headersHtml}</tr></thead>
-      <tbody>${rowsHtml}</tbody>
-    </table>
+    const rankCell = `<td style="${medalStyle}border-radius:4px">${rank}</td>`;
+
+    const dataCells = r.map((v, ci) => {
+      if (ci === safePlayerIdx) {
+        // 선수명: *=좌타/좌투, +=양타
+        const rawName = v.replace(/^[*＊+＋\s]+/,'').trim();
+        const isLeft   = /^[*＊]/.test(v);
+        const isSwitch = /^[+＋]/.test(v);
+        const badge = isLeft
+          ? `<span style="font-size:9px;background:rgba(64,180,255,0.2);color:#40b4ff;padding:1px 3px;border-radius:2px;margin-left:3px">${isBatter?'좌타':'좌투'}</span>`
+          : isSwitch
+          ? `<span style="font-size:9px;background:rgba(255,180,64,0.2);color:#e8c840;padding:1px 3px;border-radius:2px;margin-left:3px">양타</span>` : '';
+        const koName = PLAYER_KO[rawName] || PLAYER_KO[rawName.replace(/\s/g,'\u3000')] || '';
+        return `<td>
+          <div>
+            <div style="font-size:13px;font-weight:500;white-space:nowrap">${rawName}${badge}</div>
+            ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
+          </div>
+        </td>`;
+      }
+      if (ci === keyIdx) {
+        return `<td style="${percentileColor(parseFloat(v))}">${v}</td>`;
+      }
+      return `<td>${v}</td>`;
+    }).join('');
+
+    return `<tr>${rankCell}${dataCells}</tr>`;
+  }).join('');
+
+  return `<div class="card">
+    <div class="stats-scroll">
+      <table class="stats-tbl">
+        <thead><tr>${thHTML}</tr></thead>
+        <tbody>${tbHTML}</tbody>
+      </table>
+    </div>
   </div>`;
 }
 
@@ -1384,20 +1409,26 @@ function renderStatsTable(data, isBatter) {
         return `<td style="${medalStyle}border-radius:4px">${v}</td>`;
       }
       if (ci === 1) { // 선수명 — 일본어 + 한국어 서브텍스트 + 팀 로고
-        // "佐藤 輝明(神)" 또는 "佐藤　輝明（神）" → 이름, 팀약자 분리 (전각/반각 괄호 모두 처리)
         const nameMatch = v.match(/^(.+?)[\(（](.+?)[\)）]$/);
         const jpNameRaw = nameMatch ? nameMatch[1].trim() : v;
         const teamAbr = nameMatch ? nameMatch[2] : '';
-        // 한국어 매핑은 일본어 이름의 공백을 정규화(전각 스페이스 → 반각)해서 조회
         const jpNameKey = jpNameRaw.replace(/[\u3000]/g, ' ').trim();
-        const koName = PLAYER_KO[jpNameKey] || PLAYER_KO[jpNameRaw] || '';
+        // *=좌타/좌투, +=양타 배지
+        const cleanName = jpNameKey.replace(/^[*＊+＋\s]+/,'').trim();
+        const isLeft   = /^[*＊]/.test(jpNameRaw);
+        const isSwitch = /^[+＋]/.test(jpNameRaw);
+        const handBadge = isLeft
+          ? `<span style="font-size:9px;background:rgba(64,180,255,0.2);color:#40b4ff;padding:1px 3px;border-radius:2px;margin-left:3px">${isBatter?'좌타':'좌투'}</span>`
+          : isSwitch
+          ? `<span style="font-size:9px;background:rgba(255,180,64,0.2);color:#e8c840;padding:1px 3px;border-radius:2px;margin-left:3px">양타</span>` : '';
+        const koName = PLAYER_KO[cleanName] || PLAYER_KO[jpNameKey] || PLAYER_KO[jpNameRaw] || '';
         const tkey = teamAbr ? teamKey(teamAbr) : null;
         const logoHtml = tkey ? logoImg(tkey,16) : '';
         return `<td>
           <div style="display:flex;align-items:center;gap:5px">
             ${logoHtml}
             <div>
-              <div style="font-size:13px;font-weight:500;white-space:nowrap">${jpNameRaw}${teamAbr?`(${teamAbr})`:''}</div>
+              <div style="font-size:13px;font-weight:500;white-space:nowrap">${cleanName}${teamAbr?`(${teamAbr})`:''}${handBadge}</div>
               ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
             </div>
           </div>
