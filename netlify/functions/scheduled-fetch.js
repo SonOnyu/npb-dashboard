@@ -451,54 +451,51 @@ ${TEAM_CONTEXT}
 }
 
 function buildReviewPrompt(predictions, actualResults) {
-  return `당신은 NPB 애널리스트입니다. 아래에 주어진 실제 경기 데이터(팀 키, 점수, 선발투수 정보)를 기반으로 분석해주세요.
+  return `당신은 NPB 애널리스트입니다. 아래에 주어진 실제 경기 데이터를 기반으로 분석해주세요.
 
-## 절대 규칙 (매우 중요)
-- "실제 결과"에 주어진 homeTeam, awayTeam 팀 키(G/Sw/DB/D/T/C/H/F/Bs/E/L/M)와 점수만을 사실로 취급할 것.
-- 주어진 팀 키 외의 다른 팀 이름을 임의로 등장시키지 말 것.
-- "예측 당시 분석"이 빈 배열이거나 해당 경기 정보가 없으면, predictedWinner는 빈 문자열, predictionAccuracy는 "예측 없음", hitAnalysis/missAnalysis는 빈 문자열로 둘 것.
-- 박스스코어 세부 데이터가 없더라도, 주어진 스코어와 선발투수 정보를 바탕으로 MVP/최악 선수를 합리적으로 추론할 것. 예를 들어 완봉승/완투승 투수, 결승타를 친 선수 등. "정보 없음"이나 "박스스코어 미제공"은 절대 사용 금지.
-- mvpName/worstName은 반드시 실존하는 해당 팀 선수명(한국어 병기)을 적을 것. 추론이 불가피하면 선발투수를 기준으로 선정.
-- highlight는 팀 키와 점수를 사실대로 서술할 것.
+## 절대 규칙
+- homeTeam/awayTeam 팀 키(G/Sw/DB/D/T/C/H/F/Bs/E/L/M)와 점수만을 사실로 취급할 것.
+- 예측 당시 분석이 없으면 predictedWinner 빈 문자열, predictionAccuracy "예측 없음", hitAnalysis/missAnalysis 빈 문자열.
+- 박스스코어(allBatters, topBatter, winPitcher 등)가 제공된 경우 반드시 실제 데이터 기반으로 MVP/최악 선정.
+- 박스스코어가 없으면 스코어와 선발투수 기준으로 합리적 추론.
+- mvpName/worstName에 "정보 없음" 절대 금지. 반드시 실존 선수명 기재.
+- MVP는 타자/투수 모두 고려 (타자 우선: 타점, 결승타, 안타 기준. 투수: 완봉, 완투, 구원 성공).
+- 최악은 패전투수, 무안타 타자, 실책 선수 등 구체적으로.
+- 분석은 친절하고 자연스러운 한국어로. 중요 수치는 **굵게** 표시.
 
 ## 예측 당시 분석
 ${JSON.stringify(predictions, null, 2)}
 
-## 실제 결과
+## 실제 결과 (allBatters: 타자성적 배열, topBatter: 최다타점/안타 타자, winPitcher/losePitcher 포함)
 ${JSON.stringify(actualResults, null, 2)}
 
-각 경기마다 다음 JSON 구조로 분석하세요 (JSON 배열, 마크다운 없이 순수 JSON만):
+각 경기마다 JSON 구조로 분석 (JSON 배열, 순수 JSON만, 백틱 금지):
 [
   {
-    "gameId": "F-DB",
+    "gameId": "L-T",
     "homeTeam": "팀키",
     "awayTeam": "팀키",
-    "predictedWinner": "예측한 우세팀(팀키)",
+    "predictedWinner": "예측 우세팀(팀키) 또는 빈 문자열",
     "actualWinner": "실제 승팀(팀키)",
     "correct": true,
-    "score": "원정팀점수-홈팀점수 형식",
-    "predictionAccuracy": "적중 또는 미적중",
-    "hitAnalysis": "예측 적중 근거 2~3문장. 미적중이면 빈 문자열.",
-    "missAnalysis": "예측 빗나간 이유 2~3문장. 적중이면 빈 문자열.",
-    "unexpectedEvents": "예상 못한 변수 1~3문장. 없으면 빈 문자열.",
-    "mvpName": "최고 활약 선수명(한국어 병기) — 반드시 실존 선수, 추론 가능",
+    "score": "원정점수-홈점수",
+    "predictionAccuracy": "적중 또는 미적중 또는 예측 없음",
+    "hitAnalysis": "적중 근거 2~3문장. 미적중이면 빈 문자열.",
+    "missAnalysis": "빗나간 이유 2~3문장. 적중이면 빈 문자열.",
+    "unexpectedEvents": "예상 못한 변수 1~2문장. 없으면 빈 문자열.",
+    "mvpName": "최고 활약 선수명(한국어 병기) — 타자 우선",
     "mvpTeam": "팀키",
-    "mvpPerformance": "활약 내용. 박스스코어 없으면 선발투수 기준으로 추론하여 서술",
+    "mvpPerformance": "구체적 활약 (예: 4타수 2안타 1타점, 완봉승 9이닝 1실점)",
     "mvpReason": "MVP 선정 이유 1문장",
-    "worstName": "최악 활약 선수명(한국어 병기) — 반드시 실존 선수, 추론 가능",
+    "worstName": "최악 활약 선수명(한국어 병기)",
     "worstTeam": "팀키",
-    "worstPerformance": "부진 내용. 박스스코어 없으면 패전투수 기준으로 추론하여 서술",
+    "worstPerformance": "구체적 부진 내용 (예: 4타수 0안타, 5이닝 4실점)",
     "worstReason": "최악 선정 이유 1문장",
     "highlight": "경기 하이라이트 한 문장"
   }
 ]
 
-매우 중요한 규칙:
-1. 출력은 순수 JSON 배열 하나만. 코드블록 마커(백틱) 쓰지 말 것.
-2. 모든 문자열 값은 줄바꿈 없이 한 줄로 작성.
-3. 문자열 내부에 쌍따옴표(") 절대 쓰지 말 것.
-4. 위에 나열된 모든 키를 빠짐없이 포함할 것. 정보가 없으면 빈 문자열 "".
-5. mvpName/worstName에 "정보 없음" 또는 "박스스코어 미제공" 사용 절대 금지. 반드시 실존 선수명을 추론하여 적을 것.`;
+규칙: 1)순수 JSON만 2)한 줄로 3)쌍따옴표 금지 4)모든 키 포함 5)mvpName/worstName 반드시 실존 선수명`;
 }
 
 
@@ -538,17 +535,35 @@ async function fetchGameScore(away, home, mmdd) {
       let boxData = {};
       try {
         const boxHtml = await fetchUrl(`https://npb.jp${path}box.html`);
-        const wpM = boxHtml.match(/勝利([^\d<\n]{2,12})\d+勝/);
-        const lpM = boxHtml.match(/敗戦([^\d<\n]{2,12})\d+敗/);
-        const svM = boxHtml.match(/セーブ([^\d<\n]{2,12})\d+[Ss]/);
+        // 승투/패전/세이브 투수 — "勝利 武内夏暉 3勝0敗" 형태
+        const wpM = boxHtml.match(/勝利\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+勝/);
+        const lpM = boxHtml.match(/敗戦\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+敗/);
+        const svM = boxHtml.match(/セーブ\s+([\u4E00-\u9FFF\u30A0-\u30FF]{2,8})\s*\d+S/);
+
+        // 타자 성적 파싱 — 표에서 이름/타수/득점/안타/타점 추출
+        // 패턴: "桑原" 링크 텍스트 + 이어지는 숫자 셀들
+        const batRows = [...boxHtml.matchAll(/\[([^\]]{2,8})\]\(https:\/\/npb\.jp\/bis\/players\/[^)]+\)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)/g)];
+        const batters = batRows
+          .map(m => ({name: m[1].trim(), ab: parseInt(m[2]), r: parseInt(m[3]), h: parseInt(m[4]), rbi: parseInt(m[5])}))
+          .filter(b => b.ab > 0);
+
+        // 최고 타자 (타점 → 안타 순으로 정렬)
+        const topBatter = batters.sort((a,b) => (b.rbi - a.rbi) || (b.h - a.h))[0] || null;
+        // 최악 타자 (안타 없고 타수 많은 선수)
+        const worstBatter = [...batters].sort((a,b) => (a.h - b.h) || (b.ab - a.ab))[0] || null;
+
         boxData = {
-          winPitcher:  wpM ? wpM[1].replace(/\s+/g,'').trim() : '',
-          losePitcher: lpM ? lpM[1].replace(/\s+/g,'').trim() : '',
-          savePitcher: svM ? svM[1].replace(/\s+/g,'').trim() : '',
+          winPitcher:  wpM ? wpM[1].trim() : '',
+          losePitcher: lpM ? lpM[1].trim() : '',
+          savePitcher: svM ? svM[1].trim() : '',
+          topBatter,
+          worstBatter,
+          allBatters: batters,
         };
-        if (boxData.winPitcher || boxData.losePitcher)
-          console.log(`[fetchGameScore] box: wp=${boxData.winPitcher} lp=${boxData.losePitcher}`);
-      } catch(e) { /* box.html 파싱 실패 무시 */ }
+        console.log(`[fetchGameScore] box: wp=${boxData.winPitcher} lp=${boxData.losePitcher} topBat=${topBatter?.name}(${topBatter?.h}H${topBatter?.rbi}RBI) worstBat=${worstBatter?.name}(${worstBatter?.h}H/${worstBatter?.ab}AB)`);
+      } catch(e) {
+        console.log(`[fetchGameScore] box.html error: ${e.message}`);
+      }
 
       return { awayScore, homeScore, finished: true, path, ...boxData };
     } catch(e) {
@@ -752,5 +767,7 @@ const task = async () => {
   console.log('[scheduled-fetch] Done.');
 };
 
-// KST 05:00 = UTC 20:00 → "0 20 * * *"
-module.exports.handler = schedule('0 20 * * *', task);
+// KST 05:00 = UTC 20:00
+// KST 12:35 = UTC 03:35
+// KST 16:35 = UTC 07:35
+module.exports.handler = schedule('35 3,7,20 * * *', task);
