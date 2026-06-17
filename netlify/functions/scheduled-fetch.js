@@ -741,6 +741,19 @@ const task = async () => {
       if (finishedGames.length > 0) {
         const existingReview = await store.get('review-analysis', { type: 'json' });
         if (!existingReview || existingReview.mmdd !== yestMmdd) {
+          // 어제 경기 box.html에서 타자/투수 성적 보강
+          for (const g of finishedGames) {
+            if (g.path && !g.allBatters) {
+              const boxResult = await fetchGameScore(g.away, g.home, yestMmdd).catch(() => null);
+              if (boxResult) {
+                g.winPitcher  = boxResult.winPitcher  || g.winPitcher;
+                g.losePitcher = boxResult.losePitcher || g.losePitcher;
+                g.topBatter   = boxResult.topBatter;
+                g.worstBatter = boxResult.worstBatter;
+                g.allBatters  = boxResult.allBatters;
+              }
+            }
+          }
           const predictCache = await store.get('predict-analysis', { type: 'json' });
           const predictions = (predictCache && predictCache.tmrMmdd === yestMmdd)
             ? predictCache.analyses : [];
