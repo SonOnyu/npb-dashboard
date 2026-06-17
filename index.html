@@ -1697,134 +1697,169 @@ async function showDayResults(games, dateStr, mmdd) {
     return;
   }
 
-  // 1차: 결과 카드 표시
   const [y,m,d] = dateStr.split('-');
   const label = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 · ${games.length}경기`;
-
-  // AI 리뷰 분석은 2026-06-16 이후 날짜부터 제공 (그 이전은 캐시가 없어 실시간 호출 시 타임아웃/토큰 낭비 위험)
   const REVIEW_CUTOFF = '2026-06-16';
   const reviewAvailable = dateStr >= REVIEW_CUTOFF;
 
+  // 카드 그리드 (다음경기 분석과 동일한 2열 구조)
   container.innerHTML = `
     <div style="font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:14px">${label}</div>
-    <div class="result-grid" id="result-cards">${games.map(g => renderResultCard(g)).join('')}</div>
-    ${reviewAvailable ? `<div id="review-section" style="margin-top:20px">
-      <div style="display:flex;align-items:center;gap:12px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
-        <div style="width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
-        <span style="font-size:13px;color:var(--muted)">경기 리뷰 분석 중 (MVP·최악·예측 적중 여부)...</span>
-      </div>
-    </div>` : ''}`;
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:16px;align-items:start" id="result-cards">
+      ${games.map((g,i) => {
+        const hasScore = g.awayScore!==null && g.homeScore!==null;
+        const awayWin = hasScore && g.awayScore > g.homeScore;
+        const homeWin = hasScore && g.homeScore > g.awayScore;
+        const status = g.status==='finished' ? '試合終了' : g.status==='live' ? '⚡ 試合中' : `${g.time||'18:00'} 予定`;
+        return `<div class="card" id="result-card-${i}" style="box-sizing:border-box">
+          <!-- 구장/상태 -->
+          <div class="mh" style="margin:-16px -16px 12px -16px;border-radius:8px 8px 0 0">
+            <span class="mh-venue">⚾ ${g.venue||'−'} · ${g.time||'18:00'}</span>
+            <span class="mh-badge" style="${g.status==='finished'?'background:var(--muted);color:#fff':''}">${status}</span>
+          </div>
+          <!-- 팀 헤더 -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:10px">
+              ${logoLg(g.away)}
+              <div>
+                <div style="font-size:10px;color:var(--muted)">원정</div>
+                <div style="font-family:var(--fd);font-size:17px;font-weight:800;${awayWin?'color:var(--accent)':''}">${TN_S[g.away]||g.away}</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+              ${hasScore
+                ? `<div style="font-family:var(--fd);font-size:26px;font-weight:900;letter-spacing:2px">${g.awayScore} - ${g.homeScore}</div>`
+                : `<span style="font-family:var(--fd);font-size:18px;color:var(--muted2)">VS</span>`}
+              ${reviewAvailable ? `<button class="ai-btn" id="review-btn-${i}" onclick="openReviewModal(${i})" style="opacity:0.5">📊 분석 결과</button>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
+              ${logoLg(g.home)}
+              <div style="text-align:right">
+                <div style="font-size:10px;color:var(--muted)">홈</div>
+                <div style="font-family:var(--fd);font-size:17px;font-weight:800;${homeWin?'color:var(--accent)':''}">${TN_S[g.home]||g.home}</div>
+              </div>
+            </div>
+          </div>
+          <!-- 리뷰 슬롯 -->
+          <div id="review-slot-${i}">
+            ${reviewAvailable
+              ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;color:var(--muted)">
+                  <div style="width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+                  <span style="font-size:12px">리뷰 분석 로딩 중...</span>
+                </div>`
+              : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
 
   if (!reviewAvailable) return;
 
-  // 2차: Claude API로 리뷰 분석
+  // 리뷰 데이터 로드
   const savedPredictions = getSavedPredictions(mmdd);
   try {
     const res = await fetch(`${ANALYZE_API}?mode=review`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        predictions: savedPredictions,
-        actualResults: games,
-        boxScores: [],
-      }),
+      body: JSON.stringify({ predictions: savedPredictions, actualResults: games, boxScores: [] }),
     });
     const data = await res.json();
     if (data.reviews) renderReviews(data.reviews, games);
-    else document.getElementById('review-section').innerHTML =
-      `<div style="padding:12px;color:var(--muted);font-size:12px">AI 분석 데이터가 아직 준비되지 않았습니다. 다음 05:00 자동 갱신 시 반영됩니다.</div>`;
+    else games.forEach((_,i) => {
+      const slot = document.getElementById(`review-slot-${i}`);
+      if (slot) slot.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">AI 분석은 다음 05:00 자동 갱신 시 반영됩니다.</div>`;
+    });
   } catch(e) {
-    document.getElementById('review-section').innerHTML =
-      `<div style="padding:12px;color:var(--muted);font-size:12px">AI 분석 데이터가 아직 준비되지 않았습니다. 다음 05:00 자동 갱신 시 반영됩니다.</div>`;
+    games.forEach((_,i) => {
+      const slot = document.getElementById(`review-slot-${i}`);
+      if (slot) slot.innerHTML = '';
+    });
   }
 }
 
-function renderResultCard(g) {
-  const hasScore = g.awayScore!==null && g.homeScore!==null;
-  const awayWin  = hasScore && g.awayScore > g.homeScore;
-  const homeWin  = hasScore && g.homeScore > g.awayScore;
-  const tie      = hasScore && g.awayScore === g.homeScore;
-  const status   = g.status==='finished' ? '試合終了' : g.status==='live' ? '⚡ 試合中' : `${g.time||'18:00'} 予定`;
+// 리뷰 모달 데이터
+let reviewsCache = [];
 
-  return `<div class="result-card">
-    <div class="result-header">
-      <span>${g.venue||'−'}</span>
-      <span style="${g.status==='live'?'color:#4cde80':''}">${status}</span>
-    </div>
-    <div class="result-teams">
-      <div class="result-team">
-        ${logoImg(g.away,36)}
-        <div class="result-score ${awayWin?'win':hasScore&&!awayWin?'lose':''}">${hasScore?g.awayScore:'−'}</div>
-        <div class="result-team-name">${TN_S[g.away]||g.away}</div>
-      </div>
-      <div class="result-vs">VS</div>
-      <div class="result-team">
-        ${logoImg(g.home,36)}
-        <div class="result-score ${homeWin?'win':hasScore&&!homeWin?'lose':''}">${hasScore?g.homeScore:'−'}</div>
-        <div class="result-team-name">${TN_S[g.home]||g.home}</div>
-      </div>
-    </div>
-    ${hasScore ? `<div class="result-status">${awayWin?TN_S[g.away]:homeWin?TN_S[g.home]:'무승부'} 승</div>` : ''}
-  </div>`;
+function openReviewModal(idx) {
+  const rv = reviewsCache[idx];
+  if (!rv) return;
+  const bold = (t) => t ? t.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text);font-weight:700">$1</strong>') : '';
+  const autoBreak = (t) => t ? t.replace(/(니다\.|습니다\.|입니다\.|합니다\.)\s+/g, '$1<br>') : '';
+  const fmt = (t) => autoBreak(bold(t));
+  const sLabel = (t) => `<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;margin-top:14px">${t}</div>`;
+  const sText  = (t) => `<div style="font-size:13px;color:var(--text);line-height:1.9">${fmt(t)}</div>`;
+
+  document.querySelector('.ai-modal-title').innerHTML =
+    `📊 경기 분석 결과 — ${TN_S[rv.awayTeam]||rv.awayTeam} vs ${TN_S[rv.homeTeam]||rv.homeTeam}`;
+
+  document.getElementById('ai-modal-body').innerHTML =
+    (rv.highlight ? `<div style="padding:10px 12px;background:var(--surface2);border-radius:6px;font-size:13px;margin-bottom:12px">${fmt(rv.highlight)}</div>` : '') +
+    (rv.hitAnalysis   ? sLabel('✅ 예측 적중 근거') + sText(rv.hitAnalysis)   : '') +
+    (rv.missAnalysis  ? sLabel('❌ 예측 미스 원인') + sText(rv.missAnalysis)  : '') +
+    (rv.unexpectedEvents ? sLabel('⚡ 예상치 못한 변수') + sText(rv.unexpectedEvents) : '');
+
+  document.getElementById('ai-modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
 function renderReviews(reviews, games) {
-  const sec = document.getElementById('review-section');
-  if (!sec) return;
-  const html = reviews.map(rv => {
-    const correct = rv.correct;
-    const hitBadge = correct
-      ? `<span style="background:rgba(77,222,128,0.2);color:#4cde80;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">✓ 예측 적중</span>`
-      : `<span style="background:rgba(232,92,64,0.2);color:#e85c40;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">✗ 예측 미스</span>`;
+  reviewsCache = reviews;
 
+  const bold = (t) => t ? t.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text);font-weight:700">$1</strong>') : '';
+
+  reviews.forEach((rv, i) => {
+    const slot = document.getElementById(`review-slot-${i}`);
+    const btn  = document.getElementById(`review-btn-${i}`);
+    if (!slot) return;
+
+    // 예측 적중 여부 — AI 판단 대신 프론트에서 직접 계산
+    const g = games[i];
+    const actualWinner = g && g.awayScore !== null
+      ? (g.awayScore > g.homeScore ? g.away : g.homeScore > g.awayScore ? g.home : null)
+      : rv.actualWinner;
+    const correct = rv.predictedWinner && actualWinner
+      ? rv.predictedWinner === actualWinner
+      : null;
+
+    const hitBadge = correct === true
+      ? `<span style="background:rgba(77,222,128,0.2);color:#4cde80;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">✓ 예측 적중</span>`
+      : correct === false
+      ? `<span style="background:rgba(232,92,64,0.2);color:#e85c40;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">✗ 예측 미스</span>`
+      : `<span style="background:rgba(150,150,150,0.15);color:var(--muted);padding:2px 8px;border-radius:3px;font-size:11px">예측 없음</span>`;
+
+    // MVP / 최악
     const mvpHtml = rv.mvpName ? `
-      <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(232,200,64,0.08);border-radius:6px;border-left:3px solid var(--accent)">
-        <span style="font-size:18px">🏆</span>
-        <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">최고 활약</div>
-          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--accent)">${rv.mvpName}${rv.mvpTeam?` <span style="font-size:11px;color:var(--muted)">(${TN_S[rv.mvpTeam]||rv.mvpTeam})</span>`:''}</div>
-          <div style="font-size:11px;color:var(--text);margin-top:2px">${rv.mvpPerformance||''}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:1px">${rv.mvpReason||''}</div>
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:rgba(232,200,64,0.08);border-radius:6px;border-left:3px solid var(--accent);flex:1">
+        <span>🏆</span>
+        <div style="min-width:0">
+          <div style="font-size:10px;color:var(--muted)">최고 활약</div>
+          <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--accent)">${bold(rv.mvpName)} <span style="font-size:11px;color:var(--muted);font-weight:400">${TN_S[rv.mvpTeam]||rv.mvpTeam||''}</span></div>
+          <div style="font-size:11px;color:var(--text);margin-top:2px">${bold(rv.mvpPerformance||'')}</div>
         </div>
-      </div>` : '';
+      </div>` : '<div style="flex:1"></div>';
 
     const worstHtml = rv.worstName ? `
-      <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(232,92,64,0.06);border-radius:6px;border-left:3px solid var(--accent3)">
-        <span style="font-size:18px">💔</span>
-        <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">최악 활약</div>
-          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--accent3)">${rv.worstName}${rv.worstTeam?` <span style="font-size:11px;color:var(--muted)">(${TN_S[rv.worstTeam]||rv.worstTeam})</span>`:''}</div>
-          <div style="font-size:11px;color:var(--text);margin-top:2px">${rv.worstPerformance||''}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:1px">${rv.worstReason||''}</div>
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:rgba(232,92,64,0.06);border-radius:6px;border-left:3px solid var(--accent3);flex:1">
+        <span>💔</span>
+        <div style="min-width:0">
+          <div style="font-size:10px;color:var(--muted)">최악 활약</div>
+          <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--accent3)">${bold(rv.worstName)} <span style="font-size:11px;color:var(--muted);font-weight:400">${TN_S[rv.worstTeam]||rv.worstTeam||''}</span></div>
+          <div style="font-size:11px;color:var(--text);margin-top:2px">${bold(rv.worstPerformance||'')}</div>
         </div>
-      </div>` : '';
+      </div>` : '<div style="flex:1"></div>';
 
-    const hitHtml = rv.hitAnalysis
-      ? `<div style="margin-top:8px"><div class="analysis-label" style="color:#4cde80">예측 적중 분석</div><div class="analysis-text">${rv.hitAnalysis}</div></div>` : '';
-    const missHtml = rv.missAnalysis
-      ? `<div style="margin-top:8px"><div class="analysis-label" style="color:#e85c40">예측 미스 분석</div><div class="analysis-text">${rv.missAnalysis}</div></div>` : '';
-    const unexpectedHtml = rv.unexpectedEvents
-      ? `<div style="margin-top:8px"><div class="analysis-label">예상치 못한 변수</div><div class="analysis-text">⚡ ${rv.unexpectedEvents}</div></div>` : '';
-
-    return `<div class="card mgb">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;align-items:center;gap:10px">
-          ${logoImg(rv.awayTeam,24)} <span style="font-family:var(--fd);font-size:14px;font-weight:700">${TN_S[rv.awayTeam]||rv.awayTeam}</span>
-          <span style="color:var(--muted);font-size:12px">vs</span>
-          ${logoImg(rv.homeTeam,24)} <span style="font-family:var(--fd);font-size:14px;font-weight:700">${TN_S[rv.homeTeam]||rv.homeTeam}</span>
-          ${rv.score ? `<span style="font-family:var(--fd);font-size:16px;font-weight:800;color:var(--text);margin-left:4px">${rv.score}</span>` : ''}
-        </div>
+    slot.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         ${hitBadge}
       </div>
-      ${rv.highlight ? `<div style="font-size:12px;color:var(--text);margin-bottom:10px;padding:8px 10px;background:var(--surface2);border-radius:5px">${rv.highlight}</div>` : ''}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div style="display:flex;gap:8px">
         ${mvpHtml}
         ${worstHtml}
-      </div>
-      ${hitHtml}${missHtml}${unexpectedHtml}
-    </div>`;
-  }).join('');
-  sec.innerHTML = html || `<div style="padding:12px;color:var(--muted);font-size:12px">리뷰 데이터 없음</div>`;
+      </div>`;
+
+    // 분석결과 버튼 활성화
+    if (btn) btn.style.opacity = '1';
+  });
 }
 
 // 예측 저장/로드 (localStorage)
