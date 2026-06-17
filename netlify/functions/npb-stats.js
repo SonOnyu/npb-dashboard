@@ -42,7 +42,10 @@ exports.handler = async (event) => {
 
     const cached = await store.get('stats', { type: 'json' });
 
-    if (!cached || !cached[type]) {
+    // 팀별 성적 쿼리: type=team_bat_t, team_pit_l 등
+    const key = type;
+
+    if (!cached || !cached[key]) {
       return {
         statusCode: 200,
         headers: {
@@ -60,7 +63,7 @@ exports.handler = async (event) => {
         'Cache-Control': 'public, max-age=300',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({ type, ...cached[type] }),
+      body: JSON.stringify({ type, ...cached[key] }),
     };
   } catch(err) {
     return {
