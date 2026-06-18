@@ -321,9 +321,16 @@ function parseNPBStatsTable(html, isTeam = false) {
   while ((m = trRe.exec(target)) !== null) {
     const tds = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
     if (tds.length < 5) continue;
+    let rowPlayerId = null;
     const cells = tds.map((t, ci) => {
       const raw = t[1];
       const val = clean(raw);
+      // 선수명 칼럼에서 playerId 추출
+      const nameCol = isTeam ? 0 : 1;
+      if (ci === nameCol) {
+        const pidMatch = raw.match(/\/bis\/players\/(\d+)\.html/);
+        if (pidMatch) rowPlayerId = pidMatch[1];
+      }
       if (!isTeam && ci === 1) {
         const hasLeft   = raw.includes('*') || raw.includes('＊') || /class="[^"]*left/i.test(raw);
         const hasSwitch = raw.includes('+') || raw.includes('＋') || /class="[^"]*switch/i.test(raw);
@@ -333,9 +340,15 @@ function parseNPBStatsTable(html, isTeam = false) {
       return val;
     });
     if (isTeam) {
-      if (cells[0] && cells[0].replace(/^[*＊+＋\s]+/,'').trim().length > 0 && /^\d+$/.test(cells[1])) rows.push(cells);
+      if (cells[0] && cells[0].replace(/^[*＊+＋\s]+/,'').trim().length > 0 && /^\d+$/.test(cells[1])) {
+        if (rowPlayerId) cells.push(rowPlayerId); // playerId를 마지막 셀에 추가
+        rows.push(cells);
+      }
     } else {
-      if (/^\d+$/.test(cells[0])) rows.push(cells);
+      if (/^\d+$/.test(cells[0])) {
+        if (rowPlayerId) cells.push(rowPlayerId);
+        rows.push(cells);
+      }
     }
   }
   return { headers, rows, updatedAt };
