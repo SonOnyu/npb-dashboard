@@ -1960,6 +1960,10 @@ function switchMainStat(mode, btn) {
     loadTeamStats(tc, currentTeamType);
   }
   if (mode === 'search') {
+    // 데이터 미로드 시 자동 로드
+    if (Object.keys(STAT_CACHE).length === 0) {
+      loadAllStats();
+    }
     setTimeout(() => document.getElementById('player-search-input').focus(), 100);
   }
 }
@@ -2237,6 +2241,9 @@ function doPlayerSearch(val) {
 
 // 특정 선수의 전체 성적 표시
 function showPlayerResult(jpName, nameKey, isBatter) {
+  // onclick에서 문자열 'true'/'false'로 넘어올 수 있으므로 Boolean 변환
+  isBatter = (isBatter === true || isBatter === 'true');
+
   const allRows = getAllStatRows();
   // 해당 선수의 모든 타입별 row 수집
   const playerRows = allRows.filter(p =>
@@ -2252,56 +2259,87 @@ function showPlayerResult(jpName, nameKey, isBatter) {
   const koName = playerRows[0].koName;
   const tkey = playerRows[0].tkey;
   const logo = tkey ? logoImg(tkey, 22) : '';
+
   const typeLabelMap = {
-    bat_c:'센트럴', bat_p:'퍼시픽', bat_inter:'교류전', bat_op:'오픈전', bat_cur:'전체',
-    pit_c:'센트럴', pit_p:'퍼시픽', pit_inter:'교류전', pit_op:'오픈전', pit_cur:'전체',
+    bat_c:'센트럴', bat_p:'퍼시픽', bat_inter:'교류전', bat_op:'오픈전',
+    pit_c:'센트럴', pit_p:'퍼시픽', pit_inter:'교류전', pit_op:'오픈전',
   };
 
+  // 헤더 정보
+  const BAT_HEADERS = ['리그','선수','타율','경기','타석','타수','득점','안타','2루타','3루타','홈런','누타','타점','도루','도루실','희타','희비','볼넷','고의4구','사구','삼진','병살','장타율','출루율'];
+  const PIT_HEADERS = ['리그','투수','방어율','등판','승','패','세이브','홀드','HP','완투','완봉승','무사구','승률','타자','투구이닝','안타','홈런','볼넷','고의4구','사구','삼진','폭투','보크','실점','자책점'];
+  const headers = isBatter ? BAT_HEADERS : PIT_HEADERS;
+  const keyCol = 2; // 타율 or 방어율
+
+  // percentile 계산 (renderStatsTable과 동일 로직)
+  const keyVals = playerRows.map(p => parseFloat(p.row[keyCol])).filter(v => !isNaN(v));
+  const keyMin = Math.min(...keyVals);
+  const keyMax = Math.max(...keyVals);
+  const keyRange = keyMax - keyMin || 1;
+  function percentileColor(val) {
+    if (isNaN(val)) return '';
+    let pct = (val - keyMin) / keyRange;
+    if (!isBatter) pct = 1 - pct;
+    if (pct >= 0.8) return 'background:rgba(76,222,128,0.22);color:#3fae5e;font-weight:700';
+    if (pct >= 0.6) return 'background:rgba(76,222,128,0.10);color:var(--text);font-weight:600';
+    if (pct <= 0.2) return 'background:rgba(232,92,64,0.20);color:#e85c40;font-weight:700';
+    if (pct <= 0.4) return 'background:rgba(232,92,64,0.08);color:var(--text)';
+    return '';
+  }
+
+  const tableId = 'search-result-tbl';
+
+  // 선수 정보 헤더
   document.getElementById('search-hint').innerHTML =
-    `<span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--text)">
-      ${logo} ${jpName} ${koName ? `<span style="font-weight:400;color:var(--muted)">${koName}</span>` : ''}
+    `<span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--text);flex-wrap:wrap">
+      ${logo} ${jpName}
+      ${koName ? `<span style="font-weight:400;color:var(--muted)">${koName}</span>` : ''}
       ${isBatter
         ? '<span style="font-size:11px;background:rgba(76,222,128,0.2);color:#3fae5e;padding:2px 7px;border-radius:4px">타자</span>'
         : '<span style="font-size:11px;background:rgba(64,150,255,0.2);color:#4096ff;padding:2px 7px;border-radius:4px">투수</span>'}
     </span>`;
 
-  const BAT_HEADERS = ['순위','선수','타율','경기','타석','타수','득점','안타','2루타','3루타','홈런','누타','타점','도루','도루실','희타','희비','볼넷','고의4구','사구','삼진','병살','장타율','출루율'];
-  const PIT_HEADERS = ['순위','투수','방어율','등판','승','패','세이브','홀드','HP','완투','완봉승','무사구','승률','타자','투구이닝','안타','홈런','볼넷','고의4구','사구','삼진','폭투','보크','실점','자책점'];
-  const headers = isBatter ? BAT_HEADERS : PIT_HEADERS;
-
-  const thHTML = headers.map(h => `<th style="padding:7px 6px;font-size:12px;font-weight:700;text-align:${headers.indexOf(h)<=1?'left':'center'};border-bottom:2px solid var(--border2);white-space:nowrap;color:${headers.indexOf(h)===2?'var(--accent)':'var(--text)'}">${h}</th>`).join('');
-
-  const rowsHTML = playerRows.map(p => {
-    const label = typeLabelMap[p.type] || p.type;
-    const cells = p.row.map((v, ci) => {
-      if (ci === 1) return `<td style="text-align:left;padding:7px 6px;font-size:12px;font-weight:600;white-space:nowrap">${jpName}${koName?`<div style="font-size:10px;color:var(--muted)">${koName}</div>`:''}</td>`;
-      if (ci === 2) return `<td style="padding:7px 6px;font-size:12px;font-weight:700;color:var(--accent);text-align:center">${v}</td>`;
-      return `<td style="padding:7px 6px;font-size:12px;text-align:center">${v}</td>`;
-    }).join('');
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:7px 6px;font-size:11px;color:var(--muted);white-space:nowrap;font-weight:600">${label}</td>
-      ${cells.slice(cells.indexOf('</td>')+5)}
-    </tr>`;
+  // 헤더 HTML (정렬 클릭 지원)
+  const thHTML = headers.map((h, i) => {
+    const isKey = i === keyCol;
+    return `<th style="${isKey ? 'color:var(--accent)' : ''}" onclick="sortStatsTable('${tableId}',${i},${isBatter})" title="클릭하여 정렬">${h}</th>`;
   }).join('');
 
-  // 실제로 리그별 rows 렌더
-  const rowsHTMLv2 = playerRows.map(p => {
+  // 행 HTML (그라데이션 + 선수명 렌더링)
+  const tbHTML = playerRows.map(p => {
     const label = typeLabelMap[p.type] || p.type;
     const cells = p.row.map((v, ci) => {
-      if (ci === 0) return `<td style="padding:7px 6px;font-size:11px;color:var(--muted);font-weight:600;text-align:center">${label}</td>`;
-      if (ci === 1) return `<td style="padding:7px 6px;font-size:12px;font-weight:600;text-align:left;white-space:nowrap">${jpName}${koName?`<div style="font-size:10px;color:var(--muted)">${koName}</div>`:''}</td>`;
-      if (ci === 2) return `<td style="padding:7px 6px;font-size:13px;font-weight:700;color:var(--accent);text-align:center">${v}</td>`;
-      return `<td style="padding:7px 6px;font-size:12px;text-align:center">${v}</td>`;
+      if (ci === 0) {
+        // 순위 → 리그명으로 교체
+        return `<td style="text-align:center;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">${label}</td>`;
+      }
+      if (ci === 1) {
+        // 선수명 셀 — renderStatsTable과 동일하게 로고+한국어 표시
+        return `<td>
+          <div style="display:flex;align-items:center;gap:5px">
+            ${logo}
+            <div>
+              <div style="font-size:13px;font-weight:500;white-space:nowrap">${jpName}</div>
+              ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
+            </div>
+          </div>
+        </td>`;
+      }
+      if (ci === keyCol) {
+        const style = percentileColor(parseFloat(v));
+        return `<td style="${style}">${v}</td>`;
+      }
+      return `<td>${v}</td>`;
     }).join('');
-    return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
+    return `<tr>${cells}</tr>`;
   }).join('');
 
   document.getElementById('search-result-panel').innerHTML = `
     <div class="card">
       <div class="stats-scroll">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
+        <table class="stats-tbl" id="${tableId}">
           <thead><tr>${thHTML}</tr></thead>
-          <tbody>${rowsHTMLv2}</tbody>
+          <tbody>${tbHTML}</tbody>
         </table>
       </div>
     </div>`;
