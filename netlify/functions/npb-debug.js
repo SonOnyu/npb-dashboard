@@ -1,15 +1,18 @@
 const https = require('https');
 
-function fetchUrl(url) {
+function fetchUrl(url, referer) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, {
+    const u = new URL(url);
+    const req = https.get({
+      hostname: u.hostname, path: u.pathname + u.search,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html', 'Accept-Language': 'ja', 'Referer': 'https://www.buffaloes.co.jp/',
+        'Accept': 'text/html', 'Accept-Language': 'ja',
+        'Referer': referer || `https://${u.hostname}/`,
       }
     }, (res) => {
       if ([301,302].includes(res.statusCode))
-        return fetchUrl(res.headers.location).then(resolve).catch(reject);
+        return fetchUrl(res.headers.location, referer).then(resolve).catch(reject);
       if (res.statusCode !== 200)
         return reject(new Error(`HTTP ${res.statusCode}`));
       const chunks = [];
@@ -28,29 +31,40 @@ function clean(s) {
 exports.handler = async () => {
   const cors = { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' };
 
-  try {
-    const url  = 'https://www.buffaloes.co.jp/team/player/detail/2026_00001169.html';
-    const html = await fetchUrl(url);
+  // 12구단 선수 목록 페이지에서 NPB 선수 ID 링크 찾기
+  const TEAM_URLS = {
+    T:  'https://hanshintigers.jp/team/players/',
+    DB: 'https://www.baystars.co.jp/team/player/',
+    G:  'https://www.giants.jp/team/player/',
+    D:  'https://dragons.jp/team/player/',
+    C:  'https://www.carp.co.jp/team/player/',
+    Sw: 'https://www.yakult-swallows.co.jp/team/player/',
+    H:  'https://www.softbankhawks.co.jp/team/player/',
+    F:  'https://www.fighters.co.jp/team/player/',
+    Bs: 'https://www.buffaloes.co.jp/team/player/',
+    E:  'https://www.rakuteneagles.jp/team/player/',
+    L:  'https://www.seibulions.jp/team/player/',
+    M:  'https://www.marines.co.jp/team/player/',
+  };
 
-    // 성적 테이블 찾기
-    const tables = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)].map(m => m[0]);
+  const results = {};
+  await Promise.allSettled(Object.entries(TEAM_URLS).map(async ([team, url]) => {
+    try {
+      const html = await fetchUrl(url);
+      // NPB player 링크 패턴
+      const npbLinks = [...html.matchAll(/\/bis\/players\/(\d+)\.html/g)].map(m => m[1]);
+      // 구단 자체 선수 URL 패턴 (ID 추출)
+      const ownLinks = [...html.matchAll(/href="([^"]*player[^"]*detail[^"]*)"[^>]*>/gi)]
+        .map(m => m[1]).slice(0, 3);
+      results[team] = {
+        ok: true, len: html.length,
+        npbLinks: [...new Set(npbLinks)].slice(0, 3),
+        ownLinks,
+      };
+    } catch(e) {
+      results[team] = { ok: false, error: e.message };
+    }
+  }));
 
-    // 선수 이름
-    const nameMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-    const name = nameMatch ? clean(nameMatch[1]) : '';
-
-    // 각 테이블 헤더 + 첫 행
-    const tableInfo = tables.map((t, i) => {
-      const headers = [...t.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)].map(m => clean(m[1])).filter(Boolean);
-      const firstRow = [...t.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].slice(0,8).map(m => clean(m[1]));
-      return { i, headers: headers.slice(0,8), firstRow };
-    });
-
-    return {
-      statusCode: 200, headers: cors,
-      body: JSON.stringify({ ok: true, len: html.length, name, tableCount: tables.length, tableInfo }, null, 2)
-    };
-  } catch(e) {
-    return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: false, error: e.message }) };
-  }
+  return { statusCode: 200, headers: cors, body: JSON.stringify(results, null, 2) };
 };
