@@ -2147,6 +2147,25 @@ const PLAYER_ID = {
   'Ｔハーン':'73975159'
 };
 
+// Blobs의 playerIdMap으로 PLAYER_ID 보완
+async function loadPlayerIdMap() {
+  try {
+    const res = await fetch(`${API}?type=playerIdMap`);
+    if (!res.ok) return;
+    const map = await res.json();
+    if (!map || typeof map !== 'object') return;
+    let added = 0;
+    for (const [name, pid] of Object.entries(map)) {
+      const key = name.replace(/[\s　]/g,'');
+      if (!PLAYER_ID[key]) {
+        PLAYER_ID[key] = pid;
+        added++;
+      }
+    }
+    if (added > 0) console.log(`[playerIdMap] ${added}명 추가`);
+  } catch(e) {}
+}
+
 // 선수 사진 캐시 { playerId: photoUrl }
 const playerPhotoCache = {};
 
@@ -2979,10 +2998,11 @@ async function initPlayerSearch() {
   if (hint) hint.innerHTML = '';
   if (ac)   ac.style.display = 'none';
 
-  // 리그 성적 + 팀 전체 데이터 병렬 로드
+  // 리그 성적 + 팀 전체 데이터 + playerIdMap 병렬 로드
   await Promise.all([
     statsLoaded   ? Promise.resolve() : loadAllStats(),
     teamRawLoaded ? Promise.resolve() : loadAllTeamRaw(),
+    loadPlayerIdMap(),
   ]);
 
   // 활성화
