@@ -5,7 +5,7 @@ function fetchUrl(url) {
     const req = https.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html', 'Accept-Language': 'ja', 'Referer': 'https://npb.jp/',
+        'Accept': 'text/html', 'Accept-Language': 'ja', 'Referer': 'https://www.buffaloes.co.jp/',
       }
     }, (res) => {
       if ([301,302].includes(res.statusCode))
@@ -27,27 +27,30 @@ function clean(s) {
 
 exports.handler = async () => {
   const cors = { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' };
-  const results = {};
 
-  const urls = {
-    'players_index': 'https://npb.jp/bis/players/',
-    'players_b':     'https://npb.jp/bis/players/b.html',
-    'players_2026b': 'https://npb.jp/bis/2026/players/b.html',
-    'players_search':'https://npb.jp/bis/players/?name=%E6%A3%AE%E5%8F%8B%E5%93%89', // 森友哉
-  };
+  try {
+    const url  = 'https://www.buffaloes.co.jp/team/player/detail/2026_00001169.html';
+    const html = await fetchUrl(url);
 
-  for (const [key, url] of Object.entries(urls)) {
-    try {
-      const html = await fetchUrl(url);
-      const links = [...html.matchAll(/\/bis\/players\/(\d+)\.html/g)].map(m => m[1]);
-      // 선수명+링크 패턴 찾기
-      const playerEntries = [...html.matchAll(/<a[^>]+href="\/bis\/players\/(\d+)\.html"[^>]*>([\s\S]*?)<\/a>/g)]
-        .slice(0,5).map(m => ({ id: m[1], name: clean(m[2]) }));
-      results[key] = { ok: true, len: html.length, uniqueLinks: [...new Set(links)].length, playerEntries };
-    } catch(e) {
-      results[key] = { ok: false, error: e.message };
-    }
+    // 성적 테이블 찾기
+    const tables = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)].map(m => m[0]);
+
+    // 선수 이름
+    const nameMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    const name = nameMatch ? clean(nameMatch[1]) : '';
+
+    // 각 테이블 헤더 + 첫 행
+    const tableInfo = tables.map((t, i) => {
+      const headers = [...t.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)].map(m => clean(m[1])).filter(Boolean);
+      const firstRow = [...t.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].slice(0,8).map(m => clean(m[1]));
+      return { i, headers: headers.slice(0,8), firstRow };
+    });
+
+    return {
+      statusCode: 200, headers: cors,
+      body: JSON.stringify({ ok: true, len: html.length, name, tableCount: tables.length, tableInfo }, null, 2)
+    };
+  } catch(e) {
+    return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: false, error: e.message }) };
   }
-
-  return { statusCode: 200, headers: cors, body: JSON.stringify(results, null, 2) };
 };
