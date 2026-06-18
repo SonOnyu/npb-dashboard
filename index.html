@@ -2339,10 +2339,9 @@ function showPlayerResult(jpName, nameKey, isBatter) {
     return '';
   }
 
-  // playerId: 첫 번째로 발견된 것 사용
+  // playerId: 첫 번째로 발견된 것 사용 (현재 미지원)
   const playerId = playerRows.map(p => p.playerId).find(id => id) || null;
-  const npbLink  = playerId ? `https://npb.jp/bis/players/${playerId}.html` : null;
-  const nameEnc  = encodeURIComponent(nameKey);
+  const npbSearchUrl = `https://npb.jp/bis/players/`;
 
   document.getElementById('search-hint').innerHTML =
     `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
@@ -2352,16 +2351,10 @@ function showPlayerResult(jpName, nameKey, isBatter) {
       ${isBatter
         ? '<span style="font-size:11px;background:rgba(76,222,128,0.2);color:#3fae5e;padding:2px 7px;border-radius:4px">타자</span>'
         : '<span style="font-size:11px;background:rgba(64,150,255,0.2);color:#4096ff;padding:2px 7px;border-radius:4px">투수</span>'}
-      ${npbLink
-        ? `<a href="${npbLink}" target="_blank" rel="noopener"
-            style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:3px 10px;border-radius:4px;text-decoration:none">
-            📊 NPB 공식
-          </a>`
-        : ''}
-      <button onclick="loadPlayerHistory('${nameEnc}','${playerId || ''}',${isBatter})"
-        style="font-size:11px;background:var(--accent);border:none;color:#000;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:600">
-        📅 연도별 성적
-      </button>
+      <a href="https://www.google.com/search?q=site:npb.jp/bis/players+${encodeURIComponent(jpName)}" target="_blank" rel="noopener"
+        style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:3px 10px;border-radius:4px;text-decoration:none">
+        🔍 NPB 프로필 검색
+      </a>
     </div>`;
 
   const tableId = 'search-result-tbl';
