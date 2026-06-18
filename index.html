@@ -2169,6 +2169,261 @@ function playerNameHtml(jpName, koName, opts = {}) {
   return display;
 }
 
+// NPB 팀명 한국어
+const NPB_TEAM_KO_FULL = {
+  '東京ヤクルトスワローズ':'야쿠르트 스왈로즈','ヤクルト':'야쿠르트 스왈로즈',
+  '広島東洋カープ':'히로시마 카프','広島':'히로시마 카프',
+  '読売ジャイアンツ':'요미우리 자이언츠','巨人':'요미우리 자이언츠',
+  '中日ドラゴンズ':'주니치 드래곤즈','中日':'주니치 드래곤즈',
+  '横浜DeNAベイスターズ':'DeNA 베이스타즈','DeNA':'DeNA 베이스타즈','横浜':'DeNA 베이스타즈',
+  '阪神タイガース':'한신 타이거즈','阪神':'한신 타이거즈',
+  '福岡ソフトバンクホークス':'소프트뱅크 호크스','ソフトバンク':'소프트뱅크 호크스',
+  '北海道日本ハムファイターズ':'닛폰햄 파이터즈','日本ハム':'닛폰햄 파이터즈',
+  '東北楽天ゴールデンイーグルス':'라쿠텐 이글스','楽天':'라쿠텐 이글스',
+  '千葉ロッテマリーンズ':'롯데 마린스','ロッテ':'롯데 마린스',
+  'オリックス・バファローズ':'ORIX 버팔로즈','オリックス':'ORIX 버팔로즈',
+  '埼玉西武ライオンズ':'세이부 라이온즈','西武':'세이부 라이온즈',
+};
+
+function npbTeamKo(jp) {
+  if (!jp) return jp;
+  const norm = s => s.replace(/[\s\u3000]/g,'');
+  const entry = Object.entries(NPB_TEAM_KO_FULL)
+    .sort((a,b)=>b[0].length-a[0].length)
+    .find(([k]) => norm(jp).includes(norm(k)) || norm(k).includes(norm(jp)));
+  return entry ? entry[1] : jp;
+}
+
+// corsproxy.io 를 통해 NPB 선수 페이지 파싱
+async function loadPlayerProfile(playerId, containerEl) {
+  if (!playerId || !containerEl) return;
+  containerEl.innerHTML = `<div style="padding:16px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px">
+    <div style="width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    선수 정보 불러오는 중...
+  </div>`;
+
+  const npbUrl  = `https://npb.jp/bis/players/${playerId}.html`;
+  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(npbUrl)}`;
+
+  try {
+    const res  = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const doc  = new DOMParser().parseFromString(text, 'text/html');
+
+    // ── 이름 ──
+    const titleText = doc.querySelector('title')?.textContent || '';
+    const fullName  = titleText.split(/[（|]/)[0].trim().replace(/\u3000/g,' ');
+
+    // ── 요미가나 ──
+    let yomi = '';
+    const allLis = [...doc.querySelectorAll('li')].map(l => l.textContent.trim());
+    const jerseyIdx = allLis.findIndex(l => /^\d{1,3}$/.test(l));
+    const backNo    = jerseyIdx >= 0 ? allLis[jerseyIdx] : '';
+    const teamRaw   = jerseyIdx >= 0 ? (allLis[jerseyIdx+1]||'') : '';
+    if (jerseyIdx >= 3) yomi = allLis[jerseyIdx+3] || '';
+    if (!yomi) {
+      const h1 = doc.querySelector('h1');
+      let el = h1?.nextElementSibling;
+      while (el) {
+        const t = el.textContent?.trim();
+        if (t && /[\u3040-\u30FF・]/.test(t) && t.length < 30) { yomi = t; break; }
+        if (['TABLE','DIV','SECTION'].includes(el.tagName)) break;
+        el = el.nextElementSibling;
+      }
+    }
+
+    // ── 선수 사진 ──
+    const photoEl  = doc.querySelector('img[src*="players_photo"]') ||
+                     doc.querySelector('img[src*="npb.jp"][src*="player"]');
+    const photoUrl = photoEl?.src || photoEl?.getAttribute('src') || '';
+    // 상대경로 → 절대경로
+    const photo = photoUrl.startsWith('http') ? photoUrl
+      : photoUrl ? `https://npb.jp${photoUrl}` : '';
+
+    // ── 바이오 ──
+    const bioMap = {};
+    doc.querySelectorAll('dl').forEach(dl => {
+      [...dl.querySelectorAll('dt')].forEach((dt,i) => {
+        const dd = dl.querySelectorAll('dd')[i];
+        if (dd) bioMap[dt.textContent.trim()] = dd.textContent.trim();
+      });
+    });
+    [...doc.querySelectorAll('table')].forEach(tbl => {
+      if ((tbl.textContent||'').match(/打率|防御率/)) return;
+      [...tbl.querySelectorAll('tr')].forEach(tr => {
+        const cs = [...tr.querySelectorAll('th,td')];
+        if (cs.length >= 2) bioMap[cs[0].textContent.trim()] = cs[1].textContent.trim();
+      });
+    });
+    const bTxt  = doc.body?.textContent || '';
+    const getBio = (...ks) => { for (const k of ks) if (bioMap[k]) return bioMap[k]; return ''; };
+    const position  = getBio('ポジション','守備位置') || (bTxt.match(/ポジション[\s\u3000：:]*([^\n\r\t:　]+)/)||[])[1]?.trim() || '';
+    const handInfo  = getBio('投打') || (bTxt.match(/投打[\s\u3000：:]*([右左両]\s*投\s*[右左]?\s*打)/)||[])[1]?.trim().replace(/\s/g,'') || '';
+    const hwRaw     = getBio('身長／体重','身長/体重') || (bTxt.match(/身長[／/]体重[\s\u3000：:]*(\d+cm[^\n\r\t　:]+)/)||[])[1]?.trim() || '';
+    const birthRaw  = getBio('生年月日') || (bTxt.match(/生年月日[\s\u3000：:]*(\d{4}年\d{1,2}月\d{1,2}日)/)||[])[1]?.trim() || '';
+    const birthM    = birthRaw.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+    const birthDate = birthM ? `${birthM[1]}-${birthM[2].padStart(2,'0')}-${birthM[3].padStart(2,'0')}` : birthRaw;
+    const careerHist = getBio('経歴') || (bTxt.match(/経歴[\s\u3000：:]*([^\n\r\t:　]{3,})/)||[])[1]?.trim() || '';
+    const draftInfo  = getBio('ドラフト') || (bTxt.match(/ドラフト[\s\u3000：:]*(\d{4}年[^\n\r\t:　]+)/)||[])[1]?.trim() || '';
+    const teamKo     = npbTeamKo(teamRaw);
+
+    // ── 성적 테이블 파싱 ──
+    let statsTable = null;
+    for (const tbl of doc.querySelectorAll('table')) {
+      const hdr = (tbl.querySelector('thead tr')||tbl.querySelector('tr'))?.textContent || '';
+      if (hdr.includes('年度') && (hdr.includes('打率') || hdr.includes('防御率'))) {
+        statsTable = tbl; break;
+      }
+    }
+
+    let isBatterProfile = true;
+    let headers = [];
+    const seasonRows = [];
+    let careerRowData = null;
+
+    if (statsTable) {
+      const hdrRow = statsTable.querySelector('thead tr') || statsTable.querySelector('tr');
+      headers = [...(hdrRow?.querySelectorAll('th')||[])].map(t => t.textContent.trim());
+      const hdrTxt = hdrRow?.textContent || '';
+      isBatterProfile = hdrTxt.includes('打率') || hdrTxt.includes('安打');
+
+      const dataRows = [
+        ...(statsTable.querySelector('tbody')
+          ? [...statsTable.querySelector('tbody').querySelectorAll('tr')]
+          : [...statsTable.querySelectorAll('tr')].slice(1)),
+        ...(statsTable.querySelector('tfoot')
+          ? [...statsTable.querySelector('tfoot').querySelectorAll('tr')]
+          : []),
+      ];
+
+      dataRows.forEach(tr => {
+        const directTd = [...tr.querySelectorAll(':scope > td')];
+        const cells    = directTd.length ? directTd : [...tr.querySelectorAll(':scope > th')];
+        const tds = cells.map(t => {
+          const inn = t.querySelector('table');
+          return inn ? inn.textContent.replace(/\s/g,'').trim() : t.textContent.trim();
+        });
+        if (tds.length < 3) return;
+        const yr   = tds[0] || '';
+        const team = tds[1] || '';
+        if (!yr || yr === '年度') return;
+        const isCareer = /通[\s\u3000]*算/.test(yr) || /通[\s\u3000]*算/.test(team);
+        const teamKoRow = npbTeamKo(team);
+        const row = { yr, team: teamKoRow, tds, isCareer };
+        if (isCareer) careerRowData = row;
+        else seasonRows.push(row);
+      });
+    }
+
+    // ── 통산 주요 지표 ──
+    let careerStats = {};
+    if (careerRowData) {
+      headers.forEach((h, i) => { careerStats[h] = careerRowData.tds[i] || '-'; });
+    }
+
+    // ── 렌더링 ──
+    const photoHtml = photo
+      ? `<img src="${photo}" alt="${fullName}"
+          style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--border2);flex-shrink:0"
+          onerror="this.style.display='none'">`
+      : `<div style="width:80px;height:80px;background:var(--surface2);border-radius:8px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">⚾</div>`;
+
+    const posKo = {'投手':'투수','捕手':'포수','一塁手':'1루수','二塁手':'2루수','三塁手':'3루수',
+      '遊撃手':'유격수','左翼手':'좌익수','中堅手':'중견수','右翼手':'우익수','外野手':'외야수','内野手':'내야수'}[position] || position;
+    const handKo = handInfo.replace('右投右打','우투우타').replace('右投左打','우투좌타')
+      .replace('左投左打','좌투좌타').replace('左投右打','좌투우타').replace('両打','양타').replace('右打','우타').replace('左打','좌타').replace('右投','우투').replace('左投','좌투');
+
+    // 통산 하이라이트 지표
+    const statKeys = isBatterProfile
+      ? [['打率','타율'],['本塁打','홈런'],['打点','타점'],['安打','안타'],['出塁率','출루율'],['長打率','장타율']]
+      : [['防御率','방어율'],['勝利','승'],['敗戦','패'],['奪三振','탈삼진'],['投球回','이닝'],['WHIP','WHIP']];
+
+    const careerStatHtml = statKeys.map(([jp, ko]) => {
+      const v = careerStats[jp];
+      if (!v || v === '-') return '';
+      const isKey = isBatterProfile ? (jp==='打率'||jp==='出塁率'||jp==='長打率') : (jp==='防御率'||jp==='WHIP');
+      return `<div style="text-align:center;padding:6px 10px;background:var(--surface2);border-radius:6px;border:1px solid ${isKey?'var(--accent)':'var(--border2)'}">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${ko}</div>
+        <div style="font-size:15px;font-weight:700;color:${isKey?'var(--accent)':'var(--text)'}">${v}</div>
+      </div>`;
+    }).filter(Boolean).join('');
+
+    // 연도별 성적 테이블
+    const statHdrs = isBatterProfile
+      ? ['年度','所属球団','試合','打率','本塁打','打点','安打','出塁率','長打率']
+      : ['年度','所属球団','試合','防御率','投球回','奪三振','勝利','敗戦','WHIP'];
+    const colIdxs = statHdrs.map(h => headers.indexOf(h));
+
+    const tblHeadHtml = statHdrs.map((h,i) => {
+      const ko = {'年度':'시즌','所属球団':'팀','試合':'경기','打率':'타율','本塁打':'홈런','打点':'타점',
+        '安打':'안타','出塁率':'출루율','長打率':'장타율','防御率':'방어율','投球回':'이닝',
+        '奪三振':'탈삼진','勝利':'승','敗戦':'패','WHIP':'WHIP'}[h] || h;
+      const isKey = isBatterProfile ? h==='打率' : h==='防御率';
+      return `<th style="${isKey?'color:var(--accent)':''}">${ko}</th>`;
+    }).join('');
+
+    const tblBodyHtml = [...seasonRows, ...(careerRowData?[careerRowData]:[])].map(row => {
+      const isC = row.isCareer;
+      const cells = colIdxs.map((ci,i) => {
+        const v = ci>=0 ? row.tds[ci] : (i===1 ? row.team : '-');
+        const h = statHdrs[i];
+        const isKey = isBatterProfile ? h==='打率' : h==='防御率';
+        const style = isC ? 'font-weight:700;color:var(--accent)' : (isKey?'color:var(--accent);font-weight:600':'');
+        return `<td style="${style}">${i===1&&!isC ? npbTeamKo(v) : v}</td>`;
+      }).join('');
+      return `<tr style="${isC?'border-top:2px solid var(--border2);background:var(--surface2)':''}">${cells}</tr>`;
+    }).join('');
+
+    const npbOfficialLink = `https://npb.jp/bis/players/${playerId}.html`;
+
+    containerEl.innerHTML = `
+      <div class="card" style="margin-top:0">
+        <!-- 프로필 헤더 -->
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap">
+          ${photoHtml}
+          <div style="flex:1;min-width:180px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+              <span style="font-size:18px;font-weight:700;color:var(--text)">${fullName}</span>
+              ${posKo?`<span style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);color:var(--muted);padding:2px 7px;border-radius:4px">${posKo}</span>`:''}
+              ${handKo?`<span style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);color:var(--muted);padding:2px 7px;border-radius:4px">${handKo}</span>`:''}
+              ${teamKo?`<span style="font-size:11px;background:rgba(64,150,255,0.15);border:1px solid rgba(64,150,255,0.3);color:#4096ff;padding:2px 7px;border-radius:4px">NPB</span>`:''}
+              ${backNo?`<span style="font-size:11px;color:var(--muted)">등번호 ${backNo}</span>`:''}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);margin-bottom:8px">
+              ${teamKo?`<span>${teamKo}</span>`:''}
+              ${birthDate?`<span>생년월일 ${birthDate}</span>`:''}
+              ${hwRaw?`<span>신장/체중 ${hwRaw}</span>`:''}
+              ${yomi?`<span>읽기 ${yomi}</span>`:''}
+              ${careerHist?`<span>경력 ${careerHist}</span>`:''}
+              ${draftInfo?`<span>드래프트 ${draftInfo}</span>`:''}
+            </div>
+            <!-- 통산 지표 -->
+            <div style="display:flex;flex-wrap:wrap;gap:6px">${careerStatHtml}</div>
+          </div>
+        </div>
+        <!-- npb 공식 링크 -->
+        <div style="margin-bottom:10px">
+          <a href="${npbOfficialLink}" target="_blank" rel="noopener"
+            style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:4px;text-decoration:none">
+            🔗 npb.jp 공식 · 원본 보기
+          </a>
+        </div>
+        <!-- 연도별 성적 테이블 -->
+        ${tblBodyHtml ? `
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">시즌별 성적</div>
+        <div class="stats-scroll">
+          <table class="stats-tbl">
+            <thead><tr>${tblHeadHtml}</tr></thead>
+            <tbody>${tblBodyHtml}</tbody>
+          </table>
+        </div>` : '<div style="color:var(--muted);font-size:13px">성적 데이터를 불러올 수 없습니다.</div>'}
+      </div>`;
+  } catch(e) {
+    containerEl.innerHTML = `<div style="padding:14px;color:var(--muted);font-size:13px">프로필 불러오기 실패: ${e.message}</div>`;
+  }
+}
+
 // NPB 일본어 헤더 → 한국어 매핑
 const HEADER_MAP = {
   '順位':'순위','選手名':'선수명','選手':'선수','チーム':'팀','打率':'타율','試合':'경기',
@@ -2969,23 +3224,9 @@ function showPlayerResult(jpName, nameKey, isBatter) {
     return '';
   }
 
-  // playerId: 첫 번째로 발견된 것 사용 (현재 미지원)
-  const playerId = playerRows.map(p => p.playerId).find(id => id) || null;
-  const npbSearchUrl = `https://npb.jp/bis/players/`;
-
-  document.getElementById('search-hint').innerHTML =
-    `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      ${logo}
-      <span style="font-size:14px;font-weight:600;color:var(--text)">${jpName}</span>
-      ${koName ? `<span style="font-size:13px;font-weight:400;color:var(--muted)">${koName}</span>` : ''}
-      ${isBatter
-        ? '<span style="font-size:11px;background:rgba(76,222,128,0.2);color:#3fae5e;padding:2px 7px;border-radius:4px">타자</span>'
-        : '<span style="font-size:11px;background:rgba(64,150,255,0.2);color:#4096ff;padding:2px 7px;border-radius:4px">투수</span>'}
-      <a href="https://www.google.com/search?q=site:npb.jp/bis/players+${encodeURIComponent(jpName)}" target="_blank" rel="noopener"
-        style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:3px 10px;border-radius:4px;text-decoration:none">
-        🔍 NPB 프로필 검색
-      </a>
-    </div>`;
+  // playerId 확인
+  const playerId = getNpbLink(nameKey) ? (PLAYER_ID[nameKey.replace(/[\s\u3000]/g,'')] || null) : null;
+  document.getElementById('search-hint').innerHTML = '';
 
   const tableId = 'search-result-tbl';
   const thHTML  = headers.map((h, i) =>
@@ -3021,75 +3262,23 @@ function showPlayerResult(jpName, nameKey, isBatter) {
     return `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
   }).join('');
 
-  // ── 하이라이트 카드 ──
-  // playerRows에서 팀 성적(isTeam) + 리그 성적(!isTeam) 분리
-  const teamRow   = playerRows.find(p => p.isTeam);
-  const leagueRow = playerRows.find(p => !p.isTeam);
-
-  function statVal(row, headers, jp) {
-    if (!row || !headers) return null;
-    const idx = headers.findIndex(h => h === jp);
-    return idx >= 0 ? row[idx] : null;
-  }
-
-  // 팀/리그 성적 각각의 헤더+row
-  const tData = teamRow   ? (teamRawCache[teamRow.type]   || null) : null;
-  const lData = leagueRow ? (STAT_CACHE[leagueRow.type]   || null) : null;
-  const tHdrs = tData?.headers || [];
-  const lHdrs = lData?.headers || [];
-  const tRow  = teamRow?.row   || [];
-  const lRow  = leagueRow?.row || [];
-
-  // 표시할 지표 정의
-  const metrics = isBatter
-    ? [
-        { jp:'打率', ko:'타율',   fmt: v => v },
-        { jp:'本塁打', ko:'홈런', fmt: v => v },
-        { jp:'打点',  ko:'타점',  fmt: v => v },
-        { jp:'出塁率', ko:'출루율', fmt: v => v },
-        { jp:'長打率', ko:'장타율', fmt: v => v },
-        { jp:'安打',  ko:'안타',   fmt: v => v },
-        { jp:'試合',  ko:'경기',   fmt: v => v },
-      ]
-    : [
-        { jp:'防御率', ko:'방어율', fmt: v => v },
-        { jp:'勝利',  ko:'승',     fmt: v => v },
-        { jp:'敗戦',  ko:'패',     fmt: v => v },
-        { jp:'奪三振', ko:'탈삼진', fmt: v => v },
-        { jp:'投球回', ko:'이닝',   fmt: v => v },
-        { jp:'WHIP', ko:'WHIP',   fmt: v => v },
-        { jp:'試合',  ko:'경기',   fmt: v => v },
-      ];
-
-  const cards = metrics.map(m => {
-    const tv = statVal(tRow, tHdrs, m.jp);
-    const lv = statVal(lRow, lHdrs, m.jp);
-    const val = lv || tv; // 리그 성적 우선, 없으면 팀 성적
-    if (!val || val === '' || val === '-') return null;
-    const isKey = isBatter ? (m.jp === '打率' || m.jp === '出塁率' || m.jp === '長打率')
-                           : (m.jp === '防御率' || m.jp === 'WHIP');
-    return `<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;min-width:64px;text-align:center${isKey ? ';border-color:var(--accent)' : ''}">
-      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${m.ko}</div>
-      <div style="font-size:17px;font-weight:700;color:${isKey ? 'var(--accent)' : 'var(--text)'}">${m.fmt(val)}</div>
-      ${tv && lv && tv !== lv ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">팀:${tv}</div>` : ''}
-    </div>`;
-  }).filter(Boolean);
-
-  const highlightHtml = cards.length > 0
-    ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${cards.join('')}</div>`
-    : '';
-
   document.getElementById('search-result-panel').innerHTML = `
-    ${highlightHtml}
     <div class="card"><div class="stats-scroll">
       <table class="stats-tbl" id="${tableId}">
         <thead><tr>${thHTML}</tr></thead>
         <tbody>${tbHTML}</tbody>
       </table>
     </div></div>`;
-  // 연도별 성적 패널 초기화
+
+  // playerId 있으면 프로필 카드 자동 로드
   const histPanel = document.getElementById('player-history-panel');
-  if (histPanel) histPanel.innerHTML = '';
+  if (histPanel) {
+    if (playerId) {
+      loadPlayerProfile(playerId, histPanel);
+    } else {
+      histPanel.innerHTML = '';
+    }
+  }
 }
 
 // 선수 연도별 성적 로드
