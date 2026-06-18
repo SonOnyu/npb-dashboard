@@ -19,15 +19,30 @@ function fetchUrl(url) {
 }
 exports.handler = async () => {
   const cors = { 'Content-Type':'application/json; charset=utf-8','Access-Control-Allow-Origin':'*' };
-  try {
-    // 森友哉 선수 페이지에서 사진 URL 패턴 확인
-    const html = await fetchUrl('https://npb.jp/bis/players/91495139.html');
-    const imgs = [...html.matchAll(/src="([^"]+)"/g)].map(m=>m[1])
-      .filter(s => s.includes('photo') || s.includes('player') || s.includes('p.npb'));
-    // title, img 태그 전체
-    const allImgs = [...html.matchAll(/<img[^>]+>/gi)].map(m=>m[0]).slice(0,10);
-    return { statusCode:200, headers:cors, body:JSON.stringify({ imgs, allImgs }, null, 2) };
-  } catch(e) {
-    return { statusCode:200, headers:cors, body:JSON.stringify({ error:e.message }) };
+  const results = {};
+
+  // 50음 인덱스 페이지 접근 테스트
+  const suffixes = ['a','ka','sa','ta','na','ha','ma','ya','ra','wa'];
+  for (const s of suffixes.slice(0,3)) {
+    try {
+      const html = await fetchUrl(`https://npb.jp/bis/players/all/index_${s}.html`);
+      const links = [...html.matchAll(/\/bis\/players\/(\d+)\.html"[^>]*>([^<]+)</g)]
+        .map(m => ({ id: m[1], name: m[2].trim() }));
+      results[`index_${s}`] = { ok:true, len:html.length, playerCount:links.length, sample:links.slice(0,3) };
+    } catch(e) {
+      results[`index_${s}`] = { ok:false, error:e.message };
+    }
   }
+
+  // 森友哉 사진 URL 확인
+  try {
+    const html = await fetchUrl('https://npb.jp/bis/players/91495139.html');
+    const imgs = [...html.matchAll(/<img[^>]+src="([^"]+)"/gi)].map(m=>m[1])
+      .filter(s => s.includes('photo') || s.includes('p.npb') || /\d{8}/.test(s));
+    results.photoTest = { ok:true, imgs };
+  } catch(e) {
+    results.photoTest = { ok:false, error:e.message };
+  }
+
+  return { statusCode:200, headers:cors, body:JSON.stringify(results, null,2) };
 };
