@@ -493,10 +493,32 @@ body:not(.light) .rdp{color:#4cde80}
     <span class="src">출처: <a href="https://npb.jp/bis/2026/stats/" target="_blank">NPB 공식</a></span>
   </div>
 
-  <!-- 1단계: 리그 개인 성적 / 팀 개인 성적 -->
+  <!-- 1단계: 리그 개인 성적 / 팀 개인 성적 / 선수 검색 -->
   <div class="sub-tabs" style="margin-bottom:8px">
     <button class="sub-tab active" id="main-stat-league" onclick="switchMainStat('league',this)">리그 개인 성적</button>
     <button class="sub-tab" id="main-stat-team" onclick="switchMainStat('team',this)">팀 개인 성적</button>
+    <button class="sub-tab" id="main-stat-search" onclick="switchMainStat('search',this)">🔍 선수 검색</button>
+  </div>
+
+  <!-- ── 선수 검색 패널 ── -->
+  <div id="search-stat-panel" style="display:none">
+    <div style="position:relative;margin-bottom:12px">
+      <input id="player-search-input" type="text" placeholder="선수명 입력 (일본어: 佐藤, 한국어: 사토)"
+        style="width:100%;box-sizing:border-box;padding:10px 40px 10px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:14px;outline:none"
+        oninput="onPlayerSearchInput(this.value)"
+        onkeydown="if(event.key==='Enter')doPlayerSearch(this.value)"
+      />
+      <button onclick="clearPlayerSearch()" title="초기화"
+        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:2px 4px">×</button>
+      <!-- 자동완성 드롭다운 -->
+      <div id="player-autocomplete"
+        style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:6px;z-index:100;max-height:280px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.3)">
+      </div>
+    </div>
+    <!-- 검색 결과 힌트 -->
+    <div id="search-hint" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+    <!-- 검색 결과 테이블 -->
+    <div id="search-result-panel"></div>
   </div>
 
   <!-- ── 리그 개인 성적 패널 ── -->
@@ -1928,14 +1950,17 @@ let activeCSLeague  = 'cl';
 function switchMainStat(mode, btn) {
   document.querySelectorAll('#stats .sub-tab:not(.sub2)').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('league-stat-panel').style.display = mode === 'league' ? '' : 'none';
-  document.getElementById('team-stat-panel').style.display   = mode === 'team'   ? '' : 'none';
+  document.getElementById('league-stat-panel').style.display  = mode === 'league' ? '' : 'none';
+  document.getElementById('team-stat-panel').style.display    = mode === 'team'   ? '' : 'none';
+  document.getElementById('search-stat-panel').style.display  = mode === 'search' ? '' : 'none';
   if (mode === 'team') {
-    // 처음 진입 시 한신 타자 로드
     const activeTeam = document.querySelector('#team-stat-panel .sub-tab.sub2.active');
     if (!activeTeam) return;
     const tc = activeTeam.getAttribute('onclick').match(/'(\w+)'/)[1];
     loadTeamStats(tc, currentTeamType);
+  }
+  if (mode === 'search') {
+    setTimeout(() => document.getElementById('player-search-input').focus(), 100);
   }
 }
 
@@ -2044,6 +2069,260 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 페이지 로드 시 자동갱신 스케줄 등록
 scheduleAutoRefresh();
+
+// ════════════════════════════════════════
+// 선수 검색 기능
+// ════════════════════════════════════════
+
+// 전체 로드된 성적 rows 수집 (타자/투수 구분 포함)
+function getAllStatRows() {
+  const result = [];
+  // STAT_CACHE에서 모든 데이터 수집
+  for (const [type, data] of Object.entries(STAT_CACHE)) {
+    if (!data || !data.rows) continue;
+    const isBatter = type.startsWith('bat');
+    for (const row of data.rows) {
+      if (!row[1]) continue;
+      // 이름 파싱: "*糸原　健斗(神)" 형태
+      const raw = String(row[1]);
+      const vClean = raw.replace(/^[*＊+＋\s]+/, '').trim();
+      const nameMatch = vClean.match(/^(.+?)[(（](.+?)[)）]$/);
+      const jpName = nameMatch ? nameMatch[1].trim() : vClean;
+      const teamAbr = nameMatch ? nameMatch[2] : '';
+      const nameKey = jpName.replace(/\u3000/g, ' ').trim();
+      const koName = PLAYER_KO[nameKey] || PLAYER_KO[jpName] || '';
+      const tkey = teamAbr ? teamKey(teamAbr) : null;
+      result.push({ jpName, nameKey, koName, teamAbr, tkey, isBatter, row, type });
+    }
+  }
+  // 중복 제거 (같은 선수가 여러 리그 타입에 있을 수 있음 — jpName+type 기준)
+  const seen = new Set();
+  return result.filter(p => {
+    const k = p.jpName + '|' + p.type;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+// PLAYER_KO 역방향 맵: 한국어 → 일본어 (검색용)
+let _koToJp = null;
+function getKoToJp() {
+  if (_koToJp) return _koToJp;
+  _koToJp = {};
+  for (const [jp, ko] of Object.entries(PLAYER_KO)) {
+    _koToJp[ko] = jp;
+    // 공백 제거 버전도 등록
+    _koToJp[ko.replace(/\s/g, '')] = jp;
+  }
+  return _koToJp;
+}
+
+// 검색어로 선수 매칭
+function searchPlayers(query) {
+  if (!query || query.trim().length < 1) return [];
+  const q = query.trim();
+  const qLower = q.toLowerCase().replace(/\s/g, '');
+  const koToJp = getKoToJp();
+  const allRows = getAllStatRows();
+
+  // 매칭 함수
+  function matches(p) {
+    // 일본어 이름 포함 검색
+    const jpNorm = p.jpName.replace(/\u3000|\s/g, '');
+    if (jpNorm.includes(q.replace(/\s/g, ''))) return true;
+    if (p.jpName.includes(q)) return true;
+    // 한국어 이름 포함 검색 (공백 무시)
+    if (p.koName) {
+      const koNorm = p.koName.replace(/\s/g, '');
+      if (koNorm.includes(qLower)) return true;
+      if (p.koName.toLowerCase().includes(qLower)) return true;
+    }
+    // 한국어 역방향 매핑으로 일본어 이름 검색
+    const jpFromKo = koToJp[q] || koToJp[q.replace(/\s/g, '')];
+    if (jpFromKo) {
+      const jpFromKoNorm = jpFromKo.replace(/\u3000|\s/g, '');
+      if (jpNorm.includes(jpFromKoNorm)) return true;
+    }
+    return false;
+  }
+
+  const matched = allRows.filter(matches);
+  // 중복 제거: 같은 선수(jpName)가 타자/투수로 모두 있을 수 있으니 jpName+isBatter 기준
+  const seen = new Set();
+  return matched.filter(p => {
+    const k = p.jpName + '|' + p.isBatter;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+// 자동완성 드롭다운 표시
+function onPlayerSearchInput(val) {
+  const ac = document.getElementById('player-autocomplete');
+  if (!val || val.trim().length < 1) {
+    ac.style.display = 'none';
+    document.getElementById('search-hint').textContent = '';
+    return;
+  }
+  // 성적 데이터 아직 미로드 시 안내
+  if (Object.keys(STAT_CACHE).length === 0) {
+    ac.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px">리그 성적 탭을 먼저 한 번 열어주세요.</div>';
+    ac.style.display = 'block';
+    return;
+  }
+  const results = searchPlayers(val);
+  if (results.length === 0) {
+    ac.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px">검색 결과 없음</div>';
+    ac.style.display = 'block';
+    return;
+  }
+  // 최대 20개 표시
+  const items = results.slice(0, 20).map(p => {
+    const logo = p.tkey ? logoImg(p.tkey, 18) : '';
+    const badge = p.isBatter
+      ? '<span style="font-size:10px;background:rgba(76,222,128,0.2);color:#3fae5e;padding:1px 5px;border-radius:3px;margin-left:4px">타자</span>'
+      : '<span style="font-size:10px;background:rgba(64,150,255,0.2);color:#4096ff;padding:1px 5px;border-radius:3px;margin-left:4px">투수</span>';
+    const ko = p.koName ? `<span style="font-size:11px;color:var(--muted);margin-left:4px">${p.koName}</span>` : '';
+    return `<div onclick="selectPlayerFromAC('${p.jpName.replace(/'/g,"\'")}','${p.nameKey.replace(/'/g,"\'")}',${p.isBatter})"
+      style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s"
+      onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
+      ${logo}
+      <span style="font-size:13px;font-weight:500">${p.jpName}</span>${ko}${badge}
+    </div>`;
+  }).join('');
+  ac.innerHTML = items;
+  ac.style.display = 'block';
+}
+
+// 드롭다운에서 선수 선택
+function selectPlayerFromAC(jpName, nameKey, isBatter) {
+  document.getElementById('player-autocomplete').style.display = 'none';
+  document.getElementById('player-search-input').value = jpName;
+  showPlayerResult(jpName, nameKey, isBatter);
+}
+
+// 엔터 검색
+function doPlayerSearch(val) {
+  document.getElementById('player-autocomplete').style.display = 'none';
+  if (!val || val.trim().length < 1) return;
+  const results = searchPlayers(val.trim());
+  if (results.length === 0) {
+    document.getElementById('search-hint').textContent = '검색 결과가 없습니다.';
+    document.getElementById('search-result-panel').innerHTML = '';
+    return;
+  }
+  if (results.length === 1) {
+    showPlayerResult(results[0].jpName, results[0].nameKey, results[0].isBatter);
+  } else {
+    // 복수 결과: 선택 목록 표시
+    document.getElementById('search-hint').textContent = `${results.length}명 검색됨. 선수를 선택하세요.`;
+    document.getElementById('search-result-panel').innerHTML = results.slice(0,20).map(p => {
+      const logo = p.tkey ? logoImg(p.tkey, 18) : '';
+      const badge = p.isBatter
+        ? '<span style="font-size:10px;background:rgba(76,222,128,0.2);color:#3fae5e;padding:1px 5px;border-radius:3px">타자</span>'
+        : '<span style="font-size:10px;background:rgba(64,150,255,0.2);color:#4096ff;padding:1px 5px;border-radius:3px">투수</span>';
+      return `<div onclick="selectPlayerFromAC('${p.jpName.replace(/'/g,"\'")}','${p.nameKey.replace(/'/g,"\'")}',${p.isBatter})"
+        style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);background:var(--surface);border-radius:6px;margin-bottom:4px;transition:background 0.1s"
+        onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background='var(--surface)'">
+        ${logo}
+        <span style="font-size:13px;font-weight:500">${p.jpName}</span>
+        ${p.koName ? `<span style="font-size:11px;color:var(--muted)">${p.koName}</span>` : ''}
+        ${badge}
+      </div>`;
+    }).join('');
+  }
+}
+
+// 특정 선수의 전체 성적 표시
+function showPlayerResult(jpName, nameKey, isBatter) {
+  const allRows = getAllStatRows();
+  // 해당 선수의 모든 타입별 row 수집
+  const playerRows = allRows.filter(p =>
+    (p.jpName === jpName || p.nameKey === nameKey) && p.isBatter === isBatter
+  );
+
+  if (playerRows.length === 0) {
+    document.getElementById('search-hint').textContent = '성적 데이터를 찾을 수 없습니다.';
+    document.getElementById('search-result-panel').innerHTML = '';
+    return;
+  }
+
+  const koName = playerRows[0].koName;
+  const tkey = playerRows[0].tkey;
+  const logo = tkey ? logoImg(tkey, 22) : '';
+  const typeLabelMap = {
+    bat_c:'센트럴', bat_p:'퍼시픽', bat_inter:'교류전', bat_op:'오픈전', bat_cur:'전체',
+    pit_c:'센트럴', pit_p:'퍼시픽', pit_inter:'교류전', pit_op:'오픈전', pit_cur:'전체',
+  };
+
+  document.getElementById('search-hint').innerHTML =
+    `<span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--text)">
+      ${logo} ${jpName} ${koName ? `<span style="font-weight:400;color:var(--muted)">${koName}</span>` : ''}
+      ${isBatter
+        ? '<span style="font-size:11px;background:rgba(76,222,128,0.2);color:#3fae5e;padding:2px 7px;border-radius:4px">타자</span>'
+        : '<span style="font-size:11px;background:rgba(64,150,255,0.2);color:#4096ff;padding:2px 7px;border-radius:4px">투수</span>'}
+    </span>`;
+
+  const BAT_HEADERS = ['순위','선수','타율','경기','타석','타수','득점','안타','2루타','3루타','홈런','누타','타점','도루','도루실','희타','희비','볼넷','고의4구','사구','삼진','병살','장타율','출루율'];
+  const PIT_HEADERS = ['순위','투수','방어율','등판','승','패','세이브','홀드','HP','완투','완봉승','무사구','승률','타자','투구이닝','안타','홈런','볼넷','고의4구','사구','삼진','폭투','보크','실점','자책점'];
+  const headers = isBatter ? BAT_HEADERS : PIT_HEADERS;
+
+  const thHTML = headers.map(h => `<th style="padding:7px 6px;font-size:12px;font-weight:700;text-align:${headers.indexOf(h)<=1?'left':'center'};border-bottom:2px solid var(--border2);white-space:nowrap;color:${headers.indexOf(h)===2?'var(--accent)':'var(--text)'}">${h}</th>`).join('');
+
+  const rowsHTML = playerRows.map(p => {
+    const label = typeLabelMap[p.type] || p.type;
+    const cells = p.row.map((v, ci) => {
+      if (ci === 1) return `<td style="text-align:left;padding:7px 6px;font-size:12px;font-weight:600;white-space:nowrap">${jpName}${koName?`<div style="font-size:10px;color:var(--muted)">${koName}</div>`:''}</td>`;
+      if (ci === 2) return `<td style="padding:7px 6px;font-size:12px;font-weight:700;color:var(--accent);text-align:center">${v}</td>`;
+      return `<td style="padding:7px 6px;font-size:12px;text-align:center">${v}</td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 6px;font-size:11px;color:var(--muted);white-space:nowrap;font-weight:600">${label}</td>
+      ${cells.slice(cells.indexOf('</td>')+5)}
+    </tr>`;
+  }).join('');
+
+  // 실제로 리그별 rows 렌더
+  const rowsHTMLv2 = playerRows.map(p => {
+    const label = typeLabelMap[p.type] || p.type;
+    const cells = p.row.map((v, ci) => {
+      if (ci === 0) return `<td style="padding:7px 6px;font-size:11px;color:var(--muted);font-weight:600;text-align:center">${label}</td>`;
+      if (ci === 1) return `<td style="padding:7px 6px;font-size:12px;font-weight:600;text-align:left;white-space:nowrap">${jpName}${koName?`<div style="font-size:10px;color:var(--muted)">${koName}</div>`:''}</td>`;
+      if (ci === 2) return `<td style="padding:7px 6px;font-size:13px;font-weight:700;color:var(--accent);text-align:center">${v}</td>`;
+      return `<td style="padding:7px 6px;font-size:12px;text-align:center">${v}</td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
+  }).join('');
+
+  document.getElementById('search-result-panel').innerHTML = `
+    <div class="card">
+      <div class="stats-scroll">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
+          <thead><tr>${thHTML}</tr></thead>
+          <tbody>${rowsHTMLv2}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// 검색 초기화
+function clearPlayerSearch() {
+  document.getElementById('player-search-input').value = '';
+  document.getElementById('player-autocomplete').style.display = 'none';
+  document.getElementById('search-hint').innerHTML = '';
+  document.getElementById('search-result-panel').innerHTML = '';
+}
+
+// 외부 클릭 시 드롭다운 닫기
+document.addEventListener('click', (e) => {
+  const ac = document.getElementById('player-autocomplete');
+  const input = document.getElementById('player-search-input');
+  if (ac && input && !ac.contains(e.target) && e.target !== input) {
+    ac.style.display = 'none';
+  }
+});
 
 /* ── MATCH DATA ── */
 const MATCHES=[
