@@ -21,27 +21,29 @@ function fetchUrl(url) {
   });
 }
 
+function clean(s) {
+  return s.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/[\r\n\t]+/g,' ').replace(/\s{2,}/g,' ').trim();
+}
+
 exports.handler = async () => {
   const cors = { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' };
   const results = {};
 
-  // teams URL 패턴 탐색
   const urls = {
-    'teams_index':    'https://npb.jp/bis/teams/',
-    'teams_b_2026':   'https://npb.jp/bis/teams/2026_b.html',
-    'teams_b_no_yr':  'https://npb.jp/bis/teams/b.html',
-    'buffaloes':      'https://www.buffaloes.co.jp/team/player/',
-    'idb1_b_snippet': 'https://npb.jp/bis/2026/stats/idb1_b.html',
+    'players_index': 'https://npb.jp/bis/players/',
+    'players_b':     'https://npb.jp/bis/players/b.html',
+    'players_2026b': 'https://npb.jp/bis/2026/players/b.html',
+    'players_search':'https://npb.jp/bis/players/?name=%E6%A3%AE%E5%8F%8B%E5%93%89', // 森友哉
   };
 
   for (const [key, url] of Object.entries(urls)) {
     try {
       const html = await fetchUrl(url);
       const links = [...html.matchAll(/\/bis\/players\/(\d+)\.html/g)].map(m => m[1]);
-      // idb1_b의 첫 번째 <a> 태그들 확인
-      const atags = [...html.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([^<]{1,20})<\/a>/g)]
-        .slice(0, 5).map(m => ({href: m[1], text: m[2]}));
-      results[key] = { ok: true, len: html.length, playerLinks: [...new Set(links)].slice(0,5), atags };
+      // 선수명+링크 패턴 찾기
+      const playerEntries = [...html.matchAll(/<a[^>]+href="\/bis\/players\/(\d+)\.html"[^>]*>([\s\S]*?)<\/a>/g)]
+        .slice(0,5).map(m => ({ id: m[1], name: clean(m[2]) }));
+      results[key] = { ok: true, len: html.length, uniqueLinks: [...new Set(links)].length, playerEntries };
     } catch(e) {
       results[key] = { ok: false, error: e.message };
     }
