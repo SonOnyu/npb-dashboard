@@ -776,23 +776,43 @@ const task = async () => {
     console.error('[scheduled-fetch] Stats fetch failed:', e.message);
   }
 
-  // ── 2.7. 선수 ID 맵 (팀별 선수 목록 페이지에서 수집) ──
+  // ── 2.7. 선수 ID 맵 (50음 인덱스 페이지에서 전체 수집) ──
   try {
-    const TEAM_CODES_ALL = ['t','db','g','d','c','s','h','f','b','e','l','m'];
+    const SUFFIXES = ['a','i','u','e','o','ka','ki','ku','ke','ko','sa','si','su','se','so',
+      'ta','ti','tu','te','to','na','ni','nu','ne','no','ha','hi','hu','he','ho',
+      'ma','mi','mu','me','mo','ya','yu','yo','ra','ri','ru','re','ro','wa','n'];
     const playerIdMap = {};
-    await Promise.allSettled(TEAM_CODES_ALL.map(async tc => {
-      try {
-        const html = await fetchUrl(`https://npb.jp/bis/teams/2026_${tc}.html`);
-        // /bis/players/숫자.html 링크와 선수명 추출
-        const re = /<a[^>]+href="\/bis\/players\/(\d+)\.html"[^>]*>([\s\S]*?)<\/a>/gi;
-        let m;
-        while ((m = re.exec(html)) !== null) {
-          const pid  = m[1];
-          const name = clean(m[2]).replace(/　/g, ' ').trim();
-          if (name && pid) playerIdMap[name] = pid;
-        }
-      } catch(e) {}
-    }));
+    let total = 0;
+    // 병렬 처리 (5개씩 배치)
+    for (let i = 0; i < SUFFIXES.length; i += 5) {
+      const batch = SUFFIXES.slice(i, i+5);
+      await Promise.allSettled(batch.map(async suffix => {
+        try {
+          const html = await fetchUrl(`https://npb.jp/bis/players/all/index_${suffix}.html`);
+          // 선수 링크 패턴: href="/bis/players/숫자.html" 다음에 선수명
+          const re = /href="\/bis\/players\/(\d+)\.html"[^>]*>\s*<[^>]+>\s*([^\s<][^<]*?)\s*</gi;
+          let m;
+          while ((m = re.exec(html)) !== null) {
+            const pid  = m[1];
+            const name = m[2].replace(/　/g,'').replace(/\s+/g,'').trim();
+            if (name && pid && /[一-鿿゠-ヿ]/.test(name)) {
+              playerIdMap[name] = pid;
+              total++;
+            }
+          }
+          // 패턴2: 직접 텍스트
+          const re2 = /href="\/bis\/players\/(\d+)\.html"[^>]*>([^<]{2,20})<\/a>/gi;
+          while ((m = re2.exec(html)) !== null) {
+            const pid  = m[1];
+            const name = m[2].replace(/　/g,'').replace(/\s+/g,'').trim();
+            if (name && pid && /[一-鿿゠-ヿ]/.test(name) && !playerIdMap[name]) {
+              playerIdMap[name] = pid;
+              total++;
+            }
+          }
+        } catch(e) {}
+      }));
+    }
     if (Object.keys(playerIdMap).length > 0) {
       await store.setJSON('playerIdMap', playerIdMap);
       console.log(`[scheduled-fetch] PlayerIdMap saved: ${Object.keys(playerIdMap).length} players`);
