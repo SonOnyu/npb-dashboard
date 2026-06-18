@@ -2080,21 +2080,24 @@ async function loadAllTeamRaw() {
   if (teamRawLoaded || teamRawLoading) return;
   teamRawLoading = true;
   const TEAM_URL_MAP = {T:'t',DB:'db',G:'g',D:'d',C:'c',Sw:'s',H:'h',F:'f',Bs:'b',E:'e',L:'l',M:'m'};
+  console.log('[search] loadAllTeamRaw start');
   await Promise.allSettled(
     Object.entries(TEAM_URL_MAP).flatMap(([teamCode, tc]) =>
-      ['bat','pit'].map(async type => {
+      ['bat', 'pit'].map(async type => {
         const key = `team_${type}_${tc}`;
-        if (teamRawCache[key]) return;
+        if (teamRawCache[key]) { console.log('[search] skip (cached):', key); return; }
         try {
-          const res = await fetch(`${API}?type=${key}`);
+          const res  = await fetch(`${API}?type=${key}`);
           const data = await res.json();
-          if (data && data.rows) {
+          console.log(`[search] ${key}: headers=${!!data.headers} rows=${data.rows?.length ?? 'none'} error=${data.error||''}`);
+          if (data && data.headers && data.rows && data.rows.length > 0) {
             teamRawCache[key] = { rows: data.rows, isBatter: type === 'bat', teamCode };
           }
-        } catch(e) {}
+        } catch(e) { console.error('[search] fetch error:', key, e.message); }
       })
     )
   );
+  console.log('[search] loadAllTeamRaw done. teamRawCache keys:', Object.keys(teamRawCache).length);
   teamRawLoading = false;
   teamRawLoaded = true;
 }
@@ -2160,7 +2163,7 @@ function getAllStatRows() {
   for (const [key, data] of Object.entries(teamRawCache)) {
     if (!data || !data.rows) continue;
     for (const row of data.rows) {
-      const p = parsePlayerRow(row, data.isBatter, 'team_' + key);
+      const p = parsePlayerRow(row, data.isBatter, key); // key가 이미 'team_bat_b' 형태
       if (p) result.push(p);
     }
   }
