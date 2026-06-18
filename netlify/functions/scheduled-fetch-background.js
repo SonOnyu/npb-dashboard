@@ -776,6 +776,31 @@ const task = async () => {
     console.error('[scheduled-fetch] Stats fetch failed:', e.message);
   }
 
+  // ── 2.7. 선수 ID 맵 (팀별 선수 목록 페이지에서 수집) ──
+  try {
+    const TEAM_CODES_ALL = ['t','db','g','d','c','s','h','f','b','e','l','m'];
+    const playerIdMap = {};
+    await Promise.allSettled(TEAM_CODES_ALL.map(async tc => {
+      try {
+        const html = await fetchUrl(`https://npb.jp/bis/teams/2026_${tc}.html`);
+        // /bis/players/숫자.html 링크와 선수명 추출
+        const re = /<a[^>]+href="\/bis\/players\/(\d+)\.html"[^>]*>([\s\S]*?)<\/a>/gi;
+        let m;
+        while ((m = re.exec(html)) !== null) {
+          const pid  = m[1];
+          const name = clean(m[2]).replace(/　/g, ' ').trim();
+          if (name && pid) playerIdMap[name] = pid;
+        }
+      } catch(e) {}
+    }));
+    if (Object.keys(playerIdMap).length > 0) {
+      await store.setJSON('playerIdMap', playerIdMap);
+      console.log(`[scheduled-fetch] PlayerIdMap saved: ${Object.keys(playerIdMap).length} players`);
+    }
+  } catch(e) {
+    console.error('[scheduled-fetch] PlayerIdMap failed:', e.message);
+  }
+
   // ── 2.5. 순위표 (CL/PL 順位表) ──
   try {
     const standingsData = {};
