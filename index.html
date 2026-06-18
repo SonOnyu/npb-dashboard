@@ -2243,8 +2243,8 @@ function onPlayerSearchInput(val) {
       : '<span style="font-size:10px;background:rgba(64,150,255,0.2);color:#4096ff;padding:1px 5px;border-radius:3px;margin-left:4px">투수</span>';
     const ko = p.koName ? `<span style="font-size:11px;color:var(--muted);margin-left:4px">${p.koName}</span>` : '';
     const ib = p.isBatter ? 'true' : 'false';
-    const jpEsc  = p.jpName.replace(/\/g,'\\').replace(/'/g,"\'");
-    const nkEsc  = p.nameKey.replace(/\/g,'\\').replace(/'/g,"\'");
+    const jpEsc  = p.jpName.replace(/'/g, '&#39;');
+    const nkEsc  = p.nameKey.replace(/'/g, '&#39;');
     return `<div onclick="selectPlayerFromAC('${jpEsc}','${nkEsc}',${ib})"
       style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s"
       onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
@@ -2280,8 +2280,8 @@ function doPlayerSearch(val) {
         ? '<span style="font-size:10px;background:rgba(76,222,128,0.2);color:#3fae5e;padding:1px 5px;border-radius:3px">타자</span>'
         : '<span style="font-size:10px;background:rgba(64,150,255,0.2);color:#4096ff;padding:1px 5px;border-radius:3px">투수</span>';
       const ib   = p.isBatter ? 'true' : 'false';
-      const jpEsc = p.jpName.replace(/\/g,'\\').replace(/'/g,"\'");
-      const nkEsc = p.nameKey.replace(/\/g,'\\').replace(/'/g,"\'");
+      const jpEsc = p.jpName.replace(/'/g, '&#39;');
+      const nkEsc = p.nameKey.replace(/'/g, '&#39;');
       return `<div onclick="selectPlayerFromAC('${jpEsc}','${nkEsc}',${ib})"
         style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);background:var(--surface);border-radius:6px;margin-bottom:4px;transition:background 0.1s"
         onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background='var(--surface)'">
