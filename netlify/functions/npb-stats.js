@@ -17,6 +17,15 @@ exports.handler = async (event) => {
   try {
     const store = npbStore();
 
+    if (type === 'playerIdMap') {
+      const map = await store.get('playerIdMap', { type: 'json' });
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'public, max-age=3600', 'Access-Control-Allow-Origin':'*' },
+        body: JSON.stringify(map || {}),
+      };
+    }
+
     if (type === 'standings') {
       const cached = await store.get('standings', { type: 'json' });
       if (!cached) {
