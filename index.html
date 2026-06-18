@@ -2133,39 +2133,45 @@ async function initPlayerSearch() {
 function getAllStatRows() {
   const result = [];
 
-  function parsePlayerRow(row, isBatter, type) {
-    if (!row || !row[1]) return null;
-    const raw = String(row[1]);
-    const vClean = raw.replace(/^[*＊+＋\s]+/, '').trim();
+  // 리그 성적 row: ["1", "森下　翔太(T)", ".312", ...]  → nameCol=1, 팀명 포함
+  // 팀  성적 row: ["*森　友哉", "60", ".298", ...]      → nameCol=0, 팀명 없음
+  function parsePlayerRow(row, isBatter, type, isTeam) {
+    const nameCol = isTeam ? 0 : 1;
+    if (!row || !row[nameCol]) return null;
+    const raw     = String(row[nameCol]);
+    const vClean  = raw.replace(/^[*＊+＋\s]+/, '').trim();
+    // 리그 성적은 "森下　翔太(T)" 형태, 팀 성적은 "森　友哉" 형태(팀코드 없음)
     const nameMatch = vClean.match(/^(.+?)[(（](.+?)[)）]$/);
     const jpName  = nameMatch ? nameMatch[1].trim() : vClean;
     const teamAbr = nameMatch ? nameMatch[2] : '';
     const nameKey = jpName.replace(/　/g, ' ').trim();
+    if (!nameKey || /^\d+$/.test(nameKey)) return null; // 숫자만인 경우 스킵
     const koName  = PLAYER_KO[nameKey] || PLAYER_KO[jpName] || '';
+    // 팀 성적은 teamRawCache의 teamCode로 팀 파악
     const tkey    = teamAbr ? teamKey(teamAbr) : null;
-    return { jpName, nameKey, koName, teamAbr, tkey, isBatter, row, type };
+    return { jpName, nameKey, koName, teamAbr, tkey, isBatter, row, type, isTeam };
   }
 
-  // 1) STAT_CACHE — 리그 개인 성적 (규정타석/이닝 이상)
+  // 1) STAT_CACHE — 리그 개인 성적 (규정타석/이닝 이상, row[1]=선수명)
   for (const [type, data] of Object.entries(STAT_CACHE)) {
     if (!data || !data.rows) continue;
     const isBatter = type.startsWith('bat');
     for (const row of data.rows) {
-      const p = parsePlayerRow(row, isBatter, type);
+      const p = parsePlayerRow(row, isBatter, type, false);
       if (p) result.push(p);
     }
   }
 
-  // 2) teamRawCache — 팀 개인 성적 (규정 무관 전체 선수)
+  // 2) teamRawCache — 팀 개인 성적 (규정 무관 전체 선수, row[0]=선수명)
   for (const [key, data] of Object.entries(teamRawCache)) {
     if (!data || !data.rows) continue;
     for (const row of data.rows) {
-      const p = parsePlayerRow(row, data.isBatter, key); // key가 이미 'team_bat_b' 형태
+      const p = parsePlayerRow(row, data.isBatter, key, true);
       if (p) result.push(p);
     }
   }
 
-  // 중복 제거: jpName+isBatter 기준, 리그 데이터 우선
+  // 중복 제거: nameKey+isBatter 기준, 리그 데이터 우선(앞에 push됨)
   const seen = new Set();
   return result.filter(p => {
     const k = p.nameKey + '|' + p.isBatter;
@@ -2345,17 +2351,28 @@ function showPlayerResult(jpName, nameKey, isBatter) {
   ).join('');
 
   const tbHTML = playerRows.map(p => {
-    const label = typeLabelMap[p.type] || (p.type.startsWith('team_') ? '팀' : p.type);
-    const cells = p.row.map((v, ci) => {
-      if (ci === 0) return `<td style="text-align:center;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">${label}</td>`;
-      if (ci === 1) return `<td><div style="display:flex;align-items:center;gap:5px">${logo}<div>
+    const label   = typeLabelMap[p.type] || (p.type.startsWith('team_') ? '팀' : p.type);
+    const nameCol = p.isTeam ? 0 : 1; // 팀성적은 row[0]이 선수명
+    const nameTd  = `<td><div style="display:flex;align-items:center;gap:5px">${logo}<div>
         <div style="font-size:13px;font-weight:500;white-space:nowrap">${jpName}</div>
         ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
         </div></div></td>`;
-      if (ci === keyCol) return `<td style="${percentileColor(parseFloat(v))}">${v}</td>`;
-      return `<td>${v}</td>`;
-    }).join('');
-    return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
+    // 팀성적: row[0]=선수명→nameTd, 나머지 그대로
+    // 리그성적: row[0]=순위→label셀, row[1]=선수명→nameTd, 나머지 그대로
+    const cells = p.isTeam
+      ? [`<td style="text-align:center;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">팀</td>`, nameTd,
+          ...p.row.slice(1).map((v, i) => {
+            const ci = i + 1; // slice(1)이므로 실제 col index는 i+1이 아니라 i+2지만 keyCol=2 기준
+            if (i + 1 === keyCol - 1) return `<td style="${percentileColor(parseFloat(v))}">${v}</td>`;
+            return `<td>${v}</td>`;
+          })]
+      : p.row.map((v, ci) => {
+          if (ci === 0) return `<td style="text-align:center;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">${label}</td>`;
+          if (ci === 1) return nameTd;
+          if (ci === keyCol) return `<td style="${percentileColor(parseFloat(v))}">${v}</td>`;
+          return `<td>${v}</td>`;
+        });
+    return `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
   }).join('');
 
   document.getElementById('search-result-panel').innerHTML = `
