@@ -2374,12 +2374,7 @@ async function loadPlayerProfile(playerId, containerEl) {
             <div style="display:flex;flex-wrap:wrap;gap:6px">${careerStatHtml}</div>
           </div>
         </div>
-        <div style="margin-bottom:10px">
-          <a href="https://npb.jp/bis/players/${playerId}.html" target="_blank" rel="noopener"
-            style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:4px;text-decoration:none">
-            🔗 npb.jp 공식 · 원본 보기
-          </a>
-        </div>
+
         ${tbHtml ? `
         <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">시즌별 성적</div>
         <div class="stats-scroll">
@@ -2924,7 +2919,10 @@ function showActiveStatPanel() {
   }
   activeStatsTab = id;
   const el = document.getElementById('stats-' + id);
-  if (el) el.style.display = 'block';
+  if (el) {
+    el.style.display = 'block';
+    setTimeout(() => fillPlayerPhotos(el), 50);
+  }
 }
 // 초기 활성 탭 버튼 설정
 document.addEventListener('DOMContentLoaded', () => {
@@ -3090,9 +3088,14 @@ function searchPlayers(query) {
     return false;
   }
 
+  // 같은 선수가 타자+투수 둘 다 있으면 투수 우선 (팀 타자성적에 투수 혼입 방지)
+  const allMatched = allRows.filter(p => matches(p));
+  const pitNames   = new Set(allMatched.filter(p => !p.isBatter).map(p => p.nameKey));
+
   const seen = new Set();
-  return allRows.filter(p => {
-    if (!matches(p)) return false;
+  return allMatched.filter(p => {
+    // 투수 성적이 있는 선수는 타자 성적 항목 제외
+    if (p.isBatter && pitNames.has(p.nameKey)) return false;
     const k = p.nameKey + '|' + p.isBatter;
     if (seen.has(k)) return false;
     seen.add(k);
@@ -3172,9 +3175,12 @@ function doPlayerSearch(val) {
 function showPlayerResult(jpName, nameKey, isBatter) {
   isBatter = (isBatter === true || isBatter === 'true');
   const allRows = getAllStatRows();
-  const playerRows = allRows.filter(p =>
-    (p.nameKey === nameKey || p.jpName === jpName) && p.isBatter === isBatter
-  );
+  const playerRows = allRows.filter(p => {
+    if (!(p.nameKey === nameKey || p.jpName === jpName)) return false;
+    // isBatter 엄격 일치 — 팀 타자 성적에 투수가 포함되는 경우 제외
+    if (p.isBatter !== isBatter) return false;
+    return true;
+  });
   if (playerRows.length === 0) {
     document.getElementById('search-hint').textContent = '성적 데이터를 찾을 수 없습니다.';
     document.getElementById('search-result-panel').innerHTML = '';
