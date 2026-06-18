@@ -1960,9 +1960,9 @@ function switchMainStat(mode, btn) {
     loadTeamStats(tc, currentTeamType);
   }
   if (mode === 'search') {
-    // 데이터 미로드 시 자동 로드
+    const hint = document.getElementById('search-hint');
+    // 리그 성적 미로드 시 자동 로드
     if (!statsLoaded) {
-      const hint = document.getElementById('search-hint');
       if (hint) hint.innerHTML = '<span style="color:var(--muted);font-size:12px">⏳ 성적 데이터 로딩 중...</span>';
       loadAllStats().then(() => {
         if (hint) hint.innerHTML = '';
@@ -1970,6 +1970,11 @@ function switchMainStat(mode, btn) {
         if (input && input.value.trim().length > 0) onPlayerSearchInput(input.value);
       });
     }
+    // 팀 전체 선수 raw 데이터 백그라운드 로드 (규정 미달 선수 검색 지원)
+    loadAllTeamRaw().then(() => {
+      const input = document.getElementById('player-search-input');
+      if (input && input.value.trim().length > 0) onPlayerSearchInput(input.value);
+    });
     setTimeout(() => document.getElementById('player-search-input').focus(), 100);
   }
 }
@@ -1992,6 +1997,7 @@ function switchTeamType(type, btn) {
 }
 
 const teamStatsCache = {};
+const teamRawCache = {}; // 선수 검색용 raw data (rows)
 async function loadTeamStats(teamCode, type) {
   const TEAM_URL_MAP = {T:'t',DB:'db',G:'g',D:'d',C:'c',Sw:'s',H:'h',F:'f',Bs:'b',E:'e',L:'l',M:'m'};
   const tc = TEAM_URL_MAP[teamCode] || teamCode.toLowerCase();
@@ -2013,6 +2019,7 @@ async function loadTeamStats(teamCode, type) {
       const isBatter = type === 'bat';
       const html = renderTeamStatsTable(data, isBatter);
       teamStatsCache[key] = html;
+      teamRawCache[key] = { rows: data.rows, isBatter, teamCode }; // 선수 검색용 raw 저장
       panel.innerHTML = html;
     } else {
       panel.innerHTML = `<div style="padding:20px;color:var(--muted);font-size:13px">데이터가 아직 없습니다.</div>`;
@@ -2080,6 +2087,34 @@ document.addEventListener('DOMContentLoaded', () => {
 // 페이지 로드 시 자동갱신 스케줄 등록
 scheduleAutoRefresh();
 
+// 선수 검색용: 12팀 전체 raw 데이터 백그라운드 로드
+let teamRawLoading = false;
+let teamRawLoaded = false;
+async function loadAllTeamRaw() {
+  if (teamRawLoaded || teamRawLoading) return;
+  teamRawLoading = true;
+  const TEAM_URL_MAP = {T:'t',DB:'db',G:'g',D:'d',C:'c',Sw:'s',H:'h',F:'f',Bs:'b',E:'e',L:'l',M:'m'};
+  const teams = Object.keys(TEAM_URL_MAP);
+  const types = ['bat','pit'];
+  // 병렬 fetch
+  await Promise.allSettled(
+    teams.flatMap(teamCode => types.map(async type => {
+      const tc = TEAM_URL_MAP[teamCode];
+      const key = `team_${type}_${tc}`;
+      if (teamRawCache[key]) return; // 이미 있으면 스킵
+      try {
+        const res = await fetch(`${API}?type=${key}`);
+        const data = await res.json();
+        if (data.rows) {
+          teamRawCache[key] = { rows: data.rows, isBatter: type === 'bat', teamCode };
+        }
+      } catch(e) { /* 조용히 실패 */ }
+    }))
+  );
+  teamRawLoading = false;
+  teamRawLoaded = true;
+}
+
 // ════════════════════════════════════════
 // 선수 검색 기능
 // ════════════════════════════════════════
@@ -2087,28 +2122,45 @@ scheduleAutoRefresh();
 // 전체 로드된 성적 rows 수집 (타자/투수 구분 포함)
 function getAllStatRows() {
   const result = [];
-  // STAT_CACHE에서 모든 데이터 수집
+
+  function parseRow(row, isBatter, type) {
+    if (!row[1]) return null;
+    const raw = String(row[1]);
+    const vClean = raw.replace(/^[*＊+＋\s]+/, '').trim();
+    const nameMatch = vClean.match(/^(.+?)[(（](.+?)[)）]$/);
+    const jpName = nameMatch ? nameMatch[1].trim() : vClean;
+    const teamAbr = nameMatch ? nameMatch[2] : '';
+    // 전각스페이스 → 반각 정규화
+    const nameKey = jpName.replace(/\u3000/g, ' ').trim();
+    const koName = PLAYER_KO[nameKey] || PLAYER_KO[jpName] || '';
+    const tkey = teamAbr ? teamKey(teamAbr) : null;
+    return { jpName, nameKey, koName, teamAbr, tkey, isBatter, row, type };
+  }
+
+  // 1) STAT_CACHE — 리그 개인 성적 (규정타석/이닝 이상)
   for (const [type, data] of Object.entries(STAT_CACHE)) {
     if (!data || !data.rows) continue;
     const isBatter = type.startsWith('bat');
     for (const row of data.rows) {
-      if (!row[1]) continue;
-      // 이름 파싱: "*糸原　健斗(神)" 형태
-      const raw = String(row[1]);
-      const vClean = raw.replace(/^[*＊+＋\s]+/, '').trim();
-      const nameMatch = vClean.match(/^(.+?)[(（](.+?)[)）]$/);
-      const jpName = nameMatch ? nameMatch[1].trim() : vClean;
-      const teamAbr = nameMatch ? nameMatch[2] : '';
-      const nameKey = jpName.replace(/\u3000/g, ' ').trim();
-      const koName = PLAYER_KO[nameKey] || PLAYER_KO[jpName] || '';
-      const tkey = teamAbr ? teamKey(teamAbr) : null;
-      result.push({ jpName, nameKey, koName, teamAbr, tkey, isBatter, row, type });
+      const p = parseRow(row, isBatter, type);
+      if (p) result.push(p);
     }
   }
-  // 중복 제거 (같은 선수가 여러 리그 타입에 있을 수 있음 — jpName+type 기준)
+
+  // 2) teamRawCache — 팀 개인 성적 (전체 선수 포함, 규정 무관)
+  for (const [key, data] of Object.entries(teamRawCache)) {
+    if (!data || !data.rows) continue;
+    for (const row of data.rows) {
+      const p = parseRow(row, data.isBatter, 'team_' + key);
+      if (p) result.push(p);
+    }
+  }
+
+  // 중복 제거: jpName+isBatter 기준 (리그 데이터 우선, 팀 데이터는 보완)
   const seen = new Set();
+  // 리그 데이터(STAT_CACHE) 먼저 → 팀 데이터(teamRawCache) 순으로 이미 정렬됨
   return result.filter(p => {
-    const k = p.jpName + '|' + p.type;
+    const k = p.jpName + '|' + p.isBatter;
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
@@ -2180,8 +2232,12 @@ function onPlayerSearchInput(val) {
   if (!statsLoaded) {
     ac.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px">⏳ 성적 데이터 로딩 중...</div>';
     ac.style.display = 'block';
-    if (Object.keys(STAT_CACHE).length === 0) loadAllStats().then(() => onPlayerSearchInput(val));
+    loadAllStats().then(() => onPlayerSearchInput(val));
     return;
+  }
+  // 팀 raw 로딩 중이면 현재 결과 표시하되 완료 후 갱신
+  if (teamRawLoading) {
+    loadAllTeamRaw().then(() => onPlayerSearchInput(val));
   }
   const results = searchPlayers(val);
   if (results.length === 0) {
