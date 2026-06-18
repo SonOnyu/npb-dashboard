@@ -519,6 +519,8 @@ body:not(.light) .rdp{color:#4cde80}
     <div id="search-hint" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
     <!-- 검색 결과 테이블 -->
     <div id="search-result-panel"></div>
+    <!-- 연도별 성적 -->
+    <div id="player-history-panel"></div>
   </div>
 
   <!-- ── 리그 개인 성적 패널 ── -->
@@ -2140,16 +2142,17 @@ function getAllStatRows() {
     if (!row || !row[nameCol]) return null;
     const raw     = String(row[nameCol]);
     const vClean  = raw.replace(/^[*＊+＋\s]+/, '').trim();
-    // 리그 성적은 "森下　翔太(T)" 형태, 팀 성적은 "森　友哉" 형태(팀코드 없음)
     const nameMatch = vClean.match(/^(.+?)[(（](.+?)[)）]$/);
     const jpName  = nameMatch ? nameMatch[1].trim() : vClean;
     const teamAbr = nameMatch ? nameMatch[2] : '';
     const nameKey = jpName.replace(/　/g, ' ').trim();
-    if (!nameKey || /^\d+$/.test(nameKey)) return null; // 숫자만인 경우 스킵
+    if (!nameKey || /^\d+$/.test(nameKey)) return null;
     const koName  = PLAYER_KO[nameKey] || PLAYER_KO[jpName] || '';
-    // 팀 성적은 teamRawCache의 teamCode로 팀 파악
     const tkey    = teamAbr ? teamKey(teamAbr) : null;
-    return { jpName, nameKey, koName, teamAbr, tkey, isBatter, row, type, isTeam };
+    // playerId: scheduled-fetch에서 row 마지막 셀에 추가됨
+    const lastCell = row[row.length - 1];
+    const playerId = (lastCell && /^\d{7,}$/.test(String(lastCell))) ? String(lastCell) : null;
+    return { jpName, nameKey, koName, teamAbr, tkey, isBatter, row, type, isTeam, playerId };
   }
 
   // 1) STAT_CACHE — 리그 개인 성적 (규정타석/이닝 이상, row[1]=선수명)
@@ -2336,14 +2339,27 @@ function showPlayerResult(jpName, nameKey, isBatter) {
     return '';
   }
 
+  // playerId: 첫 번째로 발견된 것 사용
+  const playerId = playerRows.map(p => p.playerId).find(id => id);
+  const npbLink  = playerId ? `https://npb.jp/bis/players/${playerId}.html` : null;
+
   document.getElementById('search-hint').innerHTML =
-    `<span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--text);flex-wrap:wrap;margin-bottom:8px">
-      ${logo} ${jpName}
-      ${koName ? `<span style="font-weight:400;color:var(--muted)">${koName}</span>` : ''}
+    `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      ${logo}
+      <span style="font-size:14px;font-weight:600;color:var(--text)">${jpName}</span>
+      ${koName ? `<span style="font-size:13px;font-weight:400;color:var(--muted)">${koName}</span>` : ''}
       ${isBatter
         ? '<span style="font-size:11px;background:rgba(76,222,128,0.2);color:#3fae5e;padding:2px 7px;border-radius:4px">타자</span>'
         : '<span style="font-size:11px;background:rgba(64,150,255,0.2);color:#4096ff;padding:2px 7px;border-radius:4px">투수</span>'}
-    </span>`;
+      ${npbLink ? `<a href="${npbLink}" target="_blank" rel="noopener"
+        style="font-size:11px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:3px 10px;border-radius:4px;text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+        📊 NPB 공식 프로필
+      </a>` : ''}
+      ${playerId ? `<button onclick="loadPlayerHistory('${playerId}','${jpName.replace(/'/g,"&#39;")}',${isBatter})"
+        style="font-size:11px;background:var(--accent);border:none;color:#000;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:600">
+        📅 연도별 성적
+      </button>` : ''}
+    </div>`;
 
   const tableId = 'search-result-tbl';
   const thHTML  = headers.map((h, i) =>
@@ -2382,6 +2398,56 @@ function showPlayerResult(jpName, nameKey, isBatter) {
         <tbody>${tbHTML}</tbody>
       </table>
     </div></div>`;
+  // 연도별 성적 패널 초기화
+  const histPanel = document.getElementById('player-history-panel');
+  if (histPanel) histPanel.innerHTML = '';
+}
+
+// 선수 연도별 성적 로드
+async function loadPlayerHistory(playerId, jpName, isBatter) {
+  const panel = document.getElementById('player-history-panel');
+  if (!panel) return;
+  panel.innerHTML = `<div style="padding:20px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px">
+    <div style="width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    연도별 성적 불러오는 중...
+  </div>`;
+
+  try {
+    const res  = await fetch(`/.netlify/functions/npb-player?id=${playerId}`);
+    const data = await res.json();
+
+    if (data.error && data.error !== 'no_stats_table') {
+      panel.innerHTML = `<div style="padding:16px;color:var(--muted);font-size:13px">연도별 성적을 불러올 수 없습니다. (${data.error})</div>`;
+      return;
+    }
+    if (!data.rows || data.rows.length === 0) {
+      panel.innerHTML = `<div style="padding:16px;color:var(--muted);font-size:13px">연도별 성적 데이터가 없습니다.</div>`;
+      return;
+    }
+
+    const hdrs   = data.headers || [];
+    const thHTML = hdrs.map((h, i) =>
+      `<th style="${i===2?'color:var(--accent)':''}" onclick="sortStatsTable('hist-tbl',${i},${isBatter})" title="클릭하여 정렬">${h}</th>`
+    ).join('');
+    const tbHTML = data.rows.map(r =>
+      `<tr style="border-bottom:1px solid var(--border)">${r.map((v,i) =>
+        i===2 ? `<td style="font-weight:700;color:var(--accent)">${v}</td>` : `<td>${v}</td>`
+      ).join('')}</tr>`
+    ).join('');
+
+    panel.innerHTML = `
+      <div class="card" style="margin-top:12px">
+        <div class="card-t" style="font-size:13px;color:var(--muted);margin-bottom:8px">📅 연도별 성적</div>
+        <div class="stats-scroll">
+          <table class="stats-tbl" id="hist-tbl">
+            <thead><tr>${thHTML}</tr></thead>
+            <tbody>${tbHTML}</tbody>
+          </table>
+        </div>
+      </div>`;
+  } catch(e) {
+    panel.innerHTML = `<div style="padding:16px;color:var(--muted);font-size:13px">로드 실패: ${e.message}</div>`;
+  }
 }
 
 function clearPlayerSearch() {
