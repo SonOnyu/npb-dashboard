@@ -1961,8 +1961,14 @@ function switchMainStat(mode, btn) {
   }
   if (mode === 'search') {
     // 데이터 미로드 시 자동 로드
-    if (Object.keys(STAT_CACHE).length === 0) {
-      loadAllStats();
+    if (!statsLoaded) {
+      const hint = document.getElementById('search-hint');
+      if (hint) hint.innerHTML = '<span style="color:var(--muted);font-size:12px">⏳ 성적 데이터 로딩 중...</span>';
+      loadAllStats().then(() => {
+        if (hint) hint.innerHTML = '';
+        const input = document.getElementById('player-search-input');
+        if (input && input.value.trim().length > 0) onPlayerSearchInput(input.value);
+      });
     }
     setTimeout(() => document.getElementById('player-search-input').focus(), 100);
   }
@@ -2170,10 +2176,11 @@ function onPlayerSearchInput(val) {
     document.getElementById('search-hint').textContent = '';
     return;
   }
-  // 성적 데이터 아직 미로드 시 안내
-  if (Object.keys(STAT_CACHE).length === 0) {
-    ac.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px">리그 성적 탭을 먼저 한 번 열어주세요.</div>';
+  // 성적 데이터 로딩 중이면 대기 안내 후 완료 시 재실행
+  if (!statsLoaded) {
+    ac.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px">⏳ 성적 데이터 로딩 중...</div>';
     ac.style.display = 'block';
+    if (Object.keys(STAT_CACHE).length === 0) loadAllStats().then(() => onPlayerSearchInput(val));
     return;
   }
   const results = searchPlayers(val);
@@ -2211,6 +2218,11 @@ function selectPlayerFromAC(jpName, nameKey, isBatter) {
 function doPlayerSearch(val) {
   document.getElementById('player-autocomplete').style.display = 'none';
   if (!val || val.trim().length < 1) return;
+  if (!statsLoaded) {
+    document.getElementById('search-hint').innerHTML = '<span style="color:var(--muted);font-size:12px">⏳ 로딩 중... 잠시 후 다시 시도해주세요.</span>';
+    if (Object.keys(STAT_CACHE).length === 0) loadAllStats().then(() => doPlayerSearch(val));
+    return;
+  }
   const results = searchPlayers(val.trim());
   if (results.length === 0) {
     document.getElementById('search-hint').textContent = '검색 결과가 없습니다.';
