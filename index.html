@@ -39,7 +39,7 @@ header{border-bottom:1px solid var(--border2);padding:0 max(40px, calc((100vw - 
 .theme-btn:hover{border-color:var(--accent)}
 
 /* NAV */
-.nav-tabs{display:flex;gap:2px;padding:20px 40px 0;border-bottom:1px solid var(--border);overflow-x:auto;background:var(--bg)}
+.nav-tabs{display:flex;gap:2px;padding:20px max(40px, calc((100vw - 1400px)/2 + 40px)) 0;border-bottom:1px solid var(--border);overflow-x:auto;background:var(--bg)}
 .nav-tab{font-family:var(--fd);font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:9px 16px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.15s,border-color 0.15s}
 .nav-tab:hover{color:var(--text)}
 .nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -2147,12 +2147,94 @@ const PLAYER_ID = {
   'Ｔハーン':'73975159'
 };
 
+// 선수 사진 캐시 { playerId: photoUrl }
+const playerPhotoCache = {};
+
+// 선수 사진 URL 반환 (캐시 우선, 없으면 비동기 fetch 후 콜백)
+function getPlayerPhoto(jpName, callback) {
+  const key  = jpName.replace(/[\s\u3000]/g,'');
+  const pid  = PLAYER_ID[key];
+  if (!pid) return; // ID 없으면 스킵
+  if (playerPhotoCache[pid]) { callback(pid, playerPhotoCache[pid]); return; }
+  if (playerPhotoCache[pid] === null) return; // 이미 실패한 것
+  // 아직 미조회 — Function 호출
+  playerPhotoCache[pid] = 'loading';
+  fetch(`/.netlify/functions/npb-player?id=${pid}`)
+    .then(r => r.json())
+    .then(d => {
+      const url = d.photoUrl || null;
+      playerPhotoCache[pid] = url;
+      if (url) callback(pid, url);
+    })
+    .catch(() => { playerPhotoCache[pid] = null; });
+}
+
+// 선수 사진 img 태그 HTML
+function playerPhotoHtml(jpName, size = 28) {
+  const key = jpName.replace(/[\s\u3000]/g,'');
+  const pid = PLAYER_ID[key];
+  if (!pid) return '';
+  const cached = playerPhotoCache[pid];
+  if (cached && cached !== 'loading') {
+    return `<img src="${cached}" alt="" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;border:1px solid var(--border2);flex-shrink:0" onerror="this.style.display='none'">`;
+  }
+  // 아직 없으면 placeholder (나중에 채워짐)
+  return `<span class="player-photo-placeholder" data-pid="${pid}" data-size="${size}" style="display:inline-block;width:${size}px;height:${size}px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);flex-shrink:0"></span>`;
+}
+
 // NPB 선수 프로필 링크 생성
 function getNpbLink(jpName) {
   if (!jpName) return null;
   const key = jpName.replace(/[\s\u3000]/g, '');
   const id  = PLAYER_ID[key];
   return id ? `https://npb.jp/bis/players/${id}.html` : null;
+}
+
+// 테이블 내 사진 placeholder를 실제 사진으로 교체
+function fillPlayerPhotos(containerEl) {
+  if (!containerEl) return;
+  const placeholders = containerEl.querySelectorAll('.player-photo-placeholder');
+  if (!placeholders.length) return;
+  // 고유 pid 목록
+  const pids = [...new Set([...placeholders].map(el=>el.dataset.pid).filter(Boolean))];
+  pids.forEach(pid => {
+    if (playerPhotoCache[pid] && playerPhotoCache[pid] !== 'loading') {
+      // 이미 캐시 있음 → 즉시 교체
+      applyPhotoToPlaceholders(containerEl, pid, playerPhotoCache[pid]);
+      return;
+    }
+    if (playerPhotoCache[pid] === 'loading') return;
+    playerPhotoCache[pid] = 'loading';
+    fetch(`/.netlify/functions/npb-player?id=${pid}`)
+      .then(r => r.json())
+      .then(d => {
+        const url = d.photoUrl || null;
+        playerPhotoCache[pid] = url;
+        if (url) applyPhotoToPlaceholders(containerEl, pid, url);
+        else {
+          // 사진 없으면 placeholder 제거
+          containerEl.querySelectorAll(`.player-photo-placeholder[data-pid="${pid}"]`)
+            .forEach(el => el.remove());
+        }
+      })
+      .catch(() => {
+        playerPhotoCache[pid] = null;
+        containerEl.querySelectorAll(`.player-photo-placeholder[data-pid="${pid}"]`)
+          .forEach(el => el.remove());
+      });
+  });
+}
+
+function applyPhotoToPlaceholders(containerEl, pid, url) {
+  containerEl.querySelectorAll(`.player-photo-placeholder[data-pid="${pid}"]`).forEach(el => {
+    const size = el.dataset.size || 26;
+    const img  = document.createElement('img');
+    img.src    = url;
+    img.alt    = '';
+    img.style.cssText = `width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;border:1px solid var(--border2);flex-shrink:0`;
+    img.onerror = () => img.style.display = 'none';
+    el.replaceWith(img);
+  });
 }
 
 // 선수명 → 링크 td 또는 span
@@ -2440,9 +2522,15 @@ function renderTeamStatsTable(data, isBatter) {
         const nameDisp = npbLink
           ? `<a href="${npbLink}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted)" title="NPB 공식 프로필">${rawName}</a>`
           : rawName;
+        const teamPhotoHtml = playerPhotoHtml(rawName, 26);
         return `<td>
-          <div style="font-size:13px;font-weight:500;white-space:nowrap">${nameDisp}${badge}</div>
-          ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
+          <div style="display:flex;align-items:center;gap:5px">
+            ${teamPhotoHtml}
+            <div>
+              <div style="font-size:13px;font-weight:500;white-space:nowrap">${nameDisp}${badge}</div>
+              ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
+            </div>
+          </div>
         </td>`;
       }
       if (ci === keyIdx) {
@@ -2598,9 +2686,10 @@ function renderStatsTable(data, isBatter) {
         const nameDisp = npbLink
           ? `<a href="${npbLink}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted)" title="NPB 공식 프로필">${jpNameRaw}</a>`
           : jpNameRaw;
+        const photoHtml = playerPhotoHtml(jpNameRaw, 26);
         return `<td>
           <div style="display:flex;align-items:center;gap:5px">
-            ${logoHtml}
+            ${logoHtml}${photoHtml}
             <div>
               <div style="font-size:13px;font-weight:500;white-space:nowrap">${nameDisp}${handBadge}</div>
               ${koName ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${koName}</div>` : ''}
@@ -2665,6 +2754,11 @@ async function loadAllStats() {
     document.getElementById('stats-ko-pit').innerHTML = renderStatsTable(koPit, false);
     document.getElementById('stats-op-bat').innerHTML = renderStatsTable(opBat, true);
     document.getElementById('stats-op-pit').innerHTML = renderStatsTable(opPit, false);
+
+    // 성적 테이블 선수 사진 lazy load
+    setTimeout(() => {
+      document.querySelectorAll('[id^="stats-"]').forEach(el => fillPlayerPhotos(el));
+    }, 100);
 
     // 현재 전체 순위 (CL+PL 통합, 타율/방어율 기준 재정렬)
     const curBatRows = [...(clBat.rows||[]), ...(plBat.rows||[])]
@@ -2781,6 +2875,7 @@ async function loadTeamStats(teamCode, type) {
       teamStatsCache[key] = html;
       teamRawCache[key] = { rows: data.rows, isBatter, teamCode }; // 선수 검색용 raw 저장
       panel.innerHTML = html;
+      setTimeout(() => fillPlayerPhotos(panel), 100);
     } else {
       panel.innerHTML = `<div style="padding:20px;color:var(--muted);font-size:13px">데이터가 아직 없습니다.</div>`;
     }
