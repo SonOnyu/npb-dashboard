@@ -2080,24 +2080,21 @@ async function loadAllTeamRaw() {
   if (teamRawLoaded || teamRawLoading) return;
   teamRawLoading = true;
   const TEAM_URL_MAP = {T:'t',DB:'db',G:'g',D:'d',C:'c',Sw:'s',H:'h',F:'f',Bs:'b',E:'e',L:'l',M:'m'};
-  console.log('[search] loadAllTeamRaw start');
   await Promise.allSettled(
     Object.entries(TEAM_URL_MAP).flatMap(([teamCode, tc]) =>
       ['bat', 'pit'].map(async type => {
         const key = `team_${type}_${tc}`;
-        if (teamRawCache[key]) { console.log('[search] skip (cached):', key); return; }
+        if (teamRawCache[key]) return;
         try {
           const res  = await fetch(`${API}?type=${key}`);
           const data = await res.json();
-          console.log(`[search] ${key}: headers=${!!data.headers} rows=${data.rows?.length ?? 'none'} error=${data.error||''}`);
           if (data && data.headers && data.rows && data.rows.length > 0) {
             teamRawCache[key] = { rows: data.rows, isBatter: type === 'bat', teamCode };
           }
-        } catch(e) { console.error('[search] fetch error:', key, e.message); }
+        } catch(e) {}
       })
     )
   );
-  console.log('[search] loadAllTeamRaw done. teamRawCache keys:', Object.keys(teamRawCache).length);
   teamRawLoading = false;
   teamRawLoaded = true;
 }
