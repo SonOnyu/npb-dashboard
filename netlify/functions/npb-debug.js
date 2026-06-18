@@ -1,4 +1,3 @@
-// 임시 디버그: NPB HTML에 선수 링크가 있는지 확인
 const https = require('https');
 
 function fetchUrl(url) {
@@ -26,18 +25,23 @@ exports.handler = async () => {
   const cors = { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' };
   const results = {};
 
+  // teams URL 패턴 탐색
   const urls = {
-    'bat_c':    'https://npb.jp/bis/2026/stats/bat_c.html',
-    'idb1_b':   'https://npb.jp/bis/2026/stats/idb1_b.html',
-    'teams_b':  'https://npb.jp/bis/teams/2026_b.html',
-    'player':   'https://npb.jp/bis/players/91495139.html',
+    'teams_index':    'https://npb.jp/bis/teams/',
+    'teams_b_2026':   'https://npb.jp/bis/teams/2026_b.html',
+    'teams_b_no_yr':  'https://npb.jp/bis/teams/b.html',
+    'buffaloes':      'https://www.buffaloes.co.jp/team/player/',
+    'idb1_b_snippet': 'https://npb.jp/bis/2026/stats/idb1_b.html',
   };
 
   for (const [key, url] of Object.entries(urls)) {
     try {
       const html = await fetchUrl(url);
       const links = [...html.matchAll(/\/bis\/players\/(\d+)\.html/g)].map(m => m[1]);
-      results[key] = { ok: true, len: html.length, playerLinks: [...new Set(links)].slice(0, 5) };
+      // idb1_b의 첫 번째 <a> 태그들 확인
+      const atags = [...html.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([^<]{1,20})<\/a>/g)]
+        .slice(0, 5).map(m => ({href: m[1], text: m[2]}));
+      results[key] = { ok: true, len: html.length, playerLinks: [...new Set(links)].slice(0,5), atags };
     } catch(e) {
       results[key] = { ok: false, error: e.message };
     }
